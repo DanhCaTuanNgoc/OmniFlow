@@ -13,10 +13,10 @@
 | Giai đoạn (Phase) | Thời gian | Tổng Tasks | Hoàn thành | Đang làm | Tỷ lệ hoàn thành |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 6 | 6 | 0 | **100%** |
-| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 4 | 0 | **50.0%** |
+| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 5 | 0 | **62.5%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 5 | 0 | **45.5%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **30** | **15** | **0** | **50.0%** |
+| **TỔNG CỘNG** | **21 Ngày** | **30** | **16** | **0** | **53.3%** |
 
 ---
 
@@ -147,16 +147,16 @@
 * **Ngày hoàn thành:** 14/11/2026 18:51
 * **Trạng thái:** `DONE`
 
-#### `TASK-105` [TODO] — Bộ Unit & Fork Tests Đạt 100% Độ Phủ (Foundry)
+#### `TASK-105` [DONE] — Bộ Unit & Fork Tests Đạt 100% Độ Phủ (Foundry)
 * **Module / Màn hình:** `contracts/test/`
 * **Mục đích:** Chứng minh tính đúng đắn và an toàn của hợp đồng trước khi deploy.
 * **Chi tiết thực thi:**
-  * Viết `ActionVault.t.sol` kiểm tra Non-custodial, authorization, panic button.
-  * Viết `StopLoss_Pipeline.t.sol` kiểm tra logic giá, cooldown 200ms guard.
-  * Chạy `forge test -vvv` đảm bảo 100% tests pass.
+  * Viết `ActionVault.t.sol` (8 tests): kiểm tra Non-custodial, authorization, panic button, SafeSweep chuyển ví lạnh, và cơ chế Skip khi giá hồi phục.
+  * Viết `StopLoss_Pipeline.t.sol` (5 tests): kiểm tra lọc địa chỉ pair, ngưỡng giá, và chứng minh **Stateless Cooldown chặn đứng 100% các block 200ms dội dập mà tự động mở lại sau 300s không bị Deadlock**.
+  * Chạy `forge test -vvv`: **13/13 tests PASS 100%** trong 13.40ms.
 * **Ngày tạo:** 14/11/2026 17:35
-* **Ngày hoàn thành:** --
-* **Trạng thái:** `TODO`
+* **Ngày hoàn thành:** 14/11/2026 18:53
+* **Trạng thái:** `DONE`
 
 #### `TASK-106` [TODO] — Deploy Hợp Đồng Lên Mạng Thử Nghiệm Thật (Live Testnet)
 * **Module / Màn hình:** Base Sepolia (`84532`) & Reactive Lasna (`5318007`)
