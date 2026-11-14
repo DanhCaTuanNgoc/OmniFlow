@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { createPublicClient, http } from 'viem';
+import { chainService } from '../services/chain.service.js';
 import { env } from '../config/env.js';
 
 export const healthRouter = Router();
@@ -7,34 +7,11 @@ export const healthRouter = Router();
 healthRouter.get('/', async (_req: Request, res: Response) => {
   const timestamp = new Date().toISOString();
 
-  let baseSepoliaOk = false;
-  let baseSepoliaBlock = 0n;
-  let lasnaOk = false;
-  let lasnaBlock = 0n;
+  // Kiểm tra sức khỏe kết nối qua ChainService tập trung
+  const health = await chainService.checkHealth();
+  const relayerInfo = await chainService.getRelayerLasnaBalance();
 
-  // 1. Kiểm tra Base Sepolia RPC
-  try {
-    const baseClient = createPublicClient({
-      transport: http(env.BASE_SEPOLIA_RPC_URL),
-    });
-    baseSepoliaBlock = await baseClient.getBlockNumber();
-    baseSepoliaOk = true;
-  } catch (error) {
-    console.error('Base Sepolia health check failed:', error);
-  }
-
-  // 2. Kiểm tra Reactive Lasna RPC
-  try {
-    const lasnaClient = createPublicClient({
-      transport: http(env.LASNA_RPC_URL),
-    });
-    lasnaBlock = await lasnaClient.getBlockNumber();
-    lasnaOk = true;
-  } catch (error) {
-    console.error('Reactive Lasna health check failed:', error);
-  }
-
-  const allHealthy = baseSepoliaOk && lasnaOk;
+  const allHealthy = health.baseSepolia.ok && health.reactiveLasna.ok;
   const statusCode = allHealthy ? 200 : 503;
 
   return res.status(statusCode).json({
@@ -43,18 +20,26 @@ healthRouter.get('/', async (_req: Request, res: Response) => {
     timestamp,
     chains: {
       baseSepolia: {
-        chainId: 84532,
+        chainId: health.baseSepolia.chainId,
         rpcUrl: env.BASE_SEPOLIA_RPC_URL,
-        status: baseSepoliaOk ? 'connected' : 'unreachable',
-        blockNumber: baseSepoliaBlock.toString(),
+        status: health.baseSepolia.ok ? 'connected' : 'unreachable',
+        blockNumber: health.baseSepolia.blockNumber.toString(),
       },
       reactiveLasna: {
-        chainId: 5318007,
+        chainId: health.reactiveLasna.chainId,
         rpcUrl: env.LASNA_RPC_URL,
-        status: lasnaOk ? 'connected' : 'unreachable',
-        blockNumber: lasnaBlock.toString(),
+        status: health.reactiveLasna.ok ? 'connected' : 'unreachable',
+        blockNumber: health.reactiveLasna.blockNumber.toString(),
       },
     },
-    relayerConfigured: Boolean(env.RELAYER_PRIVATE_KEY),
+    relayer: relayerInfo
+      ? {
+          configured: true,
+          address: relayerInfo.address,
+          balanceLReact: relayerInfo.balanceFormatted,
+        }
+      : {
+          configured: false,
+        },
   });
 });

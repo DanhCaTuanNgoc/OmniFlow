@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 6 | 6 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 0 | 0 | **0%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 1 | 0 | **9.1%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 2 | 0 | **18.2%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **30** | **7** | **0** | **23.3%** |
+| **TỔNG CỘNG** | **21 Ngày** | **30** | **8** | **0** | **26.7%** |
 
 ---
 
@@ -216,14 +216,17 @@
 * **Ngày hoàn thành:** 14/11/2026 17:57
 * **Trạng thái:** `DONE`
 
-#### `TASK-205` [TODO] — Viem Multi-Chain Clients & Wallet Relayer Engine
+#### `TASK-205` [DONE] — Viem Multi-Chain Clients & Wallet Relayer Engine
 * **Module / Màn hình:** `backend/src/services/chain.service.ts`
 * **Mục đích:** Tạo client Viem kết nối Base Sepolia và Reactive Lasna, khởi tạo Relayer wallet ký giao dịch deploy.
 * **Chi tiết thực thi:**
-  * Cấu hình `publicClient` Base Sepolia và Reactive Lasna.
-  * Cấu hình `walletClient` với `RELAYER_PRIVATE_KEY` cho mạng Reactive Lasna (`Chain ID: 5318007`).
-  * Hàm tiện ích kiểm tra số dư `lREACT` và ước tính gas.
-* **Ngày tạo:** 14/11/2026 17:52 | **Trạng thái:** `TODO`
+  * Tạo `config/chains.ts` định nghĩa chuỗi `baseSepoliaChain` (84532) và `reactiveLasnaChain` (5318007).
+  * Xây dựng singleton `ChainService` quản lý `basePublicClient`, `lasnaPublicClient`, và `lasnaWalletClient`.
+  * Hỗ trợ hàm `getRelayerLasnaBalance()` đọc số dư `lREACT` và hàm `checkHealth()` kiểm tra song song 2 chuỗi.
+  * Tích hợp vào `/health` endpoint trả về trạng thái mạng và thông tin ví Relayer.
+* **Ngày tạo:** 14/11/2026 17:52
+* **Ngày hoàn thành:** 14/11/2026 18:35
+* **Trạng thái:** `DONE`
 
 #### `TASK-206` [TODO] — Pipeline Graph Parser & Pre-compiled Bytecode Deployer API
 * **Module / Màn hình:** `backend/src/services/deployer.service.ts` & `routes/pipeline.route.ts`
