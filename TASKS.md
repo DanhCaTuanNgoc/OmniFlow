@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 6 | 6 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 0 | 0 | **0%** |
-| **Sprint 2: Studio Canvas, Workspace & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 8 | 0 | 0 | **0%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 1 | 0 | **9.1%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **27** | **6** | **0** | **22.2%** |
+| **TỔNG CỘNG** | **21 Ngày** | **30** | **7** | **0** | **23.3%** |
 
 ---
 
@@ -203,31 +203,68 @@
 * **Chi tiết thực thi:** 3 Triggers, 3 Conditions, 3 Actions, 1 Logic Gate Node.
 * **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
 
-#### `TASK-204` [TODO] — Xây dựng Backend Viem Deployer & REST API
-* **Module / Màn hình:** `backend/` (Railway Service)
-* **Mục đích:** Xử lý validate Graph JSON, deploy RSC bằng Viem và nạp gas lREACT tức thì.
-* **Chi tiết thực thi:** Endpoint `POST /api/pipeline/compile-and-deploy`, `GET /health`.
-* **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
+#### `TASK-204` [DONE] — Backend Foundation & Health Check Service
+* **Module / Màn hình:** `backend/` (Railway Node.js Service)
+* **Mục đích:** Thiết lập bộ khung backend Express + TypeScript chuẩn mực, cấu hình CORS, biến môi trường với Zod, và endpoint `/health` kiểm tra kết nối song song 2 mạng RPC.
+* **Chi tiết thực thi:**
+  * Khởi tạo `package.json`, `tsconfig.json` trong `backend/` và pnpm workspace gốc.
+  * Thiết lập `src/config/env.ts` validate biến môi trường với Zod (RPC Lasna: `https://lasna-rpc.rnk.dev`, Base Sepolia: `https://sepolia.base.org`).
+  * Cấu hình Express server với Helmet, CORS (hỗ trợ Vercel Reverse Proxy), Body Parser.
+  * Xây dựng endpoint `GET /health` kiểm tra kết nối RPC Base Sepolia và Reactive Lasna.
+  * Test live kết nối thành công: Base Sepolia Block `#58659752`, Reactive Lasna Block `#8321639`.
+* **Ngày tạo:** 14/11/2026 17:52
+* **Ngày hoàn thành:** 14/11/2026 17:57
+* **Trạng thái:** `DONE`
 
-#### `TASK-205` [TODO] — Phát triển WebSocket Server & Event Streaming
+#### `TASK-205` [TODO] — Viem Multi-Chain Clients & Wallet Relayer Engine
+* **Module / Màn hình:** `backend/src/services/chain.service.ts`
+* **Mục đích:** Tạo client Viem kết nối Base Sepolia và Reactive Lasna, khởi tạo Relayer wallet ký giao dịch deploy.
+* **Chi tiết thực thi:**
+  * Cấu hình `publicClient` Base Sepolia và Reactive Lasna.
+  * Cấu hình `walletClient` với `RELAYER_PRIVATE_KEY` cho mạng Reactive Lasna (`Chain ID: 5318007`).
+  * Hàm tiện ích kiểm tra số dư `lREACT` và ước tính gas.
+* **Ngày tạo:** 14/11/2026 17:52 | **Trạng thái:** `TODO`
+
+#### `TASK-206` [TODO] — Pipeline Graph Parser & Pre-compiled Bytecode Deployer API
+* **Module / Màn hình:** `backend/src/services/deployer.service.ts` & `routes/pipeline.route.ts`
+* **Mục đích:** Validate đồ thị JSON, trích xuất parameters và deploy RSC qua Viem với 1.0 lREACT gas tài trợ trong 1s.
+* **Chi tiết thực thi:**
+  * Zod Schema validation cho Graph JSON (DAG không chu trình).
+  * Hàm deploy RSC sử dụng `walletClient.deployContract` nạp sẵn `{ value: parseEther('1.0') }`.
+  * Endpoint REST API: `POST /api/pipeline/compile-and-deploy`.
+* **Ngày tạo:** 14/11/2026 17:52 | **Trạng thái:** `TODO`
+
+#### `TASK-207` [TODO] — Real-time WebSocket Gateway & 30s Heartbeat
 * **Module / Màn hình:** `backend/src/websocket/`
-* **Mục đích:** Đẩy sự kiện on-chain real-time về Frontend với ping/pong heartbeat 30s.
-* **Chi tiết thực thi:** WebSocket gateway, topic `pipeline_events`, RPC polling listener.
-* **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
+* **Mục đích:** Cung cấp kênh truyền thông thời gian thực giữa backend và frontend, duy trì ping/pong 30s chống timeout proxy.
+* **Chi tiết thực thi:**
+  * Tích hợp `ws` server chạy chung port với Express trên path `/stream`.
+  * Cơ chế Ping/Pong 30 giây giữ kết nối với Railway reverse proxy.
+  * Broadcast room quản lý client connections theo `pipelineId`.
+* **Ngày tạo:** 14/11/2026 17:52 | **Trạng thái:** `TODO`
 
-#### `TASK-206` [TODO] — Xây dựng Màn hình Template Library (Recipe Store 1-Click)
+#### `TASK-208` [TODO] — Event Stream Listener & Fallback Initial Data Seed
+* **Module / Màn hình:** `backend/src/services/eventListener.service.ts`
+* **Mục đích:** Lắng nghe event on-chain từ RPC, lưu buffer sự kiện và cung cấp dữ liệu seed ban đầu cho Activity Logs.
+* **Chi tiết thực thi:**
+  * Bắt event `Sync`, `StopLossExecuted`, `SafeSwept`.
+  * In-Memory Ring Buffer lưu 50 events gần nhất.
+  * Fallback Data Seed với 3–5 bản ghi giao dịch thật cho Activity Logs khi container khởi động lại.
+* **Ngày tạo:** 14/11/2026 17:52 | **Trạng thái:** `TODO`
+
+#### `TASK-209` [TODO] — Xây dựng Màn hình Template Library (Recipe Store 1-Click)
 * **Module / Màn hình:** Màn hình 3 — Template Library
 * **Mục đích:** Cho phép người dùng và Giám khảo hydrate công thức có sẵn lên Canvas trong 1 click.
 * **Chi tiết thực thi:** 4 Recipes (Flash Crash Stop-Loss, Take-Profit Scalper, Anti-Drainer, DCA Out).
 * **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
 
-#### `TASK-207` [TODO] — Xây dựng Màn hình Vault Manager & Panic Button
+#### `TASK-210` [TODO] — Xây dựng Màn hình Vault Manager & Panic Button
 * **Module / Màn hình:** Màn hình 4 — Vault Manager
 * **Mục đích:** Quản lý số dư két an toàn, nạp rút ETH và nút đỏ khẩn cấp `emergencyWithdraw()`.
 * **Chi tiết thực thi:** Deposit/Withdraw UI, Panic Button đỏ rực rỡ gọi on-chain trực tiếp.
 * **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
 
-#### `TASK-208` [TODO] — Xây dựng Màn hình Active Automations & Gas Gauge
+#### `TASK-211` [TODO] — Xây dựng Màn hình Active Automations & Gas Gauge
 * **Module / Màn hình:** Màn hình 2 — Active Automations
 * **Mục đích:** Giám sát trạng thái RSC đang chạy, đo lượng gas lREACT còn lại và nút Refuel.
 * **Chi tiết thực thi:** Pipeline status cards, Gas Gauge bar (Xanh/Vàng/Đỏ), Pause/Resume controls.

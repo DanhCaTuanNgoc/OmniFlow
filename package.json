@@ -1,0 +1,15 @@
+{
+  "name": "omniflow-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OmniFlow — The Zapier of Web3: No-Code Cross-Chain Automation Powered by Reactive Omni",
+  "scripts": {
+    "build:backend": "pnpm --filter backend build",
+    "dev:backend": "pnpm --filter backend dev",
+    "build": "pnpm --filter \"@omniflow/*\" --filter backend build"
+  },
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

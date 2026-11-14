@@ -485,7 +485,7 @@ internalPort = 8080
 | `NEXT_PUBLIC_BACKEND_API_URL` | **Vercel** | Public | URL REST API Railway: `https://omniflow-backend.up.railway.app`. |
 | `NEXT_PUBLIC_BACKEND_WS_URL` | **Vercel** | Public | URL WebSocket Railway: `wss://omniflow-backend.up.railway.app/stream`. |
 | `NEXT_PUBLIC_BASE_SEPOLIA_RPC`| **Vercel** | Public | RPC Base Sepolia: `https://sepolia.base.org`. |
-| `NEXT_PUBLIC_LASNA_RPC` | **Vercel** | Public | RPC Reactive Lasna: `https://lasna-rpc.reactive.network`. |
+| `NEXT_PUBLIC_LASNA_RPC` | **Vercel** | Public | RPC Reactive Lasna: `https://lasna-rpc.rnk.dev`. |
 | `NEXT_PUBLIC_WALLETCONNECT_ID`| **Vercel** | Public | Project ID kết nối Web3 Modal từ WalletConnect. |
 | `NEXT_PUBLIC_VAULT_FACTORY` | **Vercel** | Public | Địa chỉ `ActionVaultFactory` hoặc Vault template trên Base Sepolia. |
 | `PORT` | **Railway** | Tự Động | Cổng mạng do Railway tự động gán (mặc định: `8080`). |
@@ -493,7 +493,7 @@ internalPort = 8080
 | `CORS_ALLOWED_ORIGINS` | **Railway** | Private | Danh sách domain Frontend được phép kết nối: `https://omniflow.vercel.app`. |
 | `RELAYER_PRIVATE_KEY` | **Railway** | **CỰC KỲ BẢO MẬT** | Khóa bí mật của Relayer: Dùng để ký deploy RSC lên Lasna và nạp `lREACT` gas sponsorship. |
 | `BASE_SEPOLIA_RPC_URL` | **Railway** | Private | RPC URL Base Sepolia có throughput cao (Alchemy/Infura/Public). |
-| `LASNA_RPC_URL` | **Railway** | Private | RPC URL Reactive Lasna Testnet: `https://lasna-rpc.reactive.network`. |
+| `LASNA_RPC_URL` | **Railway** | Private | RPC URL Reactive Lasna Testnet: `https://lasna-rpc.rnk.dev`. |
 | `CALLBACK_PROXY_BASE_SEPOLIA` | **Railway** | Private | Địa chỉ Callback Proxy chính thức do Reactive Network vận hành trên Base Sepolia: `0xa6eA49Ed671B8a4dfCDd34E36b7a75Ac79B8A5a6`. |
 | `SYSTEM_CONTRACT_LASNA` | **Railway** | Private | Địa chỉ Reactive System Contract: `0x0000000000000000000000000000000000fffFfF`. |
 
