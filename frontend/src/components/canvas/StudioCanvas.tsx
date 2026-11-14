@@ -40,8 +40,6 @@ import {
   Rocket, 
   RotateCcw, 
   Sparkles, 
-  Play, 
-  CheckCircle,
   AlertTriangle 
 } from 'lucide-react';
 
@@ -68,7 +66,7 @@ const INITIAL_NODES: Node[] = [
   {
     id: 'trigger-1',
     type: 'watchDEXPrice',
-    position: { x: 50, y: 140 },
+    position: { x: 40, y: 150 },
     data: {
       label: 'Watch DEX Price',
       category: 'trigger',
@@ -82,7 +80,7 @@ const INITIAL_NODES: Node[] = [
   {
     id: 'condition-1',
     type: 'priceThresholdGuard',
-    position: { x: 400, y: 140 },
+    position: { x: 380, y: 150 },
     data: {
       label: 'Price Threshold Guard',
       category: 'condition',
@@ -94,19 +92,18 @@ const INITIAL_NODES: Node[] = [
   {
     id: 'condition-2',
     type: 'cooldownGuard',
-    position: { x: 750, y: 140 },
+    position: { x: 720, y: 150 },
     data: {
       label: 'Cooldown Rate-Limiter',
       category: 'condition',
       state: 'CONFIGURED',
       cooldownSeconds: 300,
-      timeUnit: 'Minutes',
     },
   },
   {
     id: 'action-1',
     type: 'dexSwap',
-    position: { x: 1100, y: 140 },
+    position: { x: 1060, y: 150 },
     data: {
       label: 'DEX Token Swap',
       category: 'action',
@@ -122,27 +119,30 @@ const INITIAL_NODES: Node[] = [
 
 const INITIAL_EDGES: Edge[] = [
   {
-    id: 'e1-2',
+    id: 'e-trigger-cond1',
     source: 'trigger-1',
     target: 'condition-1',
     type: 'custom',
-    data: { isPulsing: true },
+    data: { isPulsing: true, color: '#38bdf8' },
   },
   {
-    id: 'e2-3',
+    id: 'e-cond1-cond2',
     source: 'condition-1',
     target: 'condition-2',
     type: 'custom',
-    data: { isPulsing: true },
+    data: { isPulsing: true, color: '#fbbf24' },
   },
   {
-    id: 'e3-4',
+    id: 'e-cond2-act1',
     source: 'condition-2',
     target: 'action-1',
     type: 'custom',
-    data: { isPulsing: true },
+    data: { isPulsing: true, color: '#34d399' },
   },
 ];
+
+let idCounter = 10;
+const getId = (prefix: string) => `${prefix}-${idCounter++}`;
 
 function StudioCanvasInner() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -154,50 +154,70 @@ function StudioCanvasInner() {
   const [isDeployOpen, setIsDeployOpen] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
 
-  // Selected node lookup
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
 
-  // Constrained Connection Validator (DAG & Port Grammar enforcement)
+  // DAG & Port Constraint Enforcement
   const isValidConnection = useCallback(
     (connection: Connection | Edge) => {
-      // 1. Prevent self-connection
-      if (connection.source === connection.target) return false;
-
       const sourceNode = nodes.find((n) => n.id === connection.source);
       const targetNode = nodes.find((n) => n.id === connection.target);
+
       if (!sourceNode || !targetNode) return false;
+      if (sourceNode.id === targetNode.id) return false;
 
-      // 2. Cannot connect Action as source
-      if (sourceNode.data.category === 'action') return false;
+      const sourceCategory = sourceNode.data.category;
+      const targetCategory = targetNode.data.category;
 
-      // 3. Cannot connect Trigger as target
-      if (targetNode.data.category === 'trigger') return false;
+      // Reject invalid reverse flow
+      if (sourceCategory === 'action') return false;
+      if (targetCategory === 'trigger') return false;
+
+      // Check cycles (DAG enforcement)
+      const hasCycle = (nodeId: string, visited = new Set<string>()): boolean => {
+        if (visited.has(nodeId)) return true;
+        visited.add(nodeId);
+        const outEdges = edges.filter((e) => e.source === nodeId);
+        for (const edge of outEdges) {
+          if (hasCycle(edge.target, new Set(visited))) return true;
+        }
+        return false;
+      };
+
+      if (hasCycle(connection.target, new Set([connection.source]))) {
+        setValidationWarning('Cyclic connections are strictly prohibited in DAG pipelines.');
+        setTimeout(() => setValidationWarning(null), 3000);
+        return false;
+      }
 
       return true;
     },
-    [nodes]
+    [nodes, edges]
   );
 
   const onConnect = useCallback(
     (params: Connection) => {
       if (isValidConnection(params)) {
+        const sourceNode = nodes.find((n) => n.id === params.source);
+        const color =
+          sourceNode?.data.category === 'trigger'
+            ? '#38bdf8'
+            : sourceNode?.data.category === 'condition'
+            ? '#fbbf24'
+            : '#34d399';
+
         setEdges((eds) =>
           addEdge(
             {
               ...params,
               type: 'custom',
-              data: { isPulsing: true },
+              data: { isPulsing: true, color },
             },
             eds
           )
         );
-        setValidationWarning(null);
-      } else {
-        setValidationWarning('Invalid connection: Port grammar rules violated.');
-        setTimeout(() => setValidationWarning(null), 3000);
       }
     },
-    [isValidConnection, setEdges]
+    [isValidConnection, setEdges, nodes]
   );
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
@@ -208,35 +228,6 @@ function StudioCanvasInner() {
     setSelectedNodeId(null);
   }, []);
 
-  // Update selected node data
-  const handleUpdateNodeData = useCallback(
-    (id: string, newData: Record<string, any>) => {
-      setNodes((nds) =>
-        nds.map((node) => {
-          if (node.id === id) {
-            return {
-              ...node,
-              data: { ...node.data, ...newData },
-            };
-          }
-          return node;
-        })
-      );
-    },
-    [setNodes]
-  );
-
-  // Delete node
-  const handleDeleteNode = useCallback(
-    (id: string) => {
-      setNodes((nds) => nds.filter((n) => n.id !== id));
-      setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
-      setSelectedNodeId(null);
-    },
-    [setNodes, setEdges]
-  );
-
-  // Drag & drop add node from palette
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
@@ -245,25 +236,25 @@ function StudioCanvasInner() {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
+      if (!reactFlowWrapper.current || !reactFlowInstance) return;
 
       const type = event.dataTransfer.getData('application/reactflow/type');
       const dataStr = event.dataTransfer.getData('application/reactflow/data');
 
-      if (!type || !reactFlowWrapper.current || !reactFlowInstance) return;
+      if (!type) return;
 
-      const bounds = reactFlowWrapper.current.getBoundingClientRect();
       const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
 
-      const defaultData = dataStr ? JSON.parse(dataStr) : { label: type };
+      const parsedData = dataStr ? JSON.parse(dataStr) : {};
 
       const newNode: Node = {
-        id: `${type}-${Date.now().toString().slice(-4)}`,
+        id: getId(parsedData.category || 'node'),
         type,
         position,
-        data: defaultData,
+        data: parsedData,
       };
 
       setNodes((nds) => nds.concat(newNode));
@@ -272,32 +263,47 @@ function StudioCanvasInner() {
     [reactFlowInstance, setNodes]
   );
 
-  // Add node by clicking palette item
-  const handleAddNodeFromPalette = useCallback(
-    (type: string, data: Record<string, any>) => {
-      const newNode: Node = {
-        id: `${type}-${Date.now().toString().slice(-4)}`,
-        type,
-        position: { x: 250 + Math.random() * 200, y: 150 + Math.random() * 150 },
-        data,
-      };
-      setNodes((nds) => nds.concat(newNode));
-      setSelectedNodeId(newNode.id);
-    },
-    [setNodes]
-  );
+  const handleAddNodeFromPalette = (type: string, defaultData: Record<string, any>) => {
+    const position = {
+      x: 350 + Math.random() * 120,
+      y: 200 + Math.random() * 120,
+    };
+    const newNode: Node = {
+      id: getId(defaultData.category || 'node'),
+      type,
+      position,
+      data: defaultData,
+    };
+    setNodes((nds) => nds.concat(newNode));
+    setSelectedNodeId(newNode.id);
+  };
 
-  // Reset to default demo graph
-  const handleResetGraph = useCallback(() => {
+  const handleUpdateNodeData = (id: string, updatedData: Record<string, any>) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === id) {
+          return {
+            ...node,
+            data: updatedData,
+          };
+        }
+        return node;
+      })
+    );
+  };
+
+  const handleDeleteNode = (id: string) => {
+    setNodes((nds) => nds.filter((n) => n.id !== id));
+    setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
+    if (selectedNodeId === id) setSelectedNodeId(null);
+  };
+
+  const handleResetGraph = () => {
     setNodes(INITIAL_NODES);
     setEdges(INITIAL_EDGES);
     setSelectedNodeId(null);
-    if (reactFlowInstance) {
-      setTimeout(() => reactFlowInstance.fitView({ padding: 0.2 }), 50);
-    }
-  }, [setNodes, setEdges, reactFlowInstance]);
+  };
 
-  // Open deploy modal
   const handleOpenDeploy = () => {
     const hasTrigger = nodes.some((n) => n.data.category === 'trigger');
     const hasAction = nodes.some((n) => n.data.category === 'action');
@@ -311,22 +317,22 @@ function StudioCanvasInner() {
   };
 
   return (
-    <div className="flex h-full w-full relative overflow-hidden select-none bg-[#08050F]">
+    <div className="flex h-full w-full relative overflow-hidden select-none bg-[#07080d]">
       {/* Left Node Palette */}
       <NodePalette onAddNode={handleAddNodeFromPalette} />
 
       {/* Main XYFlow Canvas Area */}
       <div className="flex-1 flex flex-col h-full relative" ref={reactFlowWrapper}>
         {/* Studio Top Control Bar */}
-        <div className="h-16 border-b border-[#2E1E54]/60 bg-[#0D0819]/80 backdrop-blur-md px-5 flex items-center justify-between z-10">
+        <div className="h-16 border-b border-white/[0.06] bg-[#0E1017]/80 backdrop-blur-xl px-5 flex items-center justify-between z-10">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="status-dot status-dot-violet" />
+              <span className="status-dot status-dot-cyan" />
               <span className="font-bold text-sm text-white">
                 Pipeline Studio
               </span>
             </div>
-            <span className="text-xs px-3 py-1 rounded-full bg-purple-950/50 border border-purple-800/40 text-purple-300 font-medium tabular-nums">
+            <span className="text-xs px-3 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-slate-300 font-medium tabular-nums">
               DAG Flow: {nodes.length} Nodes &bull; {edges.length} Edges
             </span>
           </div>
@@ -341,15 +347,16 @@ function StudioCanvasInner() {
 
             <button
               onClick={handleResetGraph}
-              className="py-1.5 px-3.5 rounded-xl border border-purple-900/40 bg-[#150E28] hover:bg-[#1E1438] text-purple-200 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="py-1.5 px-3.5 rounded-xl border border-white/[0.08] bg-[#161B26] hover:bg-[#1E2433] text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-purple-400" />
+              <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
               <span>Reset Demo</span>
             </button>
 
+            {/* Primary CTA: Gradient from Indigo via Purple to Cyan (DeFi Pro) */}
             <button
               onClick={handleOpenDeploy}
-              className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/25 hover:shadow-purple-600/40 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500 hover:from-indigo-400 hover:to-cyan-400 text-white shadow-lg shadow-indigo-500/25 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             >
               <Rocket className="w-3.5 h-3.5" />
               <span>Deploy Automation (1-Click)</span>
@@ -357,8 +364,11 @@ function StudioCanvasInner() {
           </div>
         </div>
 
-        {/* Canvas Body (Explicit non-zero dimensions) */}
+        {/* Canvas Body (Explicit non-zero dimensions with Radial Spotlight) */}
         <div className="flex-1 w-full h-full relative">
+          {/* Lớp hào quang nền nhẹ ở giữa Canvas giúp xóa cảm giác đen đặc */}
+          <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_45%,rgba(56,189,248,0.08),rgba(139,92,246,0.05)_40%,transparent_75%)]" />
+
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -382,20 +392,20 @@ function StudioCanvasInner() {
           >
             <Background
               variant={BackgroundVariant.Dots}
-              gap={24}
+              gap={22}
               size={1.5}
-              color="#2E1E54"
+              color="rgba(148, 163, 184, 0.20)"
             />
-            <Controls className="!bg-[#110B1F] !border-[#2E1E54]/60 !rounded-xl !shadow-xl" />
+            <Controls className="!bg-[#0f111a]/90 !border-white/[0.08] !rounded-xl !shadow-2xl" />
             <MiniMap
               nodeColor={(node) => {
-                if (node.data.category === 'trigger') return '#00E5FF';
-                if (node.data.category === 'condition') return '#F59E0B';
-                if (node.data.category === 'action') return '#10B981';
-                return '#8B5CF6';
+                if (node.data.category === 'trigger') return '#38bdf8';
+                if (node.data.category === 'condition') return '#fbbf24';
+                if (node.data.category === 'action') return '#34d399';
+                return '#a855f7';
               }}
-              maskColor="rgba(8, 5, 15, 0.85)"
-              className="!border-[#2E1E54]/60 !rounded-xl !bg-[#110B1F]"
+              maskColor="rgba(7, 8, 13, 0.75)"
+              className="!bg-[#0f111a]/90 !border !border-white/10 !rounded-xl overflow-hidden shadow-lg"
             />
           </ReactFlow>
         </div>

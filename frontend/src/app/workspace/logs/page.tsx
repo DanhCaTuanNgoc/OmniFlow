@@ -73,7 +73,7 @@ const FALLBACK_LOGS: LogEntry[] = [
   },
 ];
 
-export function ActivityLogsPage() {
+function ActivityLogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>(FALLBACK_LOGS);
   const [filter, setFilter] = useState<'ALL' | 'SUCCESS' | 'SKIPPED'>('ALL');
 

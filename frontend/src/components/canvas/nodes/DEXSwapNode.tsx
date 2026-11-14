@@ -25,24 +25,24 @@ function DEXSwapNodeComponent({ id, data, selected }: NodeProps) {
       hasSourceHandle={false}
       hasTargetHandle={true}
     >
-      <div className="bg-[#0D0819]/90 rounded-xl p-2.5 border border-[#2E1E54]/60 space-y-2.5 text-xs">
-        <div className="flex justify-between items-center text-purple-300/70">
+      <div className="bg-[#07080d]/80 rounded-xl p-2.5 border border-white/[0.06] space-y-2.5 text-xs">
+        <div className="flex justify-between items-center text-slate-400">
           <span>Action:</span>
           <span className="font-semibold text-emerald-300">Swap {fromToken} &rarr; {toToken}</span>
         </div>
         <div className="space-y-1">
-          <div className="flex justify-between text-[11px] text-purple-300/70">
+          <div className="flex justify-between text-[11px] text-slate-400">
             <span>Vault Liquidation:</span>
-            <span className="font-bold text-white tabular-nums">{percent}% of Vault</span>
+            <span className="text-sm font-bold text-white font-mono tabular-nums">{percent}% of Vault</span>
           </div>
-          <div className="w-full bg-[#1B1233] rounded-full h-1.5 overflow-hidden border border-purple-900/40">
+          <div className="w-full bg-[#131620] rounded-full h-1.5 overflow-hidden border border-white/[0.08]">
             <div
               className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-1.5 rounded-full transition-all duration-300 shadow-sm"
               style={{ width: `${percent}%` }}
             />
           </div>
         </div>
-        <div className="flex justify-between items-center text-[11px] text-purple-300/70">
+        <div className="flex justify-between items-center text-[11px] text-slate-400">
           <span className="flex items-center gap-1">
             <Sliders className="w-3 h-3 text-emerald-400" />
             Max Slippage:

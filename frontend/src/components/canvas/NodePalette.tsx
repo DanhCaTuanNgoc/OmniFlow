@@ -206,10 +206,17 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
     event.dataTransfer.effectAllowed = 'move';
   };
 
+  const CATEGORY_STRIPES: Record<NodeCategory, string> = {
+    trigger: 'border-l-2 border-l-cyan-400 hover:border-l-cyan-300',
+    condition: 'border-l-2 border-l-amber-400 hover:border-l-amber-300',
+    action: 'border-l-2 border-l-emerald-400 hover:border-l-emerald-300',
+    logic: 'border-l-2 border-l-purple-400 hover:border-l-purple-300',
+  };
+
   return (
-    <div className="w-72 border-r border-[#2E1E54]/60 bg-[#0B0716] flex flex-col h-full z-10 select-none">
+    <div className="w-72 border-r border-white/[0.08] bg-[#0E1017]/90 backdrop-blur-2xl flex flex-col h-full z-10 select-none shadow-xl">
       {/* Palette Header */}
-      <div className="p-4 border-b border-[#2E1E54]/60 bg-[#0E091C]/60 space-y-3">
+      <div className="p-4 border-b border-white/[0.06] bg-[#07080D]/60 space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-white tracking-wide">
             Node Catalog
@@ -221,18 +228,18 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
 
         {/* Search */}
         <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-purple-400/60" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
           <input
             type="text"
             placeholder="Search nodes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[#150E28] border border-purple-900/40 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-purple-300/40 focus:outline-none focus:border-violet-500 transition-colors"
+            className="w-full bg-[#131620] border border-white/[0.08] rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-colors"
           />
         </div>
 
         {/* Category Filter Tabs */}
-        <div className="grid grid-cols-4 gap-1 p-1 bg-[#150E28] rounded-xl border border-purple-900/30 text-[11px]">
+        <div className="grid grid-cols-4 gap-1 p-1 bg-[#131620] rounded-xl border border-white/[0.06] text-[11px]">
           {(['all', 'trigger', 'condition', 'action'] as const).map((tab) => (
             <button
               key={tab}
@@ -240,8 +247,8 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
               className={cn(
                 'py-1 text-center rounded-lg capitalize font-medium transition-all cursor-pointer',
                 activeTab === tab
-                  ? 'bg-purple-900/60 text-white shadow-sm font-semibold'
-                  : 'text-purple-300/60 hover:text-white'
+                  ? 'bg-white/10 text-white shadow-sm font-semibold'
+                  : 'text-slate-400 hover:text-white'
               )}
             >
               {tab === 'all' ? 'All' : tab.slice(0, 4)}
@@ -258,37 +265,40 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
             draggable
             onDragStart={(e) => onDragStart(e, item)}
             onClick={() => onAddNode(item.type, item.defaultData)}
-            className="group relative p-2.5 rounded-xl border border-purple-900/30 bg-[#110B1F]/80 hover:bg-[#1B1233] hover:border-violet-500/50 cursor-grab active:cursor-grabbing transition-all duration-150 flex items-start gap-2.5 shadow-sm"
+            className={cn(
+              'group relative p-2.5 rounded-xl border border-white/[0.06] bg-[#11141E]/90 hover:bg-[#161B26] hover:border-white/[0.15] cursor-grab active:cursor-grabbing transition-all duration-150 flex items-start gap-2.5 shadow-sm',
+              CATEGORY_STRIPES[item.category]
+            )}
           >
-            <div className="p-2 rounded-xl border border-purple-900/40 bg-[#0D0819] group-hover:border-violet-500/50 transition-colors">
+            <div className="p-2 rounded-xl border border-white/[0.06] bg-[#0A0C12] group-hover:border-white/[0.15] transition-colors">
               {item.icon}
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-100 group-hover:text-violet-300 transition-colors truncate">
+                <span className="text-xs font-semibold text-slate-100 group-hover:text-white transition-colors truncate">
                   {item.name}
                 </span>
-                <Plus className="w-3.5 h-3.5 text-purple-400 group-hover:text-violet-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Plus className="w-3.5 h-3.5 text-slate-500 group-hover:text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <p className="text-[11px] text-purple-300/60 line-clamp-1 mt-0.5">
+              <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
                 {item.description}
               </p>
             </div>
 
-            <GripVertical className="w-3.5 h-3.5 text-purple-500/40 self-center opacity-0 group-hover:opacity-100 transition-opacity" />
+            <GripVertical className="w-3.5 h-3.5 text-slate-600 self-center opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         ))}
 
         {filteredItems.length === 0 && (
-          <div className="text-center py-8 text-xs text-purple-300/50">
+          <div className="text-center py-8 text-xs text-slate-500">
             No matching nodes found.
           </div>
         )}
       </div>
 
       {/* Footer Instruction */}
-      <div className="p-3 border-t border-[#2E1E54]/60 text-[11px] text-purple-300/60 text-center bg-[#0E091C]/40">
+      <div className="p-3 border-t border-white/[0.06] text-[11px] text-slate-500 text-center bg-[#07080D]/60">
         Drag & drop or click to add
       </div>
     </div>

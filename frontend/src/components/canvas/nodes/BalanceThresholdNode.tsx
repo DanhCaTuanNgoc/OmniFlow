@@ -24,14 +24,14 @@ function BalanceThresholdNodeComponent({ id, data, selected }: NodeProps) {
       hasSourceHandle={true}
       hasTargetHandle={true}
     >
-      <div className="bg-[#0D0819]/90 rounded-xl p-2.5 border border-[#2E1E54]/60 space-y-2 text-xs">
-        <div className="flex justify-between items-center text-purple-300/70">
+      <div className="bg-[#07080d]/80 rounded-xl p-2.5 border border-white/[0.06] space-y-2 text-xs">
+        <div className="flex justify-between items-center text-slate-400">
           <span>Target:</span>
-          <span className="font-semibold text-white">{targetAccount}</span>
+          <span className="text-sm font-semibold text-white font-mono">{targetAccount}</span>
         </div>
-        <div className="flex justify-between items-center text-purple-300/70">
+        <div className="flex justify-between items-center text-slate-400">
           <span>Constraint:</span>
-          <span className="font-medium text-amber-300 tabular-nums">Balance {comparison === 'Above' ? '>' : '<'} {threshold} ETH</span>
+          <span className="font-medium text-amber-300 font-mono tabular-nums">Balance {comparison === 'Above' ? '>' : '<'} {threshold} ETH</span>
         </div>
       </div>
       <div className="flex items-center gap-1.5 text-[11px] text-amber-400/80 font-mono">

@@ -25,16 +25,16 @@ function PriceThresholdGuardNodeComponent({ id, data, selected }: NodeProps) {
       hasSourceHandle={true}
       hasTargetHandle={true}
     >
-      <div className="bg-[#0D0819]/90 rounded-xl p-2.5 border border-[#2E1E54]/60 space-y-2 text-xs">
-        <div className="flex justify-between items-center text-purple-300/70">
+      <div className="bg-[#07080d]/80 rounded-xl p-2.5 border border-white/[0.06] space-y-2 text-xs">
+        <div className="flex justify-between items-center text-slate-400">
           <span>Condition:</span>
           <span className="font-semibold text-amber-300">
             Price {isStopLoss ? '<=' : '>='}
           </span>
         </div>
-        <div className="flex justify-between items-center text-purple-300/70">
+        <div className="flex justify-between items-center text-slate-400">
           <span>Trigger Price:</span>
-          <span className="text-sm font-bold text-white tabular-nums">
+          <span className="text-sm font-bold text-white font-mono tabular-nums">
             {formatUSD(thresholdPrice)}
           </span>
         </div>

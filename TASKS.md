@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 16 | 10 | 0 | **62.5%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 17 | 11 | 0 | **64.7%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **38** | **23** | **0** | **60.5%** |
+| **TỔNG CỘNG** | **21 Ngày** | **39** | **24** | **0** | **61.5%** |
 
 ---
 
@@ -408,6 +408,20 @@
   * Kiểm thử `tsc --noEmit` đạt 0 lỗi biên dịch, 100% Type-Safe.
 * **Ngày tạo:** 14/11/2026 20:04
 * **Ngày hoàn thành:** 14/11/2026 20:12
+* **Trạng thái:** `DONE`
+
+#### `TASK-217` [DONE] — Lột xác UI Studio Canvas theo 5 Khuyến nghị Chuyên Gia (Floating Glass Panels, Radial Canvas Spotlight, Photon Particle Edges, Top Gradient Accent Nodes, DeFi Pro Colors)
+* **Module / Màn hình:** Pipeline Studio (`StudioCanvas.tsx`, `CustomEdge.tsx`, `NodePalette.tsx`, `NodeCard.tsx`, `Sidebar.tsx`)
+* **Mục đích:** Khắc phục triệt để 5 vấn đề UI "cứng" và "tối", biến Studio thành không gian Canvas mở 100% full-bleed với các panel kính nổi (Figma/Linear style), hiệu ứng hạt photon chuyển động thật trên dây nối, và bảng màu DeFi Pro chuẩn Uniswap/Hyperliquid.
+* **Chi tiết thực thi:**
+  * Bước 1: Đánh sáng nền Canvas với Radial Spotlight `radial-gradient(circle_at_50%_45%,rgba(56,189,248,0.08),rgba(139,92,246,0.05)_40%,transparent_75%)` và tăng sáng Dot Grid `rgba(148, 163, 184, 0.20)`.
+  * Bước 2: Biến Node Catalog và Studio Toolbar thành Floating Glass Panels (`bg-[#0f111a]/85 backdrop-blur-2xl border border-white/[0.08] shadow-2xl rounded-2xl`), tích hợp nút thu gọn mở rộng Catalog; hỗ trợ Sidebar thu nhỏ 64px icon-rail giải phóng 200px cho Canvas.
+  * Bước 3: Nâng cấp `NodeCard.tsx` với Top Color Accent Bar (Cyan/Amber/Emerald/Violet `border-t-2`) và Glow Shadow tương ứng; phóng to con số chủ chốt lên `text-sm font-semibold text-white font-mono`.
+  * Bước 4: Nâng cấp `CustomEdge.tsx` với 2 lớp SVG path (lớp phát quang 6px + lõi 2px) kèm hạt photon năng lượng `<circle>` chuyển động liên tục dọc theo dây nối bằng `<animateMotion>`. Handles đổi sang điểm sáng nhỏ `!w-3 !h-3` viền phát quang.
+  * Bước 5: Cải tiến MiniMap tiệp màu nền `!bg-[#0f111a]/90 !border !border-white/10 !rounded-xl` maskColor `rgba(7, 8, 13, 0.75)`.
+  * Sửa lỗi Type-Safety trong `CustomEdge.tsx`, `active/page.tsx`, `logs/page.tsx` và verify `tsc --noEmit` 0 lỗi.
+* **Ngày tạo:** 14/11/2026 21:12
+* **Ngày hoàn thành:** 14/11/2026 21:19
 * **Trạng thái:** `DONE`
 
 ---

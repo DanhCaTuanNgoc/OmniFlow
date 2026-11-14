@@ -24,12 +24,12 @@ function EmergencySafeSweepNodeComponent({ id, data, selected }: NodeProps) {
       hasSourceHandle={false}
       hasTargetHandle={true}
     >
-      <div className="bg-[#0D0819]/90 rounded-xl p-2.5 border border-[#2E1E54]/60 space-y-2 text-xs">
-        <div className="flex justify-between items-center text-purple-300/70">
+      <div className="bg-[#07080d]/80 rounded-xl p-2.5 border border-white/[0.06] space-y-2 text-xs">
+        <div className="flex justify-between items-center text-slate-400">
           <span>Safe Backup:</span>
-          <span className="font-mono text-white font-medium">{truncateAddress(safeAddress)}</span>
+          <span className="font-mono text-white text-xs font-medium">{truncateAddress(safeAddress)}</span>
         </div>
-        <div className="flex justify-between items-center text-purple-300/70">
+        <div className="flex justify-between items-center text-slate-400">
           <span>Evacuation Scope:</span>
           <span className="text-emerald-300 font-semibold">{assetScope === 'ALL' ? '100% ETH + ERC20' : 'ETH Only'}</span>
         </div>

@@ -32,7 +32,7 @@ const DEMO_ACTIVE_PIPELINES = [
   },
 ];
 
-export function ActiveAutomationsPage() {
+function ActiveAutomationsPage() {
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-6 select-none">
       {/* Header */}
