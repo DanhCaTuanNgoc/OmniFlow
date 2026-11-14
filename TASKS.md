@@ -13,10 +13,10 @@
 | Giai đoạn (Phase) | Thời gian | Tổng Tasks | Hoàn thành | Đang làm | Tỷ lệ hoàn thành |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 6 | 6 | 0 | **100%** |
-| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 5 | 0 | **62.5%** |
+| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 6 | 0 | **75.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 5 | 0 | **45.5%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **30** | **16** | **0** | **53.3%** |
+| **TỔNG CỘNG** | **21 Ngày** | **30** | **17** | **0** | **56.7%** |
 
 ---
 
@@ -180,15 +180,16 @@
 * **Ngày hoàn thành:** --
 * **Trạng thái:** `TODO`
 
-#### `TASK-108` [TODO] — Xuất ABIs & Types Sang `packages/shared/`
+#### `TASK-108` [DONE] — Xuất ABIs & Types Sang `packages/shared/`
 * **Module / Màn hình:** `packages/shared/`
 * **Mục đích:** Cung cấp ABIs và Pre-compiled Bytecode chính thức cho Frontend và Backend.
 * **Chi tiết thực thi:**
-  * Trích xuất ABI/Bytecode của `ActionVault` và `StopLoss_Pipeline`.
-  * Khởi tạo file export TypeScript trong `packages/shared/src/index.ts`.
+  * Tạo workspace package `@omniflow/shared` với cấu hình TypeScript build độc lập.
+  * Viết script `scripts/extract-abis.js` tự động trích xuất ABI và Bytecode của `ActionVault` và `StopLoss_Pipeline` từ output Foundry sang TypeScript constants.
+  * Build thành công `@omniflow/shared` xuất đầy đủ `.d.ts` và `.js` types.
 * **Ngày tạo:** 14/11/2026 17:35
-* **Ngày hoàn thành:** --
-* **Trạng thái:** `TODO`
+* **Ngày hoàn thành:** 14/11/2026 18:54
+* **Trạng thái:** `DONE`
 
 ---
 
