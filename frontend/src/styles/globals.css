@@ -3,50 +3,36 @@
 @tailwind utilities;
 
 :root {
-  --background: #06040A;
+  --background: #08050F;
   --foreground: #F8FAFC;
-  --bg-obsidian-deep: #06040A;
-  --bg-obsidian-surface: #0B0813;
-  --bg-obsidian-elevated: #110C1E;
-  --bg-obsidian-highlight: #171028;
-  --border-subtle: #1C142E;
-  --border-focus: #2E1F4A;
-  --border-active: #8B5CF6;
-  --brand-violet: #8B5CF6;
-  --brand-amethyst: #C084FC;
-  --neon-emerald: #00FF9D;
-  --tactical-amber: #F59E0B;
-  --danger-rose: #EF4444;
+  --obsidian-deep: #08050F;
+  --obsidian-surface: #110B1F;
+  --obsidian-elevated: #1B1233;
+  --border-violet-subtle: rgba(139, 92, 246, 0.18);
+  --border-violet-active: #8B5CF6;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Monospace font settings with tabular-nums & slashed zero */
-code, kbd, samp, pre, .font-mono {
-  font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
-  font-feature-settings: 'tnum' 1, 'zero' 1;
-  letter-spacing: -0.015em;
-}
-
-/* Custom Tactical Obsidian Scrollbar */
+/* Custom Sleek Obsidian Violet Scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #080512;
+  background: #08050F;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #261B42;
-  border-radius: 0px !important;
+  background: #2E1E54;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -56,163 +42,105 @@ code, kbd, samp, pre, .font-mono {
 /* Tabular figures for financial and latency metrics */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 
-/* Tech Corner Accents (L-Brackets) */
-.tech-corner-accent {
-  position: relative;
+/* Monospace font settings */
+code, kbd, samp, pre, .font-mono {
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
 }
 
-.tech-corner-accent::before {
-  content: '';
+/* Glassmorphism Surface Cards */
+.glass-panel {
+  background: rgba(17, 11, 31, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(139, 92, 246, 0.18);
+}
+
+.glass-panel-subtle {
+  background: rgba(27, 18, 51, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(139, 92, 246, 0.14);
+}
+
+/* Atmospheric Ambient Glows */
+.mesh-glow-violet {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 6px;
-  height: 6px;
-  border-top: 2px solid #8B5CF6;
-  border-left: 2px solid #8B5CF6;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.tech-corner-accent::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 6px;
-  height: 6px;
-  border-bottom: 2px solid #8B5CF6;
-  border-right: 2px solid #8B5CF6;
-  pointer-events: none;
-  z-index: 10;
-}
-
-/* Tech Corner Accent Variations */
-.tech-corner-accent-cyan::before {
-  border-top-color: #00E5FF;
-  border-left-color: #00E5FF;
-}
-.tech-corner-accent-cyan::after {
-  border-bottom-color: #00E5FF;
-  border-right-color: #00E5FF;
-}
-
-.tech-corner-accent-amber::before {
-  border-top-color: #F59E0B;
-  border-left-color: #F59E0B;
-}
-.tech-corner-accent-amber::after {
-  border-bottom-color: #F59E0B;
-  border-right-color: #F59E0B;
-}
-
-.tech-corner-accent-emerald::before {
-  border-top-color: #00FF9D;
-  border-left-color: #00FF9D;
-}
-.tech-corner-accent-emerald::after {
-  border-bottom-color: #00FF9D;
-  border-right-color: #00FF9D;
-}
-
-/* Square Status Pips */
-.status-pip {
-  width: 6px;
-  height: 6px;
-  border-radius: 0px !important;
-  display: inline-block;
-  flex-shrink: 0;
-}
-
-.status-pip-emerald {
-  background-color: #00FF9D;
-  box-shadow: 0 0 6px rgba(0, 255, 157, 0.8);
-}
-
-.status-pip-amber {
-  background-color: #F59E0B;
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.8);
-}
-
-.status-pip-rose {
-  background-color: #EF4444;
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
-}
-
-.status-pip-violet {
-  background-color: #8B5CF6;
-  box-shadow: 0 0 6px rgba(139, 92, 246, 0.8);
-}
-
-.status-pip-cyan {
-  background-color: #00E5FF;
-  box-shadow: 0 0 6px rgba(0, 229, 255, 0.8);
-}
-
-/* Atmospheric Textures */
-.cyber-grid {
-  background-size: 32px 32px;
-  background-image:
-    linear-gradient(to right, rgba(139, 92, 246, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(139, 92, 246, 0.05) 1px, transparent 1px);
-}
-
-.cyber-dots {
-  background-image: radial-gradient(rgba(168, 85, 247, 0.16) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-.scanline-overlay {
-  background: linear-gradient(
-    rgba(14, 10, 30, 0) 50%,
-    rgba(0, 0, 0, 0.28) 50%
-  );
-  background-size: 100% 4px;
-}
-
-.glow-orb-violet {
-  position: absolute;
-  width: 500px;
-  height: 500px;
   filter: blur(120px);
   pointer-events: none;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.18) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
 }
 
-/* XYFlow Custom Canvas Styling (Zero-Radius Obsidian) */
+/* Status Pulsing Dot */
+.status-dot {
+  position: relative;
+  display: inline-flex;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+}
+
+.status-dot-emerald {
+  background-color: #10B981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+}
+
+.status-dot-violet {
+  background-color: #8B5CF6;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.8);
+}
+
+.status-dot-cyan {
+  background-color: #00E5FF;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
+}
+
+.status-dot-amber {
+  background-color: #F59E0B;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+}
+
+.status-dot-rose {
+  background-color: #EF4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+}
+
+/* XYFlow Custom Canvas Styling (Modern Obsidian Glass) */
 .react-flow__background {
-  background-color: #06040A !important;
+  background-color: #08050F !important;
 }
 
 .react-flow__controls {
-  border: 1px solid #1C142E !important;
-  background: #0B0813 !important;
-  border-radius: 0px !important;
+  border: 1px solid rgba(139, 92, 246, 0.22) !important;
+  background: #110B1F !important;
+  border-radius: 12px !important;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
 }
 
 .react-flow__controls-button {
-  background: #0B0813 !important;
-  border-bottom: 1px solid #1C142E !important;
-  border-radius: 0px !important;
+  background: #110B1F !important;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.15) !important;
   fill: #A1A1AA !important;
+  transition: all 0.2s ease;
 }
 
 .react-flow__controls-button:hover {
-  background: #171028 !important;
+  background: #1B1233 !important;
   fill: #C084FC !important;
 }
 
 .react-flow__minimap {
-  background-color: #0B0813 !important;
-  border: 1px solid #1C142E !important;
-  border-radius: 0px !important;
+  background-color: #110B1F !important;
+  border: 1px solid rgba(139, 92, 246, 0.22) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
 }
 
-/* Animated Photon Pulse Edge */
+/* Animated Photon Pulse Edge (Smooth Neon Violet/Cyan Beam) */
 @keyframes photonPulseAnimation {
   0% {
     stroke-dashoffset: 100%;
@@ -223,11 +151,11 @@ code, kbd, samp, pre, .font-mono {
   }
   100% {
     stroke-dashoffset: 0%;
-    stroke: #00FF9D;
+    stroke: #10B981;
   }
 }
 
 .edge-pulse-active path {
-  stroke-dasharray: 8 4 !important;
-  animation: photonPulseAnimation 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
+  stroke-dasharray: 8 6 !important;
+  animation: photonPulseAnimation 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
 }

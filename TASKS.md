@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 15 | 9 | 0 | **60.0%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 16 | 10 | 0 | **62.5%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **37** | **22** | **0** | **59.5%** |
+| **TỔNG CỘNG** | **21 Ngày** | **38** | **23** | **0** | **60.5%** |
 
 ---
 
@@ -395,6 +395,19 @@
   * Kiểm thử `tsc --noEmit` đạt 0 lỗi biên dịch.
 * **Ngày tạo:** 14/11/2026 19:42
 * **Ngày hoàn thành:** 14/11/2026 19:52
+* **Trạng thái:** `DONE`
+
+#### `TASK-216` [DONE] — Thiết kế Giao diện Modern FinTech Glass với Màu Chủ Đạo Tím Obsidian
+* **Module / Màn hình:** Toàn bộ Frontend (`frontend/src/`)
+* **Mục đích:** Nâng cấp toàn diện giao diện từ phong cách infra/hacker sang chuẩn Modern DeFi FinTech cao cấp (tương tự Uniswap, Linear, Jupiter): Giữ trọn vẹn màu chủ đạo Tím Obsidian (#08050F, #110B1F, #8B5CF6, #C084FC), kết hợp bo góc mềm mại tinh tế (12px - 16px), hiệu ứng kính mờ Glassmorphism, cổng nối tròn nhẵn và typography Sans tự nhiên.
+* **Chi tiết thực thi:**
+  * Tinh chỉnh `tailwind.config.ts` & `globals.css`: bảng màu Tím Obsidian sâu thẳm, bo góc mềm mại `rounded-2xl` / `rounded-xl`, ánh sáng mesh glow và hiệu ứng frosted glass.
+  * Tái thiết kế `NodeCard.tsx` và 10 Visual Nodes: bo góc 16px, cổng kết nối Handle tròn mềm mại với glow xung ánh sáng, header trực quan chuẩn Zapier Web3.
+  * Đánh bóng App Shell (`Header.tsx`, `Sidebar.tsx`): Nút kết nối ví MetaMask dạng pill mượt mà, menu điều hướng thanh thoát với viền tím tinh tế.
+  * Cập nhật các trang màn hình: `Vault Manager`, `Active Automations`, `Template Library`, `DeployModal`, `InspectorPanel` theo ngôn ngữ Tím Obsidian FinTech.
+  * Kiểm thử `tsc --noEmit` đạt 0 lỗi biên dịch, 100% Type-Safe.
+* **Ngày tạo:** 14/11/2026 20:04
+* **Ngày hoàn thành:** 14/11/2026 20:12
 * **Trạng thái:** `DONE`
 
 ---

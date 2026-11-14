@@ -311,48 +311,48 @@ function StudioCanvasInner() {
   };
 
   return (
-    <div className="flex h-full w-full relative overflow-hidden select-none bg-[#06040A]">
+    <div className="flex h-full w-full relative overflow-hidden select-none bg-[#08050F]">
       {/* Left Node Palette */}
       <NodePalette onAddNode={handleAddNodeFromPalette} />
 
       {/* Main XYFlow Canvas Area */}
       <div className="flex-1 flex flex-col h-full relative" ref={reactFlowWrapper}>
         {/* Studio Top Control Bar */}
-        <div className="h-14 border-b border-[#1C142E] bg-[#06040A] px-4 flex items-center justify-between z-10 font-mono">
+        <div className="h-16 border-b border-[#2E1E54]/60 bg-[#0D0819]/80 backdrop-blur-md px-5 flex items-center justify-between z-10">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="status-pip status-pip-violet" />
-              <span className="font-extrabold text-xs uppercase tracking-wider text-zinc-100">
-                PIPELINE STUDIO
+              <span className="status-dot status-dot-violet" />
+              <span className="font-bold text-sm text-white">
+                Pipeline Studio
               </span>
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-none bg-[#110C1E] border border-[#2E1F4A] text-[#C084FC] font-mono tabular-nums uppercase">
-              DAG FLOW: {nodes.length} NODES &bull; {edges.length} EDGES
+            <span className="text-xs px-3 py-1 rounded-full bg-purple-950/50 border border-purple-800/40 text-purple-300 font-medium tabular-nums">
+              DAG Flow: {nodes.length} Nodes &bull; {edges.length} Edges
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {validationWarning && (
-              <div className="text-[10px] font-mono text-amber-400 bg-amber-950/40 border border-amber-800/60 px-2.5 py-1 rounded-none flex items-center gap-1.5 animate-pulse uppercase tracking-wider">
-                <AlertTriangle className="w-3.5 h-3.5" />
-                {validationWarning}
+              <div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5 animate-pulse">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                <span>{validationWarning}</span>
               </div>
             )}
 
             <button
               onClick={handleResetGraph}
-              className="py-1.5 px-3 rounded-none border border-[#2E1F4A] bg-[#110C1E] hover:bg-[#1A102E] text-zinc-300 hover:text-white hover:border-[#8B5CF6] text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="py-1.5 px-3.5 rounded-xl border border-purple-900/40 bg-[#150E28] hover:bg-[#1E1438] text-purple-200 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>RESET DEMO</span>
+              <RotateCcw className="w-3.5 h-3.5 text-purple-400" />
+              <span>Reset Demo</span>
             </button>
 
             <button
               onClick={handleOpenDeploy}
-              className="flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-mono font-bold uppercase tracking-wider rounded-none border border-[#8B5CF6] bg-[#8B5CF6] hover:bg-[#7C3AED] text-white shadow-md shadow-[#8B5CF6]/20 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/25 hover:shadow-purple-600/40 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             >
               <Rocket className="w-3.5 h-3.5" />
-              <span>DEPLOY AUTOMATION</span>
+              <span>Deploy Automation (1-Click)</span>
             </button>
           </div>
         </div>
@@ -384,18 +384,18 @@ function StudioCanvasInner() {
               variant={BackgroundVariant.Dots}
               gap={24}
               size={1.5}
-              color="#2E1F4A"
+              color="#2E1E54"
             />
-            <Controls className="!bg-[#0B0813] !border-[#1C142E] !rounded-none" />
+            <Controls className="!bg-[#110B1F] !border-[#2E1E54]/60 !rounded-xl !shadow-xl" />
             <MiniMap
               nodeColor={(node) => {
                 if (node.data.category === 'trigger') return '#00E5FF';
                 if (node.data.category === 'condition') return '#F59E0B';
-                if (node.data.category === 'action') return '#00FF9D';
+                if (node.data.category === 'action') return '#10B981';
                 return '#8B5CF6';
               }}
-              maskColor="rgba(6, 4, 10, 0.85)"
-              className="!border-[#1C142E] !rounded-none !bg-[#0B0813]"
+              maskColor="rgba(8, 5, 15, 0.85)"
+              className="!border-[#2E1E54]/60 !rounded-xl !bg-[#110B1F]"
             />
           </ReactFlow>
         </div>

@@ -207,41 +207,41 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
   };
 
   return (
-    <div className="w-72 border-r border-[#1C142E] bg-[#0B0813] flex flex-col h-full z-10 select-none font-mono">
+    <div className="w-72 border-r border-[#2E1E54]/60 bg-[#0B0716] flex flex-col h-full z-10 select-none">
       {/* Palette Header */}
-      <div className="p-3 border-b border-[#1C142E] bg-[#06040A] space-y-2.5">
+      <div className="p-4 border-b border-[#2E1E54]/60 bg-[#0E091C]/60 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-zinc-200">
-            NODE CATALOG
+          <span className="text-xs font-bold text-white tracking-wide">
+            Node Catalog
           </span>
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-none bg-[#110C1E] border border-[#2E1F4A] text-[#C084FC]">
-            10 NODES
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-950/70 border border-purple-800/50 text-purple-300 font-semibold">
+            10 Nodes
           </span>
         </div>
 
         {/* Search */}
         <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-zinc-500" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-purple-400/60" />
           <input
             type="text"
-            placeholder="Search catalog..."
+            placeholder="Search nodes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[#0B0813] border border-[#1C142E] rounded-none pl-8 pr-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-[#8B5CF6] transition-colors"
+            className="w-full bg-[#150E28] border border-purple-900/40 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-purple-300/40 focus:outline-none focus:border-violet-500 transition-colors"
           />
         </div>
 
         {/* Category Filter Tabs */}
-        <div className="grid grid-cols-4 gap-1 p-0.5 bg-[#0B0813] rounded-none border border-[#1C142E] text-[10px]">
+        <div className="grid grid-cols-4 gap-1 p-1 bg-[#150E28] rounded-xl border border-purple-900/30 text-[11px]">
           {(['all', 'trigger', 'condition', 'action'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                'py-1 text-center rounded-none uppercase font-bold tracking-wider transition-colors cursor-pointer',
+                'py-1 text-center rounded-lg capitalize font-medium transition-all cursor-pointer',
                 activeTab === tab
-                  ? 'bg-[#110C1E] text-white border-b-2 border-[#8B5CF6]'
-                  : 'text-zinc-500 hover:text-zinc-300'
+                  ? 'bg-purple-900/60 text-white shadow-sm font-semibold'
+                  : 'text-purple-300/60 hover:text-white'
               )}
             >
               {tab === 'all' ? 'All' : tab.slice(0, 4)}
@@ -251,44 +251,44 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
       </div>
 
       {/* Nodes List */}
-      <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {filteredItems.map((item) => (
           <div
             key={item.type}
             draggable
             onDragStart={(e) => onDragStart(e, item)}
             onClick={() => onAddNode(item.type, item.defaultData)}
-            className="group relative p-2.5 rounded-none border border-[#1C142E] bg-[#06040A] hover:bg-[#110C1E] hover:border-[#8B5CF6] cursor-grab active:cursor-grabbing transition-all duration-150 flex items-start gap-2.5"
+            className="group relative p-2.5 rounded-xl border border-purple-900/30 bg-[#110B1F]/80 hover:bg-[#1B1233] hover:border-violet-500/50 cursor-grab active:cursor-grabbing transition-all duration-150 flex items-start gap-2.5 shadow-sm"
           >
-            <div className="p-1.5 rounded-none border border-[#1C142E] bg-[#0B0813] group-hover:border-[#8B5CF6] transition-colors">
+            <div className="p-2 rounded-xl border border-purple-900/40 bg-[#0D0819] group-hover:border-violet-500/50 transition-colors">
               {item.icon}
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-200 group-hover:text-white uppercase tracking-wider transition-colors truncate">
+                <span className="text-xs font-semibold text-slate-100 group-hover:text-violet-300 transition-colors truncate">
                   {item.name}
                 </span>
-                <Plus className="w-3.5 h-3.5 text-zinc-500 group-hover:text-[#8B5CF6] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Plus className="w-3.5 h-3.5 text-purple-400 group-hover:text-violet-300 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <p className="text-[10px] text-zinc-500 line-clamp-1 mt-0.5 font-sans">
+              <p className="text-[11px] text-purple-300/60 line-clamp-1 mt-0.5">
                 {item.description}
               </p>
             </div>
 
-            <GripVertical className="w-3.5 h-3.5 text-zinc-600 self-center opacity-0 group-hover:opacity-100 transition-opacity" />
+            <GripVertical className="w-3.5 h-3.5 text-purple-500/40 self-center opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         ))}
 
         {filteredItems.length === 0 && (
-          <div className="text-center py-8 text-xs text-zinc-500 uppercase tracking-wider">
+          <div className="text-center py-8 text-xs text-purple-300/50">
             No matching nodes found.
           </div>
         )}
       </div>
 
       {/* Footer Instruction */}
-      <div className="p-2.5 border-t border-[#1C142E] text-[10px] text-zinc-500 text-center bg-[#06040A] uppercase tracking-wider">
+      <div className="p-3 border-t border-[#2E1E54]/60 text-[11px] text-purple-300/60 text-center bg-[#0E091C]/40">
         Drag & drop or click to add
       </div>
     </div>

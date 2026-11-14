@@ -22,18 +22,18 @@ function CooldownGuardNodeComponent({ id, data, selected }: NodeProps) {
       hasSourceHandle={true}
       hasTargetHandle={true}
     >
-      <div className="bg-[#06040A] rounded-none p-2.5 border border-[#1C142E] space-y-1.5 font-mono text-[11px]">
-        <div className="flex justify-between items-center text-zinc-400">
+      <div className="bg-[#0D0819]/90 rounded-xl p-2.5 border border-[#2E1E54]/60 space-y-2 text-xs">
+        <div className="flex justify-between items-center text-purple-300/70">
           <span>Lock Interval:</span>
-          <span className="font-bold text-zinc-100 tabular-nums">{cooldownSec}s ({Math.floor(cooldownSec / 60)} min)</span>
+          <span className="font-semibold text-white tabular-nums">{cooldownSec}s ({Math.floor(cooldownSec / 60)} min)</span>
         </div>
-        <div className="flex justify-between items-center text-zinc-400">
+        <div className="flex justify-between items-center text-purple-300/70">
           <span>Defense Scope:</span>
-          <span className="text-amber-400 font-bold">Base 200ms Block Flurry</span>
+          <span className="text-amber-300 font-medium">Base 200ms Storm Guard</span>
         </div>
       </div>
-      <div className="flex items-center gap-1.5 text-[10px] text-amber-400/80 font-mono">
-        <ShieldCheck className="w-3 h-3" />
+      <div className="flex items-center gap-1.5 text-[11px] text-amber-400/80 font-mono">
+        <ShieldCheck className="w-3.5 h-3.5" />
         <span>now - lastTriggered &gt; cooldown</span>
       </div>
     </NodeCard>

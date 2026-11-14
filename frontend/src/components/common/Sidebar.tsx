@@ -20,7 +20,7 @@ const NAV_ITEMS = [
     name: 'Pipeline Studio',
     href: '/workspace/studio',
     icon: Network,
-    badge: '10 NODES',
+    badge: '10 Nodes',
   },
   {
     name: 'Active Automations',
@@ -48,34 +48,34 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 border-r border-[#1C142E] bg-[#0B0813] flex flex-col justify-between select-none">
+    <aside className="w-64 border-r border-[#2E1E54]/60 bg-[#0B0716] flex flex-col justify-between select-none">
       {/* Brand Header */}
       <div>
-        <div className="p-4 border-b border-[#1C142E] bg-[#06040A]">
+        <div className="p-4 border-b border-[#2E1E54]/60 bg-[#0E091C]/60">
           <Link href="/workspace/studio" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-none bg-[#110C1E] border border-[#8B5CF6] flex items-center justify-center shadow-md shadow-[#8B5CF6]/20 group-hover:bg-[#8B5CF6]/20 transition-all">
-              <Zap className="w-5 h-5 text-[#8B5CF6]" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 via-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-600/30 group-hover:scale-105 transition-transform">
+              <Zap className="w-5 h-5 text-white fill-white" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-sm tracking-wider uppercase text-white font-mono">
-                  OMNIFLOW
+                <span className="font-bold text-base tracking-tight text-white">
+                  OmniFlow
                 </span>
-                <span className="text-[9px] font-mono px-1 py-0.2 rounded-none bg-[#110C1E] text-[#C084FC] border border-[#2E1F4A] font-bold">
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-purple-950/70 text-purple-300 border border-purple-800/50 font-semibold">
                   v1.0
                 </span>
               </div>
-              <p className="text-[9px] text-zinc-500 font-mono tracking-widest uppercase">
-                THE ZAPIER OF WEB3
+              <p className="text-[11px] text-purple-300/60 font-medium">
+                The Zapier of Web3
               </p>
             </div>
           </Link>
         </div>
 
         {/* Navigation Items */}
-        <nav className="p-2 space-y-1">
-          <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-zinc-500 px-3 py-1.5">
-            // CONSOLE MODULES
+        <nav className="p-3 space-y-1">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-purple-300/50 px-3 py-1.5">
+            Workspace
           </div>
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href || (item.href === '/workspace/studio' && pathname === '/workspace');
@@ -85,18 +85,18 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex items-center justify-between px-3 py-2 text-xs font-mono tracking-wider uppercase transition-colors cursor-pointer rounded-none border-l-2',
+                  'flex items-center justify-between px-3.5 py-2.5 text-xs rounded-xl font-medium transition-all cursor-pointer',
                   isActive
-                    ? 'bg-[#110C1E] text-white border-[#8B5CF6] font-bold'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-[#110C1E]/60 border-transparent'
+                    ? 'bg-gradient-to-r from-purple-900/50 to-purple-950/20 text-white font-semibold shadow-sm border border-purple-800/40'
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-[#150E28]'
                 )}
               >
                 <div className="flex items-center gap-2.5">
-                  <Icon className={cn('w-4 h-4', isActive ? 'text-[#8B5CF6]' : 'text-zinc-500')} />
+                  <Icon className={cn('w-4 h-4', isActive ? 'text-violet-400' : 'text-purple-400/60')} />
                   <span>{item.name}</span>
                 </div>
                 {item.badge && (
-                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-none bg-[#171028] text-[#C084FC] border border-[#2E1F4A]">
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">
                     {item.badge}
                   </span>
                 )}
@@ -106,28 +106,28 @@ export function Sidebar() {
         </nav>
       </div>
 
-      {/* Network Live Telemetry Footer (Tech Corner Accent) */}
-      <div className="p-3 bg-[#06040A] border-t border-[#1C142E]">
-        <div className="tech-corner-accent p-3 bg-[#0B0813] border border-[#1C142E] space-y-2.5 font-mono">
-          <div className="flex items-center justify-between pb-2 border-b border-[#1C142E] text-[10px]">
+      {/* Network Live Telemetry Footer (Rounded Glass Panel) */}
+      <div className="p-3 bg-[#08050F]/70 border-t border-[#2E1E54]/60">
+        <div className="p-3.5 rounded-2xl bg-[#110B1F]/90 border border-[#2E1E54] space-y-2.5 shadow-sm">
+          <div className="flex items-center justify-between pb-2 border-b border-purple-900/30 text-xs">
             <div className="flex items-center gap-2">
-              <span className="status-pip status-pip-emerald" />
-              <span className="text-zinc-400 font-bold tracking-widest uppercase">LIVE NETWORKS</span>
+              <span className="status-dot status-dot-emerald" />
+              <span className="text-slate-300 font-semibold">Live Networks</span>
             </div>
-            <span className="text-emerald-400 font-bold px-1 py-0.2 border border-emerald-900/60 bg-emerald-950/40 text-[9px]">
-              ONLINE
+            <span className="text-emerald-400 font-medium px-2 py-0.5 rounded-full border border-emerald-900/40 bg-emerald-950/40 text-[10px]">
+              Online
             </span>
           </div>
 
-          <div className="space-y-1.5 text-[10px]">
-            <div className="flex items-center justify-between p-1.5 bg-[#06040A] border border-[#1C142E]">
-              <span className="text-zinc-400">BASE SEPOLIA</span>
-              <span className="text-cyan-400 font-bold tabular-nums">200ms DENIM</span>
+          <div className="space-y-1.5 text-[11px]">
+            <div className="flex items-center justify-between p-2 rounded-xl bg-[#08050F]/80 border border-purple-900/20">
+              <span className="text-slate-300">Base Sepolia</span>
+              <span className="text-cyan-400 font-mono font-medium tabular-nums">200ms Denim</span>
             </div>
 
-            <div className="flex items-center justify-between p-1.5 bg-[#06040A] border border-[#1C142E]">
-              <span className="text-zinc-400">REACTIVE LASNA</span>
-              <span className="text-[#C084FC] font-bold tabular-nums">~1s RVM</span>
+            <div className="flex items-center justify-between p-2 rounded-xl bg-[#08050F]/80 border border-purple-900/20">
+              <span className="text-slate-300">Reactive Lasna</span>
+              <span className="text-violet-300 font-mono font-medium tabular-nums">~1s RVM</span>
             </div>
           </div>
 
@@ -135,10 +135,10 @@ export function Sidebar() {
             href="https://lasna.reactscan.net"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-between text-[9px] text-zinc-500 hover:text-zinc-300 pt-1 transition-colors uppercase tracking-wider"
+            className="flex items-center justify-between text-[11px] text-purple-300/60 hover:text-purple-200 pt-1 transition-colors"
           >
-            <span>REACTSCAN EXPLORER</span>
-            <ExternalLink className="w-2.5 h-2.5" />
+            <span>ReactScan Explorer</span>
+            <ExternalLink className="w-3 h-3" />
           </a>
         </div>
       </div>

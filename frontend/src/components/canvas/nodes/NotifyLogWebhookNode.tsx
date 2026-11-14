@@ -26,18 +26,18 @@ function NotifyLogWebhookNodeComponent({ id, data, selected }: NodeProps) {
       hasSourceHandle={false}
       hasTargetHandle={true}
     >
-      <div className="bg-[#06040A] rounded-none p-2.5 border border-[#1C142E] space-y-1.5 font-mono text-[11px]">
-        <div className="flex justify-between items-center text-zinc-400">
+      <div className="bg-[#0D0819]/90 rounded-xl p-2.5 border border-[#2E1E54]/60 space-y-2 text-xs">
+        <div className="flex justify-between items-center text-purple-300/70">
           <span>Alert Title:</span>
-          <span className="font-bold text-zinc-100 truncate max-w-[140px]">{alertTitle}</span>
+          <span className="font-semibold text-white truncate max-w-[140px]">{alertTitle}</span>
         </div>
-        <div className="flex justify-between items-center text-zinc-400">
+        <div className="flex justify-between items-center text-purple-300/70">
           <span>Severity:</span>
-          <span className={`font-mono font-bold ${severityColor}`}>{severity}</span>
+          <span className={`font-semibold ${severityColor}`}>{severity}</span>
         </div>
       </div>
-      <div className="flex items-center gap-1.5 text-[10px] text-emerald-400/80 font-mono">
-        <Terminal className="w-3 h-3" />
+      <div className="flex items-center gap-1.5 text-[11px] text-emerald-400/80 font-mono">
+        <Terminal className="w-3.5 h-3.5" />
         <span>emit PipelineNotification(msg)</span>
       </div>
     </NodeCard>
