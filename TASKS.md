@@ -13,10 +13,10 @@
 | Giai đoạn (Phase) | Thời gian | Tổng Tasks | Hoàn thành | Đang làm | Tỷ lệ hoàn thành |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 6 | 6 | 0 | **100%** |
-| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 3 | 0 | **37.5%** |
+| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 4 | 0 | **50.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 5 | 0 | **45.5%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **30** | **14** | **0** | **46.7%** |
+| **TỔNG CỘNG** | **21 Ngày** | **30** | **15** | **0** | **50.0%** |
 
 ---
 
@@ -134,16 +134,18 @@
 * **Ngày hoàn thành:** 14/11/2026 18:50
 * **Trạng thái:** `DONE`
 
-#### `TASK-104` [TODO] — Phát triển Reactive Smart Contract `StopLoss_Pipeline.sol`
+#### `TASK-104` [DONE] — Phát triển Reactive Smart Contract `StopLoss_Pipeline.sol`
 * **Module / Màn hình:** `contracts/src/StopLoss_Pipeline.sol` (Reactive Lasna)
 * **Mục đích:** Hợp đồng phản ứng tự trị lắng nghe DEX Sync event và kích hoạt callback.
 * **Chi tiết thực thi:**
-  * Kế thừa `IReactive` và `AbstractReactive`.
-  * Kiểm tra `if (!vm)` đăng ký `service.subscribe` trong constructor `payable`.
-  * Hàm `react()` với Stateless Cooldown Timestamp Guard và Two-Slot Payload.
+  * Kế thừa `IReactive` và `AbstractReactive` từ `@reactive-network/reactive-lib`.
+  * Bọc `service.subscribe` trong `if (!vm)` để bảo vệ môi trường ReactVM và test local.
+  * Triển khai hàm `react()` với **Stateless Cooldown Timestamp** (`block.timestamp - lastTriggeredTimestamp < cooldownSeconds`) chống dội block 200ms và không bị Deadlock.
+  * Tạo Two-Slot Payload chuẩn: Slot 1 để `address(0)` (cho Proxy đè RVM ID), Slot 2 truyền `address(this)`.
+  * Biên dịch thành công 100% bằng Foundry.
 * **Ngày tạo:** 14/11/2026 17:35
-* **Ngày hoàn thành:** --
-* **Trạng thái:** `TODO`
+* **Ngày hoàn thành:** 14/11/2026 18:51
+* **Trạng thái:** `DONE`
 
 #### `TASK-105` [TODO] — Bộ Unit & Fork Tests Đạt 100% Độ Phủ (Foundry)
 * **Module / Màn hình:** `contracts/test/`
