@@ -3,13 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --background: #08050F;
+  --background: #08090D;
   --foreground: #F8FAFC;
-  --obsidian-deep: #08050F;
-  --obsidian-surface: #110B1F;
-  --obsidian-elevated: #1B1233;
-  --border-violet-subtle: rgba(139, 92, 246, 0.18);
-  --border-violet-active: #8B5CF6;
+  --obsidian-deep: #08090D;
+  --obsidian-surface: #0E1017;
+  --obsidian-elevated: #161922;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-active: #8B5CF6;
 }
 
 body {
@@ -20,23 +20,23 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Custom Sleek Obsidian Violet Scrollbar */
+/* Custom Sleek Obsidian FinTech Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #08050F;
+  background: #08090D;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2E1E54;
+  background: #1C202E;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4C2889;
+  background: #2E354B;
 }
 
 /* Tabular figures for financial and latency metrics */
@@ -53,17 +53,17 @@ code, kbd, samp, pre, .font-mono {
 
 /* Glassmorphism Surface Cards */
 .glass-panel {
-  background: rgba(17, 11, 31, 0.82);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  background: rgba(14, 16, 23, 0.90);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass-panel-subtle {
-  background: rgba(27, 18, 51, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(139, 92, 246, 0.14);
+  background: rgba(22, 25, 34, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* Atmospheric Ambient Glows */
@@ -110,32 +110,32 @@ code, kbd, samp, pre, .font-mono {
 
 /* XYFlow Custom Canvas Styling (Modern Obsidian Glass) */
 .react-flow__background {
-  background-color: #08050F !important;
+  background-color: #07080d !important;
 }
 
 .react-flow__controls {
-  border: 1px solid rgba(139, 92, 246, 0.22) !important;
-  background: #110B1F !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: #0E1017 !important;
   border-radius: 12px !important;
   overflow: hidden;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
 }
 
 .react-flow__controls-button {
-  background: #110B1F !important;
-  border-bottom: 1px solid rgba(139, 92, 246, 0.15) !important;
-  fill: #A1A1AA !important;
+  background: #0E1017 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  fill: #94A3B8 !important;
   transition: all 0.2s ease;
 }
 
 .react-flow__controls-button:hover {
-  background: #1B1233 !important;
-  fill: #C084FC !important;
+  background: #161922 !important;
+  fill: #F8FAFC !important;
 }
 
 .react-flow__minimap {
-  background-color: #110B1F !important;
-  border: 1px solid rgba(139, 92, 246, 0.22) !important;
+  background-color: #0E1017 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 12px !important;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
 }

@@ -75,17 +75,17 @@ export default function TemplateLibraryPage() {
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-6 select-none">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-[#2E1E54]/60">
+      <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 text-white shadow-md shadow-purple-600/20">
+            <div className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 shadow-sm">
               <Library className="w-5 h-5" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-white tracking-tight">
                 Template Recipe Store
               </h1>
-              <p className="text-xs text-purple-300/70 mt-0.5">
+              <p className="text-xs text-slate-400 mt-0.5">
                 Production-Tested Cross-Chain Automations &bull; 1-Click Hydration onto Canvas
               </p>
             </div>
@@ -93,7 +93,7 @@ export default function TemplateLibraryPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs px-3 py-1 rounded-full bg-purple-950/60 border border-purple-800/40 text-purple-300 font-medium">
+          <span className="text-xs px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 font-medium">
             6 Production Recipes
           </span>
         </div>
@@ -106,7 +106,7 @@ export default function TemplateLibraryPage() {
           return (
             <div
               key={recipe.id}
-              className="p-6 rounded-2xl bg-[#110B1F]/90 border border-purple-900/30 hover:border-purple-500/40 transition-all space-y-4 flex flex-col justify-between shadow-lg hover:shadow-xl hover:shadow-purple-950/20"
+              className="p-6 rounded-2xl bg-[#0E1017]/90 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.14] transition-all space-y-4 flex flex-col justify-between shadow-xl"
             >
               <div className="space-y-3.5">
                 <div className="flex items-start justify-between">
@@ -122,7 +122,7 @@ export default function TemplateLibraryPage() {
                         {recipe.tags.map((t) => (
                           <span
                             key={t}
-                            className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#0D0819] text-purple-300/80 border border-purple-900/30"
+                            className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#07080D] text-slate-300 border border-white/[0.06]"
                           >
                             {t}
                           </span>
@@ -131,22 +131,22 @@ export default function TemplateLibraryPage() {
                     </div>
                   </div>
 
-                  <span className="text-xs font-mono text-purple-300/70 tabular-nums font-medium">
+                  <span className="text-xs font-mono text-slate-400 tabular-nums font-medium">
                     {recipe.nodesCount} Nodes
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-300 leading-relaxed">
+                <p className="text-xs text-slate-400 leading-relaxed">
                   {recipe.description}
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-purple-900/30">
+              <div className="pt-3 border-t border-white/[0.06]">
                 <Link
                   href="/workspace/studio"
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-full bg-[#1B1233] hover:bg-[#251945] text-purple-200 hover:text-white border border-purple-800/40 hover:border-violet-400 transition-all cursor-pointer group shadow-sm"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-xl bg-violet-600/10 hover:bg-violet-600 text-violet-300 hover:text-white border border-violet-500/20 hover:border-violet-500 transition-all cursor-pointer group shadow-sm"
                 >
-                  <Zap className="w-3.5 h-3.5 text-violet-400 group-hover:scale-110 transition-transform" />
+                  <Zap className="w-3.5 h-3.5 text-violet-400 group-hover:scale-110 group-hover:text-white transition-all" />
                   <span>Hydrate onto Studio Canvas</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                 </Link>

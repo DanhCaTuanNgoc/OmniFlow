@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 17 | 11 | 0 | **64.7%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **39** | **24** | **0** | **61.5%** |
+| **TỔNG CỘNG** | **21 Ngày** | **40** | **25** | **0** | **62.5%** |
 
 ---
 
@@ -422,6 +422,18 @@
   * Sửa lỗi Type-Safety trong `CustomEdge.tsx`, `active/page.tsx`, `logs/page.tsx` và verify `tsc --noEmit` 0 lỗi.
 * **Ngày tạo:** 14/11/2026 21:12
 * **Ngày hoàn thành:** 14/11/2026 21:19
+* **Trạng thái:** `DONE`
+
+#### `TASK-218` [DONE] — Chuẩn Hóa Bảng Màu Toàn Diện & Xóa Bỏ AI-Slop (Obsidian Violet FinTech Theme Unification across All Screens)
+* **Module / Màn hình:** Toàn bộ Frontend Workspace (`Header.tsx`, `Sidebar.tsx`, `vault/page.tsx`, `active/page.tsx`, `templates/page.tsx`, `logs/page.tsx`, `InspectorPanel.tsx`, `DeployModal.tsx`, `globals.css`)
+* **Mục đích:** Xóa bỏ hoàn toàn hiện tượng "AI-slop" (màu tím trùm lên toàn bộ văn bản và đường viền tạo cảm giác mờ mịt và rẻ tiền, gradient đa sắc cầu vồng trên mọi button/badge). Chuẩn hóa toàn bộ hệ thống sang giao diện Obsidian FinTech đẳng cấp cao (như Uniswap, Linear, Hyperliquid):
+  * **Base Palette**: Nền đen Obsidian Graphite `#08090D`, bề mặt Card `#0E1017`/90 với viền tinh tế `border-white/[0.08]` (hover `border-white/[0.14]`).
+  * **Typography Tương Phản Cao**: Tiêu đề và số liệu màu trắng thuần `#FFFFFF` (không ám tím), nhãn và mô tả dùng Slate-400 `#94A3B8` trong trẻo, dễ đọc đạt chuẩn WCAG AAA.
+  * **Màu Chủ Đạo Tím Obsidian Có Chọn Lọc**: Sử dụng tập trung cho Brand Logo, icon container (`bg-violet-500/10 border-violet-500/20 text-violet-400`), active navigation indicator, và primary CTA buttons.
+  * **Semantic Colors Rõ Ràng**: Emerald cho Success/Safe Sweep, Amber cho Warning/Cooldown, Cyan cho Trigger/Speed, Rose cho Panic/Emergency.
+  * Kiểm thử biên dịch TypeScript `tsc --noEmit` đạt 0 lỗi (100% Type-Safe).
+* **Ngày tạo:** 14/11/2026 21:24
+* **Ngày hoàn thành:** 14/11/2026 21:31
 * **Trạng thái:** `DONE`
 
 ---

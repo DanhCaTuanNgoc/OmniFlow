@@ -52,18 +52,18 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'border-r border-[#2E1E54]/60 bg-[#0B0716] flex flex-col justify-between select-none transition-all duration-200 z-20 shrink-0',
+        'border-r border-white/[0.08] bg-[#0A0B10] flex flex-col justify-between select-none transition-all duration-200 z-20 shrink-0',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
       {/* Brand Header */}
       <div>
-        <div className="p-3.5 border-b border-[#2E1E54]/60 bg-[#0E091C]/60 flex items-center justify-between">
+        <div className="p-3.5 border-b border-white/[0.08] bg-[#0D0E15] flex items-center justify-between">
           <Link
             href="/workspace/studio"
             className={cn('flex items-center gap-3 group overflow-hidden', collapsed && 'justify-center w-full')}
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 via-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-600/30 group-hover:scale-105 transition-transform shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.35)] group-hover:scale-105 transition-transform shrink-0">
               <Zap className="w-5 h-5 text-white fill-white" />
             </div>
             {!collapsed && (
@@ -72,11 +72,11 @@ export function Sidebar() {
                   <span className="font-bold text-base tracking-tight text-white truncate">
                     OmniFlow
                   </span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-purple-950/70 text-purple-300 border border-purple-800/50 font-semibold">
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20 font-semibold">
                     v1.0
                   </span>
                 </div>
-                <p className="text-[11px] text-purple-300/60 font-medium truncate">
+                <p className="text-[11px] text-slate-400 font-medium truncate">
                   The Zapier of Web3
                 </p>
               </div>
@@ -86,7 +86,7 @@ export function Sidebar() {
           {!collapsed && (
             <button
               onClick={() => setCollapsed(true)}
-              className="p-1 rounded-lg text-purple-300/60 hover:text-white hover:bg-purple-950/50 transition-colors"
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
               title="Collapse sidebar"
             >
               <PanelLeftClose className="w-4 h-4" />
@@ -97,7 +97,7 @@ export function Sidebar() {
         {/* Navigation Items */}
         <nav className="p-2 space-y-1">
           {!collapsed && (
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-purple-300/50 px-3 py-1.5">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 px-3 py-1.5">
               Workspace
             </div>
           )}
@@ -115,16 +115,16 @@ export function Sidebar() {
                     ? 'justify-center p-2.5'
                     : 'justify-between px-3.5 py-2.5',
                   isActive
-                    ? 'bg-gradient-to-r from-purple-900/50 to-purple-950/20 text-white font-semibold shadow-sm border border-purple-800/40'
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-[#150E28]'
+                    ? 'bg-violet-500/12 text-white font-semibold border-l-2 border-violet-400 pl-3 shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                 )}
               >
                 <div className="flex items-center gap-2.5">
-                  <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-violet-400' : 'text-purple-400/60')} />
+                  <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-violet-400' : 'text-slate-400')} />
                   {!collapsed && <span className="truncate">{item.name}</span>}
                 </div>
                 {!collapsed && item.badge && (
-                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 shrink-0">
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20 shrink-0">
                     {item.badge}
                   </span>
                 )}
@@ -135,37 +135,37 @@ export function Sidebar() {
       </div>
 
       {/* Network Live Telemetry Footer (Rounded Glass Panel) */}
-      <div className="p-2.5 bg-[#08050F]/70 border-t border-[#2E1E54]/60">
+      <div className="p-2.5 bg-[#08090D] border-t border-white/[0.08]">
         {collapsed ? (
           <div className="flex flex-col items-center gap-2">
             <span className="status-dot status-dot-emerald" title="Live Networks Online" />
             <button
               onClick={() => setCollapsed(false)}
-              className="p-1 rounded-lg text-purple-300/60 hover:text-white hover:bg-purple-950/50 transition-colors"
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
               title="Expand sidebar"
             >
               <PanelLeftOpen className="w-4 h-4" />
             </button>
           </div>
         ) : (
-          <div className="p-3.5 rounded-2xl bg-[#110B1F]/90 border border-[#2E1E54] space-y-2.5 shadow-sm">
-            <div className="flex items-center justify-between pb-2 border-b border-purple-900/30 text-xs">
+          <div className="p-3.5 rounded-2xl bg-[#0E1017] border border-white/[0.08] space-y-2.5 shadow-sm">
+            <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] text-xs">
               <div className="flex items-center gap-2">
                 <span className="status-dot status-dot-emerald" />
-                <span className="text-slate-300 font-semibold">Live Networks</span>
+                <span className="text-slate-200 font-semibold">Live Networks</span>
               </div>
-              <span className="text-emerald-400 font-medium px-2 py-0.5 rounded-full border border-emerald-900/40 bg-emerald-950/40 text-[10px]">
+              <span className="text-emerald-400 font-medium px-2 py-0.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-[10px]">
                 Online
               </span>
             </div>
 
             <div className="space-y-1.5 text-[11px]">
-              <div className="flex items-center justify-between p-2 rounded-xl bg-[#08050F]/80 border border-purple-900/20">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-[#07080D] border border-white/[0.05]">
                 <span className="text-slate-300">Base Sepolia</span>
                 <span className="text-cyan-400 font-mono font-medium tabular-nums">200ms Denim</span>
               </div>
 
-              <div className="flex items-center justify-between p-2 rounded-xl bg-[#08050F]/80 border border-purple-900/20">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-[#07080D] border border-white/[0.05]">
                 <span className="text-slate-300">Reactive Lasna</span>
                 <span className="text-violet-300 font-mono font-medium tabular-nums">~1s RVM</span>
               </div>
@@ -175,7 +175,7 @@ export function Sidebar() {
               href="https://lasna.reactscan.net"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between text-[11px] text-purple-300/60 hover:text-purple-200 pt-1 transition-colors"
+              className="flex items-center justify-between text-[11px] text-slate-400 hover:text-violet-300 pt-1 transition-colors"
             >
               <span>ReactScan Explorer</span>
               <ExternalLink className="w-3 h-3" />

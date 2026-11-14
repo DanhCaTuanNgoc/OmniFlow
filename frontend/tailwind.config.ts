@@ -10,15 +10,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: '#08050F',
+        background: '#08090D',
         obsidian: {
-          deep: '#08050F',
-          surface: '#110B1F',
-          elevated: '#1B1233',
-          highlight: '#261847',
-          active: '#33205E',
-          border: '#2E1E54',
-          borderSubtle: 'rgba(139, 92, 246, 0.15)',
+          deep: '#08090D',
+          surface: '#0E1017',
+          elevated: '#161922',
+          highlight: '#1F2432',
+          active: '#2A3042',
+          border: 'rgba(255, 255, 255, 0.08)',
+          borderSubtle: 'rgba(255, 255, 255, 0.05)',
         },
         brand: {
           violet: '#8B5CF6',
@@ -34,10 +34,10 @@ const config: Config = {
           cyan: '#00E5FF',
         },
         surface: {
-          DEFAULT: '#110B1F',
-          hover: '#1B1233',
-          muted: '#08050F',
-          border: '#2E1E54',
+          DEFAULT: '#0E1017',
+          hover: '#161922',
+          muted: '#08090D',
+          border: 'rgba(255, 255, 255, 0.08)',
         },
       },
       fontFamily: {

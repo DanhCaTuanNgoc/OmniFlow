@@ -36,17 +36,17 @@ function ActiveAutomationsPage() {
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-6 select-none">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-[#2E1E54]/60">
+      <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 text-white shadow-md shadow-purple-600/20">
+            <div className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 shadow-sm">
               <Cpu className="w-5 h-5" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-white tracking-tight">
                 Active Automations
               </h1>
-              <p className="text-xs text-purple-300/70 mt-0.5">
+              <p className="text-xs text-slate-400 mt-0.5">
                 Autonomous Reactive Smart Contracts (RSC) Running on Lasna Testnet
               </p>
             </div>
@@ -55,7 +55,7 @@ function ActiveAutomationsPage() {
 
         <Link
           href="/workspace/studio"
-          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/25 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-violet-600 hover:bg-violet-500 text-white shadow-[0_0_20px_-3px_rgba(139,92,246,0.45)] transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
         >
           <Zap className="w-3.5 h-3.5" />
           <span>New Pipeline</span>
@@ -64,70 +64,70 @@ function ActiveAutomationsPage() {
 
       {/* 4 Telemetry Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-[#110B1F]/90 border border-purple-900/30 hover:border-purple-500/40 transition-all shadow-md">
-          <div className="flex items-center justify-between pb-2 border-b border-purple-900/20 text-xs">
-            <span className="text-purple-300/70 font-medium">Running Engines</span>
-            <span className="text-emerald-400 font-semibold px-2 py-0.5 rounded-full border border-emerald-900/40 bg-emerald-950/40 text-[10px]">
+        <div className="p-5 rounded-2xl bg-[#0E1017]/90 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.14] transition-all shadow-xl">
+          <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] text-xs">
+            <span className="text-slate-400 font-medium">Running Engines</span>
+            <span className="text-emerald-400 font-semibold px-2 py-0.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-[10px]">
               Online
             </span>
           </div>
           <div className="my-3">
-            <div className="text-2xl font-bold text-white tracking-tight tabular-nums">
-              01 <span className="text-xs text-purple-300/70 font-normal">Active RSC</span>
+            <div className="text-2xl font-bold text-white tracking-tight tabular-nums font-mono">
+              01 <span className="text-xs text-slate-400 font-normal font-sans">Active RSC</span>
             </div>
           </div>
-          <div className="pt-2 border-t border-purple-900/20 text-[11px] text-purple-300/60">
+          <div className="pt-2 border-t border-white/[0.06] text-[11px] text-slate-400">
             Chain: <strong className="text-violet-300 font-medium">Reactive Lasna (#5318007)</strong>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-[#110B1F]/90 border border-purple-900/30 hover:border-purple-500/40 transition-all shadow-md">
-          <div className="flex items-center justify-between pb-2 border-b border-purple-900/20 text-xs">
-            <span className="text-purple-300/70 font-medium">Sponsored Gas</span>
-            <span className="text-purple-300 font-semibold px-2 py-0.5 rounded-full border border-purple-800/40 bg-purple-950/40 text-[10px]">
+        <div className="p-5 rounded-2xl bg-[#0E1017]/90 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.14] transition-all shadow-xl">
+          <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] text-xs">
+            <span className="text-slate-400 font-medium">Sponsored Gas</span>
+            <span className="text-violet-300 font-semibold px-2 py-0.5 rounded-full border border-violet-500/20 bg-violet-500/10 text-[10px]">
               99.98%
             </span>
           </div>
           <div className="my-3">
-            <div className="text-2xl font-bold text-white tracking-tight tabular-nums">
-              0.9998 <span className="text-xs text-purple-300/70 font-normal">lREACT</span>
+            <div className="text-2xl font-bold text-white tracking-tight tabular-nums font-mono">
+              0.9998 <span className="text-xs text-slate-400 font-normal font-sans">lREACT</span>
             </div>
           </div>
-          <div className="pt-2 border-t border-purple-900/20 text-[11px] text-purple-300/60">
+          <div className="pt-2 border-t border-white/[0.06] text-[11px] text-slate-400">
             Lifespan: <strong className="text-emerald-400 font-medium">~4,990 Callbacks Left</strong>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-[#110B1F]/90 border border-purple-900/30 hover:border-purple-500/40 transition-all shadow-md">
-          <div className="flex items-center justify-between pb-2 border-b border-purple-900/20 text-xs">
-            <span className="text-purple-300/70 font-medium">Reaction Latency</span>
-            <span className="text-cyan-400 font-semibold px-2 py-0.5 rounded-full border border-cyan-900/40 bg-cyan-950/40 text-[10px]">
+        <div className="p-5 rounded-2xl bg-[#0E1017]/90 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.14] transition-all shadow-xl">
+          <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] text-xs">
+            <span className="text-slate-400 font-medium">Reaction Latency</span>
+            <span className="text-cyan-400 font-semibold px-2 py-0.5 rounded-full border border-cyan-500/20 bg-cyan-500/10 text-[10px]">
               Sub-Second
             </span>
           </div>
           <div className="my-3">
-            <div className="text-2xl font-bold text-white tracking-tight tabular-nums">
-              1,140 <span className="text-xs text-purple-300/70 font-normal">ms (P99)</span>
+            <div className="text-2xl font-bold text-white tracking-tight tabular-nums font-mono">
+              1,140 <span className="text-xs text-slate-400 font-normal font-sans">ms (P99)</span>
             </div>
           </div>
-          <div className="pt-2 border-t border-purple-900/20 text-[11px] text-purple-300/60">
+          <div className="pt-2 border-t border-white/[0.06] text-[11px] text-slate-400">
             Path: <strong className="text-cyan-300 font-medium">Base Sepolia &harr; Lasna</strong>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-[#110B1F]/90 border border-purple-900/30 hover:border-purple-500/40 transition-all shadow-md">
-          <div className="flex items-center justify-between pb-2 border-b border-purple-900/20 text-xs">
-            <span className="text-purple-300/70 font-medium">Storm Defense</span>
-            <span className="text-amber-400 font-semibold px-2 py-0.5 rounded-full border border-amber-900/40 bg-amber-950/40 text-[10px]">
+        <div className="p-5 rounded-2xl bg-[#0E1017]/90 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.14] transition-all shadow-xl">
+          <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] text-xs">
+            <span className="text-slate-400 font-medium">Storm Defense</span>
+            <span className="text-amber-400 font-semibold px-2 py-0.5 rounded-full border border-amber-500/20 bg-amber-500/10 text-[10px]">
               Protected
             </span>
           </div>
           <div className="my-3">
-            <div className="text-2xl font-bold text-white tracking-tight tabular-nums">
-              300 <span className="text-xs text-purple-300/70 font-normal">Seconds</span>
+            <div className="text-2xl font-bold text-white tracking-tight tabular-nums font-mono">
+              300 <span className="text-xs text-slate-400 font-normal font-sans">Seconds</span>
             </div>
           </div>
-          <div className="pt-2 border-t border-purple-900/20 text-[11px] text-purple-300/60">
+          <div className="pt-2 border-t border-white/[0.06] text-[11px] text-slate-400">
             Mechanism: <strong className="text-emerald-400 font-medium">Stateless Cooldown</strong>
           </div>
         </div>
@@ -142,20 +142,20 @@ function ActiveAutomationsPage() {
         {DEMO_ACTIVE_PIPELINES.map((p) => (
           <div
             key={p.id}
-            className="p-6 rounded-2xl bg-[#110B1F]/90 border border-purple-900/30 hover:border-purple-500/40 transition-all space-y-5 shadow-lg"
+            className="p-6 rounded-2xl bg-[#0E1017]/90 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.14] transition-all space-y-5 shadow-xl"
           >
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-purple-900/30">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-white/[0.06]">
               <div>
                 <div className="flex items-center gap-2.5">
                   <span className="status-dot status-dot-emerald" />
                   <span className="font-bold text-base text-white">
                     {p.name}
                   </span>
-                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-purple-950/60 border border-purple-800/40 text-purple-300 font-medium">
+                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 font-medium">
                     {p.id}
                   </span>
                 </div>
-                <div className="text-xs text-purple-300/60 mt-1 font-mono">
+                <div className="text-xs text-slate-400 mt-1 font-mono">
                   RSC Contract: <span className="text-slate-200">{truncateAddress(p.rscAddress, 8)}</span> &bull; Deployed: {p.deployedAt}
                 </div>
               </div>
@@ -165,13 +165,13 @@ function ActiveAutomationsPage() {
                   href="https://lasna.reactscan.net"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-full bg-[#150E28] hover:bg-[#1E1438] text-purple-200 hover:text-white border border-purple-800/40 transition-all cursor-pointer shadow-sm"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-full bg-[#07080D] hover:bg-[#161922] text-slate-200 hover:text-white border border-white/[0.08] hover:border-white/[0.16] transition-all cursor-pointer shadow-sm"
                 >
                   <span>View ReactScan</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-purple-400" />
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                 </a>
 
-                <button className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-full bg-rose-950/30 hover:bg-rose-900/40 text-rose-300 border border-rose-800/40 transition-colors cursor-pointer">
+                <button className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 transition-colors cursor-pointer">
                   <Pause className="w-3.5 h-3.5" />
                   <span>Pause</span>
                 </button>
@@ -180,34 +180,34 @@ function ActiveAutomationsPage() {
 
             {/* Pipeline Configuration Parameters */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
-              <div className="p-3.5 rounded-xl bg-[#0D0819] border border-purple-900/30 space-y-1">
-                <span className="text-[11px] text-purple-300/60 font-medium">Trigger Stream:</span>
+              <div className="p-3.5 rounded-xl bg-[#07080D] border border-white/[0.06] space-y-1">
+                <span className="text-[11px] text-slate-400 font-medium">Trigger Stream:</span>
                 <div className="text-white font-semibold">{p.originPair}</div>
               </div>
-              <div className="p-3.5 rounded-xl bg-[#0D0819] border border-purple-900/30 space-y-1">
-                <span className="text-[11px] text-purple-300/60 font-medium">Condition Guard:</span>
+              <div className="p-3.5 rounded-xl bg-[#07080D] border border-white/[0.06] space-y-1">
+                <span className="text-[11px] text-slate-400 font-medium">Condition Guard:</span>
                 <div className="text-amber-300 font-semibold">{p.condition}</div>
               </div>
-              <div className="p-3.5 rounded-xl bg-[#0D0819] border border-purple-900/30 space-y-1">
-                <span className="text-[11px] text-purple-300/60 font-medium">Destination Action:</span>
+              <div className="p-3.5 rounded-xl bg-[#07080D] border border-white/[0.06] space-y-1">
+                <span className="text-[11px] text-slate-400 font-medium">Destination Action:</span>
                 <div className="text-emerald-300 font-semibold">{p.action}</div>
               </div>
             </div>
 
             {/* Gas Fuel Gauge Bar */}
-            <div className="space-y-2 pt-2 border-t border-purple-900/20">
+            <div className="space-y-2 pt-2 border-t border-white/[0.06]">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-purple-300/70 flex items-center gap-1.5 font-medium">
-                  <Fuel className="w-3.5 h-3.5 text-purple-400" />
+                <span className="text-slate-400 flex items-center gap-1.5 font-medium">
+                  <Fuel className="w-3.5 h-3.5 text-violet-400" />
                   lREACT Gas Fuel Tank
                 </span>
-                <span className="font-semibold text-white tabular-nums">
+                <span className="font-semibold text-white tabular-nums font-mono">
                   {p.gasRemaining} / {p.gasTotal} lREACT Remaining
                 </span>
               </div>
-              <div className="w-full bg-[#0D0819] h-2.5 rounded-full border border-purple-900/30 overflow-hidden">
+              <div className="w-full bg-[#07080D] h-2.5 rounded-full border border-white/[0.08] overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-violet-600 via-purple-500 to-emerald-400 h-full rounded-full transition-all duration-300 shadow-sm"
+                  className="bg-gradient-to-r from-violet-600 to-emerald-400 h-full rounded-full transition-all duration-300 shadow-sm"
                   style={{ width: `${(p.gasRemaining / p.gasTotal) * 100}%` }}
                 />
               </div>

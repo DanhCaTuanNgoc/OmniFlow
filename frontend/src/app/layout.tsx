@@ -19,7 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="bg-[#08050F] text-slate-100 min-h-screen antialiased selection:bg-purple-600/30 selection:text-purple-200">
+      <body className="bg-[#08090D] text-slate-100 min-h-screen antialiased selection:bg-violet-500/30 selection:text-white">
         <Web3Provider>{children}</Web3Provider>
       </body>
     </html>
