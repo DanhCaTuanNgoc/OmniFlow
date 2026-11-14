@@ -4,8 +4,13 @@ import helmet from 'helmet';
 import http from 'http';
 import { env } from './config/env.js';
 import { healthRouter } from './routes/health.route.js';
+import { WebSocketGateway } from './websocket/gateway.js';
 
-export function createApp(): { app: Express; server: http.Server } {
+export function createApp(): {
+  app: Express;
+  server: http.Server;
+  wsGateway: WebSocketGateway;
+} {
   const app = express();
   const server = http.createServer(app);
 
@@ -20,6 +25,9 @@ export function createApp(): { app: Express; server: http.Server } {
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true }));
 
+  // Khởi tạo WebSocket Gateway trên cùng http server
+  const wsGateway = new WebSocketGateway(server);
+
   // Routes
   app.use('/health', healthRouter);
 
@@ -30,6 +38,8 @@ export function createApp(): { app: Express; server: http.Server } {
       version: '1.0.0',
       description: 'The Zapier of Web3: No-Code Cross-Chain Automation Powered by Reactive Omni',
       health: '/health',
+      websocket: '/stream',
+      activeWsClients: wsGateway.getClientCount(),
     });
   });
 
@@ -44,5 +54,5 @@ export function createApp(): { app: Express; server: http.Server } {
     res.status(500).json({ error: 'Internal server error', message: err.message });
   });
 
-  return { app, server };
+  return { app, server, wsGateway };
 }

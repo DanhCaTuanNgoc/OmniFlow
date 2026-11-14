@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 6 | 6 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 0 | 0 | **0%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 2 | 0 | **18.2%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 3 | 0 | **27.3%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **30** | **8** | **0** | **26.7%** |
+| **TỔNG CỘNG** | **21 Ngày** | **30** | **9** | **0** | **30.0%** |
 
 ---
 
@@ -237,14 +237,18 @@
   * Endpoint REST API: `POST /api/pipeline/compile-and-deploy`.
 * **Ngày tạo:** 14/11/2026 17:52 | **Trạng thái:** `TODO`
 
-#### `TASK-207` [TODO] — Real-time WebSocket Gateway & 30s Heartbeat
+#### `TASK-207` [DONE] — Real-time WebSocket Gateway & 30s Heartbeat
 * **Module / Màn hình:** `backend/src/websocket/`
 * **Mục đích:** Cung cấp kênh truyền thông thời gian thực giữa backend và frontend, duy trì ping/pong 30s chống timeout proxy.
 * **Chi tiết thực thi:**
-  * Tích hợp `ws` server chạy chung port với Express trên path `/stream`.
-  * Cơ chế Ping/Pong 30 giây giữ kết nối với Railway reverse proxy.
-  * Broadcast room quản lý client connections theo `pipelineId`.
-* **Ngày tạo:** 14/11/2026 17:52 | **Trạng thái:** `TODO`
+  * Xây dựng `WebSocketGateway` chạy chung HTTP server tại endpoint `/stream`.
+  * Hỗ trợ message types: `CONNECTED`, `SUBSCRIBE_PIPELINE`, `REACTIVE_STEP_UPDATE`, `PIPELINE_STATUS_CHANGED`.
+  * Cơ chế Ping/Pong 30 giây dọn dẹp các kết nối chết (stale clients).
+  * Hàm `broadcast()` linh hoạt lọc theo từng pipeline hoặc gửi broadcast toàn mạng.
+  * Test live thành công: Client kết nối, subscribe, và nhận gói tin broadcast `REACTIVE_STEP_UPDATE` tức thời.
+* **Ngày tạo:** 14/11/2026 17:52
+* **Ngày hoàn thành:** 14/11/2026 18:37
+* **Trạng thái:** `DONE`
 
 #### `TASK-208` [TODO] — Event Stream Listener & Fallback Initial Data Seed
 * **Module / Màn hình:** `backend/src/services/eventListener.service.ts`
