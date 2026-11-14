@@ -97,6 +97,16 @@ Mandatory whenever testing, verifying data bindings, or running integration suit
 - **Auto-Commit Execution**:
   - Stage modified files cleanly: `git add <specific paths>`.
   - Create conventional commit: `git commit -m "<type>(<scope>): <summary>"`.
-  - Scopes: `(contracts)`, `(studio)`, `(canvas)`, `(vault)`, `(relayer)`, `(deploy)`, `(infra)`.
+  - Scopes: `(contracts)`, `(studio)`, `(canvas)`, `(vault)`, `(relayer)`, `(deploy)`, `(infra)`, `(tasks)`.
   - Output commit hash and summary for user review.
   - **NEVER execute `git push`**.
+
+---
+
+## 5. Strict Task Tracking Protocol (`TASKS.md`)
+- **Mandatory Policy on Task State**:
+  - File `TASKS.md` is the official central progress tracking ledger of the OmniFlow project.
+  - **Before starting a task**: Mark the task status as `IN_PROGRESS` in `TASKS.md`.
+  - **Upon finishing a task**: Update the task status to `DONE`, fill in the completion timestamp (`Ngày hoàn thành`), and record any relevant commit hashes or outputs.
+  - **If a task is paused, unfinished, or blocked**: You MUST update its current progress, notes on what was completed, and remaining items into `TASKS.md` (status: `IN_PROGRESS` or `BLOCKED`). Never leave progress untracked across context turns!
+  - Always recalculate and update the **Progress Summary Table** at the top of `TASKS.md`.
