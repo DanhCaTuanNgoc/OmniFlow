@@ -646,27 +646,27 @@ Nhằm đảm bảo hợp đồng thông minh của ReactiveFlow đạt chuẩn 
 
 ---
 
-### 5.1 Callback Proxy Authentication Pattern (Xác thực 2 chiều chuẩn giao thức)
+### 5.1 Callback Proxy Authentication & Two-Slot Payload Pattern (Xác thực 2 chiều chuẩn giao thức)
 
-Trên mạng Reactive Network, lệnh Callback cross-chain không trực tiếp gọi đến đích mà được chuyển tiếp qua **Reactive Callback Proxy / Service Provider**. 
+Trên mạng Reactive Network, lệnh Callback cross-chain không trực tiếp gọi đến đích mà được chuyển tiếp qua **Reactive Callback Proxy / Service Provider** (Địa chỉ chính thức trên Base Sepolia: `0xa6eA49Ed671B8a4dfCDd34E36b7a75Ac79B8A5a6`). 
 
-#### Cơ chế hoạt động:
-1. Khi Callback Proxy gọi vào hàm `execute()` trên `ActionVault.sol`, Proxy **tự động chèn (overwrite) địa chỉ của hợp đồng RSC vào tham số đầu tiên `address rvm`**.
-2. Hợp đồng `ActionVault` sử dụng modifier `onlyServiceProvider` (kế thừa từ `AbstractCallback`) để đảm bảo `msg.sender` chính là Callback Proxy chính thức.
-3. Hợp đồng kiểm tra tiếp: `require(rvm == authorizedRSC, "Unauthorized RSC");` để bảo đảm chỉ duy nhất RSC của người dùng mới có quyền ra lệnh cho Vault.
+#### Cơ chế hoạt động & Quy tắc Two-Slot Payload:
+1. Khi Callback Proxy gọi vào hàm `executeStopLoss()` trên `ActionVault.sol`, Proxy **tự động ghi đè 160 bits đầu tiên của calldata (Slot 1: `address rvmId`) bằng địa chỉ ví Deployer của RSC (RVM ID)**. Do đó, tham số đầu tiên nhận được là địa chỉ ví EOA deployer, KHÔNG PHẢI địa chỉ hợp đồng RSC!
+2. Hợp đồng `StopLoss_Pipeline.sol` truyền địa chỉ thực sự của nó (`address(this)`) ở **Slot 2 (`address rscContract`)**.
+3. Hợp đồng `ActionVault` sử dụng modifier chuẩn `authorizedSenderOnly` (kế thừa từ `AbstractCallback`) để đảm bảo `msg.sender` chính là Callback Proxy chính thức.
+4. Hợp đồng kiểm tra tiếp: `require(authorizedRSCs[rscContract], "Unauthorized RSC caller");` để bảo đảm chỉ RSC đã được cấp quyền mới có thể ra lệnh cho Vault.
 
 ```solidity
 // Trích đoạn chuẩn hóa trên ActionVault.sol (Base Sepolia)
-function execute(
-    address rvm, // Được Callback Proxy tự động tiêm địa chỉ RSC
-    uint256 pipelineId,
-    uint256 kind,
-    uint256 triggerPrice,
-    uint256 tickTimestamp
-) external onlyServiceProvider {
-    require(rvm == authorizedRSC && rvm != address(0), "Unauthorized RSC caller");
+function executeStopLoss(
+    address rvmId,        // Slot 1: Được Callback Proxy tự động tiêm RVM Deployer ID
+    address rscContract,  // Slot 2: Địa chỉ thực sự của StopLoss_Pipeline.sol
+    uint256 percentToSwap,
+    uint256 thresholdPriceUSD
+) external authorizedSenderOnly {
+    require(authorizedRSCs[rscContract], "Unauthorized RSC caller");
     
-    // Tiếp tục thực thi logic an toàn...
+    // Tiếp tục thực thi logic an toàn với router.getAmountsOut()...
 }
 ```
 
