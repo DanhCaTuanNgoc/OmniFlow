@@ -12,11 +12,11 @@
 
 | Giai đoạn (Phase) | Thời gian | Tổng Tasks | Hoàn thành | Đang làm | Tỷ lệ hoàn thành |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 5 | 5 | 0 | **100%** |
+| **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 6 | 6 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 0 | 0 | **0%** |
 | **Sprint 2: Studio Canvas, Workspace & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 8 | 0 | 0 | **0%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **26** | **5** | **0** | **19.2%** |
+| **TỔNG CỘNG** | **21 Ngày** | **27** | **6** | **0** | **22.2%** |
 
 ---
 
@@ -78,6 +78,17 @@
 * **Ngày tạo:** 14/11/2026 17:33
 * **Ngày hoàn thành:** 14/11/2026 17:33
 * **Trạng thái:** `DONE` (Commit `078b32e`)
+
+#### `TASK-006` [DONE] — Thiết lập Quy chuẩn Bám sát Tài liệu Dự án & Tối ưu Token trong `AGENTS.md`
+* **Module / Màn hình:** Project Guidelines & Agent Directives (`AGENTS.md`)
+* **Mục đích:** Xác lập thứ bậc tài liệu chuẩn (Blueprint -> FRS -> BRD) và giao thức đọc chọn lọc (On-Demand Targeted Reading) để không lãng phí token.
+* **Chi tiết thực thi:**
+  * Khai báo danh mục Canonical Project Documentation chuẩn mực trong `AGENTS.md`.
+  * Ban hành quy tắc tra cứu tài liệu theo phạm vi công việc thay vì nhét toàn bộ tài liệu vào context.
+  * Đồng bộ tiêu chuẩn bảo vệ Stateless Cooldown và mapping `authorizedRSCs` vào quy chuẩn `AGENTS.md`.
+* **Ngày tạo:** 14/11/2026 17:50
+* **Ngày hoàn thành:** 14/11/2026 17:53
+* **Trạng thái:** `DONE`
 
 ---
 

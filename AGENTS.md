@@ -12,7 +12,11 @@
   - Backend Service (`backend/`): Node.js 20 LTS, TypeScript, Express REST API, WebSocket Server (ws), Foundry Runner, Docker Multi-stage deployed on Railway
   - Frontend (`frontend/`): Next.js 14 (App Router), TypeScript, Tailwind CSS, @xyflow/react, Wagmi / Viem, deployed on Vercel
   - Shared Library (`packages/shared/`): Common types, JSON schemas, Foundry ABIs
-- **Master Blueprint**: Always adhere strictly to `PROJECT_BLUEPRINT.md` as the single source of truth.
+- **Canonical Project Documentation (Single Source of Truth)**:
+  - **Master Architecture Blueprint**: `PROJECT_BLUEPRINT.md` (System topology, smart contract interfaces, end-to-end full loop verification, security invariants).
+  - **Functional Requirements Specification (FRS)**: `docs/REACTIVEFLOW_DETAILED_FRS.md` (Screen-by-screen UX, 10 visual nodes, WebSocket event schemas, API contracts, error states).
+  - **Business Requirements & Scope (BRD)**: `docs/REACTIVEFLOW_BUSINESS_REQUIREMENTS_SPEC.md` (Target personas, value proposition, hackathon track alignment, user journeys).
+  - **Hackathon Track & Rules**: `docs/hackathon_details_Reactive.md` (Reactive Buildathon track rules, judging criteria, deadline).
 
 ---
 
@@ -37,8 +41,8 @@ Use for structured, production-grade feature development:
 Mandatory when writing, modifying, or testing smart contracts in `contracts/`:
 - Implement `IReactive` and `AbstractReactive` for RSCs on Lasna Testnet.
 - Implement `AbstractCallback` for `ActionVault.sol` on Base Sepolia.
-- Enforce the 4 Core Defensive Patterns: Callback Proxy Authentication, In-Flight Flag Protection, Live Price Re-Validation, and Dual-Way Event Mirroring.
-- Always include non-custodial `emergencyWithdraw()` (Panic Button) in `ActionVault`.
+- Enforce the 4 Core Defensive Patterns: Callback Proxy Authentication, Stateless Cooldown Timestamp Protection (against multi-callback storms across 200ms blocks), Live Price Re-Validation, and Dual-Way Event Mirroring.
+- Always include non-custodial `emergencyWithdraw()` (Panic Button) and `executeSafeSweep()` in `ActionVault`.
 - Test thoroughly with Foundry (`forge test -vvv`) before any deployment script.
 
 ### 🕸️ XYFlow Canvas Engine Skill (`.agents/skills/xyflow-canvas/`)
@@ -79,11 +83,20 @@ Mandatory whenever testing, verifying data bindings, or running integration suit
 ---
 
 ## 3. Engineering & Coding Standards
+- **Canonical Documentation Adherence (Zero Deviation)**:
+  - All smart contracts, backend services, canvas nodes, and frontend workflows MUST strictly implement the designs in `PROJECT_BLUEPRINT.md` and `docs/`. Never introduce conflicting patterns or ad-hoc architecture.
+  - Hierarchy of authority in case of specification discrepancies:
+    1. `PROJECT_BLUEPRINT.md` (Technical Architecture, Smart Contracts, Security Invariants & Monorepo Topology).
+    2. `docs/REACTIVEFLOW_DETAILED_FRS.md` (Functional UI/UX, 10-Node Specs, WebSocket Payloads & API Contracts).
+    3. `docs/REACTIVEFLOW_BUSINESS_REQUIREMENTS_SPEC.md` & `docs/hackathon_details_Reactive.md` (Business Logic & Hackathon Track Invariants).
+- **Token-Efficient Doc Consultation (Targeted Reading Only)**:
+  - Do NOT dump or scan entire doc files into working memory indiscriminately.
+  - Read targeted sections or line ranges via `read_file` only when actively designing, implementing, or auditing that specific component (e.g. read Node Catalog in FRS when building Studio Canvas, read Vault spec in Blueprint when coding `ActionVault.sol`).
 - **No Mock / Fake Shortcuts (Fail-Fast)**: Never implement silent mock/fallback data for on-chain RPC calls. Masking fetch failures behind dummy data obscures real bugs. Surface real disconnected or error states explicitly.
-- **Strict Callback Proxy Authorization**: On Base Sepolia, `msg.sender` must be verified as the official Reactive Callback Proxy, and `rscCaller` must match `authorizedRSC`.
-- **In-Flight Callback Protection**: RSCs must use an `isCallbackInFlight` guard to prevent multi-callback storms across Base Sepolia's rapid 200ms blocks.
+- **Strict Callback Proxy Authorization**: On Base Sepolia, `msg.sender` must be verified as the official Reactive Callback Proxy, and `rscCaller` must match `authorizedRSCs[rscCaller] == true`.
+- **Stateless Cooldown Protection**: RSCs must use a `block.timestamp - lastTriggeredTimestamp < cooldownSeconds` guard at the very start of `react()` to prevent multi-callback storms across Base Sepolia's rapid 200ms blocks.
 - **Live Price Re-Validation**: Destination execution must re-check pool reserves at execution time to protect against flash rebounds and MEV sandwich attacks (`minAmountOut`).
-- **Non-Custodial Guarantee**: `ActionVault` must always grant `owner` immediate, unconditional access to `emergencyWithdraw()`.
+- **Non-Custodial Guarantee**: `ActionVault` must always grant `owner` immediate, unconditional access to `emergencyWithdraw()` and `executeSafeSweep()`.
 - **Gas Lifecycle Awareness**: Always account for RSC `lREACT` gas balances and support refuel capabilities.
 - **Zero AI Slop & No Emojis in Source Code**: No emojis in contract variable names, schemas, or tests. Keep code clean and production-ready.
 
