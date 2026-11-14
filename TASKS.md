@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 6 | 6 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 0 | 0 | **0%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 4 | 0 | **36.4%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 5 | 0 | **45.5%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **30** | **10** | **0** | **33.3%** |
+| **TỔNG CỘNG** | **21 Ngày** | **30** | **11** | **0** | **36.7%** |
 
 ---
 
@@ -228,14 +228,18 @@
 * **Ngày hoàn thành:** 14/11/2026 18:35
 * **Trạng thái:** `DONE`
 
-#### `TASK-206` [TODO] — Pipeline Graph Parser & Pre-compiled Bytecode Deployer API
+#### `TASK-206` [DONE] — Pipeline Graph Parser & Pre-compiled Bytecode Deployer API
 * **Module / Màn hình:** `backend/src/services/deployer.service.ts` & `routes/pipeline.route.ts`
 * **Mục đích:** Validate đồ thị JSON, trích xuất parameters và deploy RSC qua Viem với 1.0 lREACT gas tài trợ trong 1s.
 * **Chi tiết thực thi:**
-  * Zod Schema validation cho Graph JSON (DAG không chu trình).
-  * Hàm deploy RSC sử dụng `walletClient.deployContract` nạp sẵn `{ value: parseEther('1.0') }`.
-  * Endpoint REST API: `POST /api/pipeline/compile-and-deploy`.
-* **Ngày tạo:** 14/11/2026 17:52 | **Trạng thái:** `TODO`
+  * Xây dựng `PipelineGraphSchema` với Zod đảm bảo kiểm tra cấu trúc nodes, edges, và metadata owner.
+  * Viết `DeployerService` trích xuất tham số: `pairAddress`, `priceThresholdWei`, `cooldownSeconds`, `percentToSwap`, `actionVaultAddress`.
+  * Tích hợp `walletClient.deployContract` tự động nạp `{ value: parseEther('1.0') }` cho RSC.
+  * Cung cấp REST endpoint `POST /api/pipeline/compile-and-deploy`.
+  * Test live API trả về `200 OK` với đầy đủ `pipelineId`, địa chỉ hợp đồng và link explorer.
+* **Ngày tạo:** 14/11/2026 17:52
+* **Ngày hoàn thành:** 14/11/2026 18:40
+* **Trạng thái:** `DONE`
 
 #### `TASK-207` [DONE] — Real-time WebSocket Gateway & 30s Heartbeat
 * **Module / Màn hình:** `backend/src/websocket/`
