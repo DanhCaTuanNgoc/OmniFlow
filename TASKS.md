@@ -12,11 +12,11 @@
 
 | Giai đoạn (Phase) | Thời gian | Tổng Tasks | Hoàn thành | Đang làm | Tỷ lệ hoàn thành |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 6 | 6 | 0 | **100%** |
-| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 6 | 0 | **75.0%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 8 | 0 | **72.7%** |
+| **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
+| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 14 | 8 | 0 | **57.1%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **30** | **20** | **0** | **66.7%** |
+| **TỔNG CỘNG** | **21 Ngày** | **36** | **21** | **0** | **58.3%** |
 
 ---
 
@@ -88,6 +88,20 @@
   * Đồng bộ tiêu chuẩn bảo vệ Stateless Cooldown và mapping `authorizedRSCs` vào quy chuẩn `AGENTS.md`.
 * **Ngày tạo:** 14/11/2026 17:50
 * **Ngày hoàn thành:** 14/11/2026 17:53
+* **Trạng thái:** `DONE`
+
+#### `TASK-007` [DONE] — Bổ sung Đặc tả Kiến trúc 12 Node, Decoupled Live Price Validation & Anchored Velocity Window
+* **Module / Màn hình:** Architecture & Specification (`PROJECT_BLUEPRINT.md`, `docs/REACTIVEFLOW_DETAILED_FRS.md`)
+* **Mục đích:** Nâng cấp danh mục từ 10 thành 12 Node Chuẩn Trực Giao, mở rộng không gian sáng tạo với Cross-Chain bản địa, bảo vệ chống bẫy micro-drop và bẫy trượt giá liên chuỗi.
+* **Chi tiết thực thi:**
+  * Bổ sung Node #11 (`CustomEventWatcherNode`) với Ma trận Typed Ports (cấm nối vào Price Condition #4 và #14; cho phép nối vào Cooldown #5 / Balance #6 tới Action #7 DEX Swap, #8 SafeSweep, #9 Webhook).
+  * Bổ sung Node #14 (`PriceVelocityGuardNode`) với thuật toán Anchored Sliding Window (`windowStartPrice`, `windowStartTime`) triệt tiêu bẫy trượt cửa sổ thời gian trên block 200ms/1s.
+  * Chuẩn hóa cơ chế Cross-Chain bản địa (Unichain Sepolia ↔ Base Sepolia) qua Chain Selector trên từng Node, không sinh node rời gây gãy DAG.
+  * Đặc tả cơ chế Decoupled Live Price Validation cho Pattern 3 trong `ActionVault.sol`: bypass check giá tĩnh chuỗi đích khi chạy Cross-Chain / Velocity, giữ nguyên 100% `minAmountOut` chống MEV sandwich.
+  * Bổ sung 2 tính năng Studio UI: `Simulate Flow (Dry-Run Sandbox)` và `Live Solidity Preview`.
+  * Thêm Recipe 5 (`Payday Auto-Splitter`) và Recipe 6 (`Unichain-to-Base Cross-Chain Hedge`) vào Template Library.
+* **Ngày tạo:** 14/11/2026 19:25
+* **Ngày hoàn thành:** 14/11/2026 19:35
 * **Trạng thái:** `DONE`
 
 ---
@@ -190,6 +204,25 @@
 * **Ngày tạo:** 14/11/2026 17:35
 * **Ngày hoàn thành:** 14/11/2026 18:54
 * **Trạng thái:** `DONE`
+
+#### `TASK-109` [TODO] — Nâng cấp `ActionVault.sol` với Decoupled Live Price Check cho Cross-Chain & Velocity
+* **Module / Màn hình:** `contracts/src/ActionVault.sol` (Base Sepolia)
+* **Mục đích:** Đảm bảo lệnh phòng vệ liên chuỗi (Unichain $\rightarrow$ Base) và lệnh kích hoạt theo Price Velocity không bị `OrderSkipped` do giá Base chưa kịp giảm, trong khi vẫn kiểm tra `minAmountOut` chống MEV.
+* **Chi tiết thực thi:**
+  * Thêm điều kiện `thresholdPriceUSD < type(uint256).max` hoặc flag `checkLocalLivePrice` trong `executeStopLoss`.
+  * Giữ nguyên 100% kiểm tra `amountOut >= minAmountOut` qua Uniswap Router `getAmountsOut()` để triệt tiêu nguy cơ sandwich MEV.
+  * Viết Foundry test trong `ActionVault.t.sol` xác nhận trường hợp cross-chain bypass kiểm tra giá tĩnh thành công.
+* **Ngày tạo:** 14/11/2026 19:30 | **Trạng thái:** `TODO`
+
+#### `TASK-110` [TODO] — Nâng cấp `StopLoss_Pipeline.sol` với Anchored Sliding Window & Dynamic Origin Chain / Topic0
+* **Module / Màn hình:** `contracts/src/StopLoss_Pipeline.sol` (Reactive Lasna)
+* **Mục đích:** Hỗ trợ tính toán Price Velocity không bị trượt cửa sổ thời gian trên block 200ms/1s và hỗ trợ lắng nghe sự kiện từ Unichain Sepolia hoặc Custom Topic0.
+* **Chi tiết thực thi:**
+  * Khai báo state: `windowStartPrice`, `windowStartTime`, `velocityThresholdBps`, `windowSeconds`.
+  * Cài đặt logic so sánh giá tức thời với mốc neo đầu chu kỳ `windowStartPrice` và reset mốc neo khi hết `windowSeconds`.
+  * Hỗ trợ nhận `originChainId` linh hoạt (`84532` hoặc `1301`) và custom `topic_0` cho Node #11.
+  * Viết Foundry test kiểm thử tính toán % delta chính xác qua các sự kiện Sync giả lập.
+* **Ngày tạo:** 14/11/2026 19:30 | **Trạng thái:** `TODO`
 
 ---
 
@@ -321,6 +354,34 @@
 * **Mục đích:** Giám sát trạng thái RSC đang chạy, đo lượng gas lREACT còn lại và nút Refuel.
 * **Chi tiết thực thi:** Pipeline status cards, Gas Gauge bar (Xanh/Vàng/Đỏ), Pause/Resume controls.
 * **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
+
+#### `TASK-212` [TODO] — Mở rộng Palette Studio với Node #11 (Custom Event), Node #14 (Price Velocity) & Chain Selector
+* **Module / Màn hình:** Pipeline Studio (`frontend/src/components/canvas/`)
+* **Mục đích:** Đưa 2 Node mới lên Canvas Palette, cấu hình Typed Port Matrix và bổ sung lựa chọn Origin/Destination Chain ID.
+* **Chi tiết thực thi:**
+  * Xây dựng `CustomEventWatcherNode.tsx` hỗ trợ nhập địa chỉ hợp đồng, tên event và tự tính `topic_0` qua Viem `toEventSelector()`.
+  * Xây dựng `PriceVelocityGuardNode.tsx` với slider `% drop` và cửa sổ thời gian `windowSeconds`.
+  * Tích hợp `originChainId` (`84532` Base Sepolia hoặc `1301` Unichain Sepolia) vào Triggers và `destinationChainId` vào Actions.
+  * Hiển thị huy hiệu `[ 🌐 Cross-Chain: Unichain -> Base ]` trên dây nối khi khác Chain ID.
+  * Ràng buộc Typed Port: Cấm nối Node #11 vào Condition #4 và #14; cho phép nối qua Cooldown #5 / Balance #6 tới Actions.
+* **Ngày tạo:** 14/11/2026 19:30 | **Trạng thái:** `TODO`
+
+#### `TASK-213` [TODO] — Triển khai Nút Simulate Flow (Dry-Run Sandbox) & Tab Live Solidity Preview
+* **Module / Màn hình:** Pipeline Studio Toolbar & Inspector (`frontend/src/components/canvas/`)
+* **Mục đích:** Nâng cao điểm Craft/DevTools, cho phép BGK test visual pipeline không cần đợi biến động giá và kiểm chứng tính minh bạch on-chain.
+* **Chi tiết thực thi:**
+  * Nút `[ 🧪 Simulate Flow ]`: Bắn event mô phỏng kích hoạt tuần tự Trigger chớp Cyan $\rightarrow$ Photon Pulse trên dây $\rightarrow$ Condition Glowing $\rightarrow$ Action Tick Xanh (có watermark rõ ràng "Sandbox Preview Mode").
+  * Tab `[ </> View Solidity ]`: Cung cấp code syntax highlighter hiển thị mã nguồn `StopLoss_Pipeline.sol` với các biến nhảy trực tiếp theo slider người dùng kéo trên Inspector.
+* **Ngày tạo:** 14/11/2026 19:30 | **Trạng thái:** `TODO`
+
+#### `TASK-214` [TODO] — Bổ sung Recipe 5 (Payday Auto-Splitter) & Recipe 6 (Cross-Chain Hedge) vào Template Library
+* **Module / Màn hình:** Màn hình 3 — Template Library (`frontend/src/app/workspace/templates/page.tsx`)
+* **Mục đích:** Cung cấp 2 kịch bản đột phá "An automation nobody's thought of yet" phục vụ chấm giải Track Set It and Forget It.
+* **Chi tiết thực thi:**
+  * Khai báo schema Recipe 5: `Payday Auto-Splitter` (Watch Transfers > 1,000 USDC lương $\rightarrow$ Swap 20% DCA ETH + Sweep 30% ví lạnh).
+  * Khai báo schema Recipe 6: `Unichain-to-Base Cross-Chain Hedge` (Watch DEX Price Unichain $\rightarrow$ Velocity Guard > 5% trong 10s $\rightarrow$ Swap Base Sepolia).
+  * Kết nối Graph Hydration Engine để render đồ thị 1-click lên Studio Canvas.
+* **Ngày tạo:** 14/11/2026 19:30 | **Trạng thái:** `TODO`
 
 ---
 

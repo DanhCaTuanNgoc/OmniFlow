@@ -119,6 +119,15 @@ stateDiagram-v2
 | **6. STOP / PAUSE (Tạm dừng)** | Destination Chain State | Người dùng bấm Pause $\rightarrow$ gọi hàm `revokeRSC(address)` trên `ActionVault`, tạm thời tước quyền thực thi của RSC. |
 | **7. TERMINATED (Hủy hoàn toàn)** | On-chain Unsubscribe | RSC gọi `service.unsubscribe()`, rút toàn bộ `lREACT` còn dư về ví của người dùng. Canvas lưu trữ thành dạng Archived. |
 
+### 2.1.1 Tính Năng Bổ Trợ Trải Nghiệm Studio (Craft & DevTools)
+1. **Nút `[ 🧪 Simulate Flow / Dry-Run ]` trên Canvas Toolbar:**
+   * **Mục đích:** Giúp Ban Giám Khảo và người dùng kiểm thử toàn bộ phản hồi thị giác của đồ thị DAG ngay cả khi testnet chưa có biến động giá.
+   * **Cơ chế:** Kích hoạt chuỗi hiệu ứng mô phỏng có kiểm soát: Node Trigger chớp Cyan $\rightarrow$ Hạt photon bắn dọc theo đường dây nối (Edge Pulse) $\rightarrow$ Node Condition rực sáng Glowing Aura $\rightarrow$ Node Action hiện dấu Tick Xanh kèm Toast thành công.
+   * **Nguyên tắc kỹ thuật:** Gắn nhãn rõ ràng *"Simulated Sandbox Mode (Zero-Risk Preview)"*, phân tách hoàn toàn với dữ liệu RPC thật để tuân thủ 100% chính sách Zero-Mock của dự án.
+2. **Tab `[ </> View Generated Solidity ]` trong Inspector Panel:**
+   * **Mục đích:** Xóa bỏ nghi ngờ về việc hệ thống là "hộp đen giả lập", chứng minh tính minh bạch của Graph-to-Solidity Engine.
+   * **Cơ chế:** Hiển thị preview mã nguồn `StopLoss_Pipeline.sol` với cú pháp được highlight theo thời gian thực. Khi người dùng điều chỉnh Slider giá từ `$1,800` lên `$1,950` hoặc đổi Chain ID từ `84532` sang `1301`, các hằng số tương ứng trong Solidity sẽ lập tức cập nhật trực tiếp.
+
 ---
 
 ## 2.2 Vòng Đời Của Từng Node (Node State Machine)
@@ -162,23 +171,30 @@ stateDiagram-v2
 
 ---
 
-## 2.3 Danh Mục 10 Node Thực Thi Chuẩn Hóa (Lean & Orthogonal Catalog)
+## 2.3 Danh Mục 12 Node Thực Thi Chuẩn Hóa (Enriched Orthogonal Catalog)
 
-Hệ thống được thiết kế theo nguyên tắc **Direct Orthogonal Architecture** (Không trùng lặp, mỗi node sở hữu một năng lực kỹ thuật độc nhất):
+Hệ thống được thiết kế theo nguyên tắc **Direct Orthogonal Architecture** (Không trùng lặp, mỗi node sở hữu một năng lực kỹ thuật độc nhất, tối đa hóa khả năng biểu đạt Expressive Power):
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                   REACTIVEFLOW LEAN CATALOG (10 NODES)                 │
+│               REACTIVEFLOW ENRICHED CATALOG (12 NODES)                 │
 ├─────────────────────┬──────────────────────────┬───────────────────────┤
-│ 🔵 1. TRIGGERS (3)  │ 🟡 2. CONDITIONS (3)     │ 🟢 3. ACTIONS (3)     │
+│ 🔵 1. TRIGGERS (4)  │ 🟡 2. CONDITIONS (4)     │ 🟢 3. ACTIONS (3)     │
 │ 1. Watch DEX Price  │ 4. Price Threshold Guard │ 7. DEX Token Swap     │
 │ 2. Watch Transfers  │ 5. Cooldown Rate-Limiter │ 8. Emergency SafeSweep│
 │ 3. Periodic Cron    │ 6. Balance Threshold     │ 9. Notify Log Webhook │
+│ 11. Custom Contract │ 14. Price Velocity Guard │                       │
+│     Event (Watcher) │     (% Delta Detector)   │                       │
 ├─────────────────────┴──────────────────────────┴───────────────────────┤
 │ ⚪ 4. LOGIC / CONTROL (1)                                              │
 │ 10. Logic Gate (AND / OR) — [Điểm nhấn biến hệ thống thành Zapier Web3]│
 └────────────────────────────────────────────────────────────────────────┘
 ```
+
+> 🌐 **CƠ CHẾ CROSS-CHAIN LIÊN CHUỖI (BASE SEPOLIA ↔ UNICHAIN SEPOLIA):**
+> * **Không tạo Node "Cross-Chain" riêng biệt:** Việc tách một node trung gian sẽ vi phạm cấu trúc đồ thị DAG chuẩn (Trigger $\rightarrow$ Condition $\rightarrow$ Action) và gây khó hiểu cho người dùng.
+> * **Tích hợp Native Chain Selector:** Mọi Trigger Node đều có trường cấu hình `Origin Chain` (`84532` Base Sepolia hoặc `1301` Unichain Sepolia). Mọi Action Node đều có trường cấu hình `Destination Chain`.
+> * **Hiệu ứng đồ họa Canvas:** Khi phát hiện dây nối giữa 2 node khác Chain ID, Canvas tự động hiển thị huy hiệu `[ 🌐 Cross-Chain: Unichain -> Base ]` kèm dải sáng đa sắc trên dây nối.
 
 ---
 
@@ -189,7 +205,7 @@ Hệ thống được thiết kế theo nguyên tắc **Direct Orthogonal Archit
 * **Cơ chế kỹ thuật ngầm:** Gọi `service.subscribe(originChainId, pairAddress, SYNC_TOPIC, ...)`. Lắng nghe `Sync(uint112 reserve0, uint112 reserve1)`.
 * **Cổng kết nối:** 0 Input | 1 Output (Type: `EventStream<PriceData>`).
 * **Đặc tả Inputs (Inspector):**
-  * `chainId` *(Dropdown, Bắt buộc)*: `84532` (Base Sepolia) hoặc `1301` (Unichain Sepolia). Mặc định: `84532`.
+  * `originChainId` *(Dropdown, Bắt buộc)*: `84532` (Base Sepolia) hoặc `1301` (Unichain Sepolia). Mặc định: `84532`.
   * `dexRouter` *(Dropdown, Bắt buộc)*: `Uniswap V2`.
   * `tokenPair` *(Dropdown, Bắt buộc)*: `ETH/USDC`, `WBTC/USDC`. Tự động map sang Pair Address `0x...`.
 * **Output Data Package:** `{ reserve0: uint112, reserve1: uint112, timestamp: uint256 }`.
@@ -201,6 +217,7 @@ Hệ thống được thiết kế theo nguyên tắc **Direct Orthogonal Archit
 * **Cơ chế kỹ thuật ngầm:** Gọi `service.subscribe()` lắng nghe event `Transfer(address indexed from, address indexed to, uint256 value)`.
 * **Cổng kết nối:** 0 Input | 1 Output (Type: `EventStream<TransferData>`).
 * **Đặc tả Inputs (Inspector):**
+  * `originChainId` *(Dropdown)*: `84532` (Base Sepolia) hoặc `1301` (Unichain Sepolia).
   * `watchTarget` *(Dropdown)*: `My Connected Wallet` hoặc `Specific Address`.
   * `tokenAddress` *(Dropdown)*: `Native ETH` hoặc ERC-20 token address.
   * `direction` *(Dropdown)*: `Outgoing` | `Incoming` | `Both`.
@@ -219,6 +236,29 @@ Hệ thống được thiết kế theo nguyên tắc **Direct Orthogonal Archit
 
 ---
 
+#### 11. 🔵 Node: `CustomEventWatcherNode` (Trigger) — [VŨ KHÍ MỞ RỘNG ĐỀ BÀI]
+* **Chức năng:** Lắng nghe bất kỳ sự kiện nào từ bất kỳ Smart Contract nào trên Base Sepolia hoặc Unichain Sepolia (ví dụ: Aave `LiquidationCall`, Governor `ProposalExecuted`, NFT `Transfer`, v.v.).
+* **Cơ chế kỹ thuật ngầm:** 
+  * Người dùng nhập Contract Address và chọn/nhập Event Signature (ví dụ: `ProposalExecuted(uint256)`).
+  * Frontend sử dụng `viem.toEventSelector()` để băm keccak256 ra `topic_0` tức thời.
+  * RSC gọi `service.subscribe(originChainId, contractAddress, topic_0, ...)` theo cơ chế **Topic-Only Occurrence Filter**.
+* **Cổng kết nối:** 0 Input | 1 Output (Type: `EventStream<GenericLog>`).
+* **Đặc tả Inputs (Inspector):**
+  * `originChainId` *(Dropdown, Bắt buộc)*: `84532` (Base Sepolia) hoặc `1301` (Unichain Sepolia).
+  * `contractAddress` *(Address, Bắt buộc)*: Địa chỉ hợp đồng cần theo dõi.
+  * `eventSignature` *(String, Bắt buộc)*: Chuỗi signature (ví dụ: `ProposalExecuted(uint256)` hoặc `OwnershipTransferred(address,address)`).
+  * `topic0Hex` *(Read-only Hex)*: Tự động tính keccak256 selector.
+* **Output Data Package:** `{ emitter: address, topic0: bytes32, blockNumber: uint256, txHash: bytes32 }`.
+* **MA TRẬN RÀNG BUỘC CỔNG KẾT NỐI (TYPED PORT MATRIX):**
+  * ❌ **CẤM NỐI VÀO:** Node #4 (`PriceThresholdGuard`) và Node #14 (`PriceVelocityGuard`). *Lý do kỹ thuật:* Payload của một custom event tùy ý không chứa `Sync(uint112 reserve0, uint112 reserve1)`. Nếu giải mã sẽ gây lỗi revert contract trên Lasna.
+  * ✅ **CHO PHÉP NỐI VÀO:** 
+    * Node #5 (`CooldownGuard`) hoặc Node #6 (`BalanceThreshold`) làm bộ lọc trung gian.
+    * Node #7 (`DEXSwap`): Chạy hoàn toàn hợp lệ vì `ActionVault` tự đọc số dư và cấu hình % swap tĩnh định sẵn trên Inspector!
+    * Node #8 (`EmergencySafeSweep`): Tẩu tán toàn bộ tài sản Vault về ví lạnh khi dApp mục tiêu phát sinh sự kiện khẩn cấp.
+    * Node #9 (`NotifyLogWebhook`): Gửi cảnh báo on-chain ngay lập tức.
+
+---
+
 #### 4. 🟡 Node: `PriceThresholdGuardNode` (Condition)
 * **Chức năng:** So sánh tỷ giá tức thời được tính toán từ reserves với ngưỡng mục tiêu (Hỗ trợ cả Cắt lỗ và Chốt lời).
 * **Cơ chế kỹ thuật ngầm:** $\text{currentPrice} = \frac{\text{reserve1} \times 10^{18}}{\text{reserve0}}$. So khớp với operator `<=`, `>=`.
@@ -227,6 +267,33 @@ Hệ thống được thiết kế theo nguyên tắc **Direct Orthogonal Archit
   * `operator` *(Dropdown, Bắt buộc)*: `LESS_THAN_OR_EQUAL (<=)` [Cắt lỗ] hoặc `GREATER_THAN_OR_EQUAL (>=)` [Chốt lời].
   * `targetPriceUSD` *(Number Float, Bắt buộc)*: Ngưỡng giá USD (ví dụ: `1800.00`).
 * **Output Data Package:** `{ conditionMet: boolean, currentPrice: uint256 }`.
+
+---
+
+#### 14. 🟡 Node: `PriceVelocityGuardNode` (Condition / % Delta Detector) — [TẬN DỤNG BLOCK 1s LASNA]
+* **Chức năng:** Bắt các cú sập giá siêu tốc (Flash Crash Velocity) theo % biến thiên trong một khoảng thời gian ngắn, bất kể giá tuyệt đối là bao nhiêu.
+* **Cơ chế kỹ thuật ngầm (Thuật toán Anchored Sliding Window):**
+  * Để khắc phục triệt để **bẫy trượt cửa sổ (Sliding Window Trap)** trên các L2 tần số cao (block 200ms - 1s) khi giá giảm từ từ 1%/giây không kích hoạt nếu chỉ so sánh block liền kề, RSC sử dụng cơ chế **Mốc Neo Chu Kỳ (Anchored Window)**:
+    ```solidity
+    // Kiểm tra và reset mốc neo chu kỳ mới khi hết windowSeconds
+    if (block.timestamp - windowStartTime > windowSeconds || windowStartPrice == 0) {
+        windowStartPrice = currentPrice;
+        windowStartTime = block.timestamp;
+        return;
+    }
+    // So sánh currentPrice tức thời với mốc neo đầu chu kỳ windowStartPrice
+    if (windowStartPrice > currentPrice) {
+        uint256 dropPercentBps = ((windowStartPrice - currentPrice) * 10000) / windowStartPrice;
+        if (dropPercentBps >= velocityThresholdBps) {
+            // Thỏa mãn điều kiện vận tốc sập giá -> Bắn tín hiệu sang Action!
+        }
+    }
+    ```
+* **Cổng kết nối:** 1 Input (Type: `PriceData` từ Node #1) | 1 Output (Type: `ConditionSignal`).
+* **Đặc tả Inputs (Inspector):**
+  * `dropPercentage` *(Slider, Bắt buộc)*: Mức sụt giảm kích hoạt (% Delta từ `1%` đến `50%`, ví dụ: `5%` = `500 bps`).
+  * `timeWindowSeconds` *(Number, Bắt buộc)*: Cửa sổ thời gian quan sát (ví dụ: `10` giây, `30` giây, `60` giây).
+* **Output Data Package:** `{ conditionMet: boolean, dropPercentBps: uint256, windowSeconds: uint256 }`.
 
 ---
 
@@ -253,15 +320,20 @@ Hệ thống được thiết kế theo nguyên tắc **Direct Orthogonal Archit
 ---
 
 #### 7. 🟢 Node: `DEXSwapNode` (Action)
-* **Chức năng:** Phát sinh callback gọi vào `ActionVault.sol` để thực thi hoán đổi token trên Uniswap Router (Dùng cho cả Stop-Loss, Take-Profit, Rebalance).
-* **Cơ chế kỹ thuật ngầm:** `emit Callback(...)` gọi `executeStopLoss(percent, minAmountOut)`.
+* **Chức năng:** Phát sinh callback gọi vào `ActionVault.sol` để thực thi hoán đổi token trên Uniswap Router (Dùng cho cả Stop-Loss, Take-Profit, Rebalance, Cross-Chain Hedge).
+* **Cơ chế kỹ thuật ngầm:** `emit Callback(...)` gọi `executeStopLoss(...)`.
 * **Cổng kết nối:** 1 Input (Type: `ValidatedSignal`) | 0 Output.
 * **Đặc tả Inputs (Inspector):**
+  * `destinationChainId` *(Dropdown, Bắt buộc)*: `84532` (Base Sepolia) hoặc `1301` (Unichain Sepolia).
   * `fromToken` *(Dropdown)*: Token bán (ví dụ: `ETH`).
   * `toToken` *(Dropdown)*: Token nhận về (ví dụ: `USDC`).
   * `amountPercentage` *(Slider, Bắt buộc)*: Tỷ lệ bán (1% - 100%). Mặc định: `50%`.
-  * **`maxSlippage` *(Slider, Bắt buộc) — Tích hợp trực tiếp bên trong node:*** Trượt giá tối đa (0.1% - 5%). Mặc định: `1%`.
-* **Business Rules:** Tự động tính `minAmountOut = (amountIn * expectedPrice * (100 - slippage)) / 100` chống MEV.
+  * `maxSlippage` *(Slider, Bắt buộc)*: Trượt giá tối đa (0.1% - 5%). Mặc định: `1%`.
+* **ĐẶC TẢ DECOUPLED LIVE PRICE VALIDATION KHI CHẠY CROSS-CHAIN / VELOCITY:**
+  * Khi luồng là **Cross-Chain** (Origin $\ne$ Destination) hoặc kích hoạt bởi **Price Velocity / Custom Event**:
+    * Hàm gọi callback sang `ActionVault` truyền tham số `thresholdPriceUSD = type(uint256).max` (hoặc cờ `checkLocalLivePrice = false`).
+    * `ActionVault` bỏ qua bước so sánh cứng `livePrice > thresholdPriceUSD` trên chuỗi đích (tránh lệnh bị `OrderSkipped` oan uổng do giá Base chưa kịp giảm theo Unichain).
+    * `ActionVault` **vẫn bảo lưu 100% việc tính `minAmountOut`** qua `getAmountsOut()` để chống tấn công Sandwich MEV!
 
 ---
 
@@ -270,6 +342,7 @@ Hệ thống được thiết kế theo nguyên tắc **Direct Orthogonal Archit
 * **Cơ chế kỹ thuật ngầm:** `emit Callback(...)` gọi `emergencySweep(safeAddress)`.
 * **Cổng kết nối:** 1 Input | 0 Output.
 * **Đặc tả Inputs (Inspector):**
+  * `destinationChainId` *(Dropdown)*: `84532` (Base Sepolia).
   * `safeAddress` *(Address, Bắt buộc)*: Địa chỉ ví lạnh an toàn.
   * `assetScope` *(Dropdown)*: `All Assets (ETH + Tokens)` | `ETH Only`.
 
@@ -294,33 +367,43 @@ Hệ thống được thiết kế theo nguyên tắc **Direct Orthogonal Archit
 
 ---
 
-## 2.4 Phân Tích Nghiệp Vụ: Đề Xuất 12 Node vs 10 Node Tinh Hoa
+## 2.4 Phân Tích Nghiệp Vụ: Kiến Trúc 12 Node Chuẩn & Lý Do Loại Bỏ Các Đề Xuất Lỗi
 
-Khi mở rộng hệ thống, việc đánh giá tính cần thiết của từng node là cực kỳ quan trọng để tránh tạo ra các "tính năng rác":
+Khi mở rộng hệ thống, việc đánh giá tính khả thi theo kiến trúc EVM là bắt buộc:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│              SO SÁNH ĐỀ XUẤT 12 NODE vs 10 NODE TINH HOA               │
+│             ĐÁNH GIÁ CÁC ĐỀ XUẤT MỞ RỘNG & PHÂN TÍCH KIẾN TRÚC         │
 ├─────────────────────────┬──────────────────────────────────────────────┤
-│ ĐỀ XUẤT 12 NODES        │ PHÂN TÍCH NGHIỆP VỤ & KẾT LUẬN               │
+│ ĐỀ XUẤT NODE            │ PHÂN TÍCH NGHIỆP VỤ & KẾT LUẬN               │
 ├─────────────────────────┼──────────────────────────────────────────────┤
-│ 1. Take-Profit Scalper  │ ❌ DƯ THỪA 100%: Bản chất on-chain đều là    │
-│    vs DEX Token Swap    │ gọi Uniswap swap ETH -> USDC. Điểm khác duy  │
-│                         │ nhất là operator (<= vs >=) ở node Condition.│
-│                         │ $\rightarrow$ Hợp nhất vào 1 node `DEX Swap`. │
+│ 1. Take-Profit Scalper  │ ❌ DƯ THỪA: Bản chất on-chain đều là swap.   │
+│    vs DEX Token Swap    │ Khác biệt nằm ở toán tử (<= vs >=) ở node #4.│
+│                         │ $\rightarrow$ Giữ nguyên hợp nhất trong DEX Swap.│
 ├─────────────────────────┼──────────────────────────────────────────────┤
-│ 2. Slippage Guard       │ ❌ SAI NGHIỆP VỤ UX: Slippage không bao giờ  │
-│    như một Node rời     │ là 1 node điều kiện độc lập trên đồ thị DeFi.│
-│                         │ Nó là tham số cấu hình bắt buộc NẰM TRONG    │
-│                         │ node `DEX Swap` (minAmountOut).              │
+│ 2. Slippage Guard rời   │ ❌ SAI NGUYÊN TẮC DEFI: Slippage (minAmount) │
+│                         │ bắt buộc phải nằm bên trong `DEX Swap`.      │
 ├─────────────────────────┼──────────────────────────────────────────────┤
-│ 3. Whale Alert Tracker  │ ❌ TRÙNG LẶP: Đều là nghe sự kiện `Transfer`.│
-│    vs Watch Transfers   │ "Cá voi" chỉ là một ví có amount lớn.        │
-│                         │ $\rightarrow$ Hợp nhất vào `Watch Transfers`.│
+│ 3. Whale Alert rời      │ ❌ TRÙNG LẶP: Là sự kiện `Transfer` lọc giá  │
+│                         │ trị lớn $\rightarrow$ Hợp nhất vào node #2.    │
+├─────────────────────────┼──────────────────────────────────────────────┤
+│ 4. Revoke Approvals     │ ❌ VI PHẠM BẢO MẬT EVM: ActionVault không    │
+│    (Chống hack ví EOA)  │ thể thay mặt ví EOA cá nhân gọi approve(0).  │
+│                         │ Chỉ EOA chủ sở hữu mới có quyền thu hồi.     │
+│                         │ $\rightarrow$ LOẠI BỎ để tránh hiểu lầm EVM. │
+├─────────────────────────┼──────────────────────────────────────────────┤
+│ 5. Cross-Chain Mirror   │ ❌ GÂY RỐI DAG NẾU TÁCH THÀNH NODE RỜI:      │
+│    như một Node rời     │ Bản chất Cross-Chain nằm ở cặp Chain ID của  │
+│                         │ Trigger & Action $\rightarrow$ HỢP NHẤT VÀO  │
+│                         │ Chain Selector & Canvas Edge Badge.          │
+├─────────────────────────┼──────────────────────────────────────────────┤
+│ 6. Custom Event Watcher │ ✅ GIỮ LẠI (NODE #11): Cực kỳ mạnh, giải     │
+│    & Price Velocity     │ quyết bài toán mở rộng đề bài, tận dụng      │
+│    Detector             │ tối đa block 1s Lasna & block 200ms Base.    │
 └─────────────────────────┴──────────────────────────────────────────────┘
 ```
 
-> 🎯 **Kết luận:** Giữ lại **10 Node Tinh Hoa** giúp sản phẩm đạt chuẩn **Orthogonal Architecture**, vừa vặn cho Hackathon 21 ngày, không bị lỗi thời gian chạy thực tế (Runtime bug), và được Ban Giám Khảo đánh giá rất cao về tư duy thiết kế phần mềm sạch.
+> 🎯 **Kết luận:** Bộ **12 Node Tinh Hoa** đạt chuẩn **Orthogonal Architecture**, tối ưu cho Hackathon 21 ngày, không bị lỗi runtime, hỗ trợ đầy đủ Cross-Chain và được Ban Giám Khảo đánh giá rất cao về tư duy kiến trúc sạch.
 
 ---
 
@@ -443,17 +526,35 @@ Nơi người dùng an tâm "quên nó đi" nhưng vẫn nắm trọn quyền đ
 ### Mục tiêu
 Xóa bỏ hoàn toàn rào cản thao tác cho người dùng mới và phục vụ ban giám khảo test sản phẩm trong 10 giây.
 
+### Danh Mục 6 Recipes Chuẩn (Bao Gồm 2 Recipe Đột Phá Mới):
+1. **Recipe 1: `Uniswap Flash Crash Stop-Loss` (DeFi Protection)**
+   * *Nodes:* `WatchDEXPrice` $\rightarrow$ `PriceThresholdGuard (<= $1,800)` $\rightarrow$ `CooldownGuard` $\rightarrow$ `DEXSwap (50% ETH to USDC)`.
+2. **Recipe 2: `Take-Profit Scalper` (Yield Automation)**
+   * *Nodes:* `WatchDEXPrice` $\rightarrow$ `PriceThresholdGuard (>= $3,500)` $\rightarrow$ `CooldownGuard` $\rightarrow$ `DEXSwap (25% ETH to USDC)`.
+3. **Recipe 3: `Anti-Drainer Panic Sweep` (Wallet Security)**
+   * *Nodes:* `WatchTransfers` $\rightarrow$ `BalanceThreshold` $\rightarrow$ `EmergencySafeSweep (To Cold Wallet)`.
+4. **Recipe 4: `Daily Portfolio Rebalancer` (Asset Management)**
+   * *Nodes:* `PeriodicCron (Every 24h)` $\rightarrow$ `BalanceThreshold` $\rightarrow$ `DEXSwap (Rebalance 50/50)`.
+5. **Recipe 5: `Payday Auto-Splitter & DCA Saver` (Personal Life Automation — "An Automation Nobody Thought Of")**
+   * *Ý nghĩa:* Đánh trúng 100% tiêu chí "A tool you'd actually keep running / Clear personal purpose" của Track Set It and Forget It.
+   * *Nodes:* `WatchTransfers (Ví nhận > 1,000 USDC lương)` $\rightarrow$ `DEXSwap (Trích 20% mua ETH tích sản DCA)` + `EmergencySafeSweep (Trích 30% gửi sang ví tiết kiệm lạnh)`.
+6. **Recipe 6: `Unichain-to-Base Cross-Chain Flash Hedge` (Omni Speed Arbitrage / Front-run Protection)**
+   * *Ý nghĩa:* Tận dụng tối đa tốc độ block 1s của Reactive Omni và khả năng liên chuỗi Unichain Sepolia (1301) $\leftrightarrow$ Base Sepolia (84532).
+   * *Nodes:* `WatchDEXPrice (Unichain Sepolia 1301)` $\rightarrow$ `PriceVelocityGuard (Sụt > 5% trong 10s)` $\rightarrow$ `DEXSwap (Bán ETH sang USDC trên Base Sepolia 84532)` trước khi giá Base kịp sập theo!
+
 ### Bảng Đặc Tả Chi Tiết:
 * **Data Schema Của Một Recipe Card:**
   ```json
   {
-    "id": "recipe-stop-loss-eth",
-    "title": "Uniswap Flash Crash Stop-Loss",
-    "badge": "DeFi Protection",
-    "difficulty": "Beginner",
-    "estimatedGas": "~0.002 Sepolia ETH",
-    "nodesIncluded": ["WatchDEXPrice", "PriceThresholdGuard", "CooldownGuard", "DEXSwap"],
-    "description": "Automatically swap 50% ETH to USDC if price drops below $1,800."
+    "id": "recipe-cross-chain-hedge",
+    "title": "Unichain-to-Base Flash Hedge",
+    "badge": "Cross-Chain Speed",
+    "difficulty": "Advanced",
+    "estimatedGas": "~0.003 Sepolia ETH",
+    "originChainId": 1301,
+    "destinationChainId": 84532,
+    "nodesIncluded": ["WatchDEXPrice", "PriceVelocityGuard", "CooldownGuard", "DEXSwap"],
+    "description": "Detect rapid price collapse on Unichain Sepolia and hedge on Base Sepolia in ~1s."
   }
   ```
 * **Business Rules (Graph Hydration Engine):**

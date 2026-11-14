@@ -847,12 +847,19 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
   ```solidity
   (uint112 r0, uint112 r1,) = IUniswapV2Pair(tokenPair).getReserves();
   uint256 livePrice = (uint256(r1) * 1e18) / uint256(r0);
-  if (livePrice > thresholdPriceUSD) {
+  if (thresholdPriceUSD < type(uint256).max && livePrice > thresholdPriceUSD) {
       emit OrderSkipped("Price bounced back", livePrice);
       return;
   }
   ```
   Nếu giá đã bật lại trên ngưỡng an toàn, giao dịch hủy bỏ êm đẹp mà không làm mất 1 xu tài sản của người dùng.
+
+* **ĐẶC TẢ DECOUPLED VALIDATION KHI CHẠY CROSS-CHAIN / VELOCITY / CUSTOM EVENT:**
+  * **Vấn đề xung đột tiềm ẩn:** Khi chạy kịch bản Cross-Chain Hedge (ví dụ: Unichain Sepolia 1301 sập kích hoạt bán cắt lỗ trước trên Base Sepolia 84532), giá trên Base tại thời điểm đó vẫn còn cao ($2,000 > $1,800). Nếu so sánh cứng `livePrice > thresholdPriceUSD` cục bộ thì lệnh phòng vệ liên chuỗi sẽ bị `OrderSkipped` oan!
+  * **Giải pháp chuẩn hóa:**
+    1. Khi pipeline là **Cross-Chain** (`originChainId != destinationChainId`), hoặc kích hoạt bởi **Price Velocity (% Delta)**, hoặc **Custom Event**: Callback truyền `thresholdPriceUSD = type(uint256).max` (hoặc cờ `checkLocalLivePrice = false`).
+    2. `ActionVault` bỏ qua bước so sánh giá tĩnh với Pool Base Sepolia.
+    3. `ActionVault` **vẫn bảo lưu 100% kiểm tra `amountOut >= minAmountOut`** qua Uniswap Router `getAmountsOut()` để triệt tiêu nguy cơ bị tấn công Sandwich MEV!
 
 ---
 
@@ -930,32 +937,46 @@ Mỗi Node trên Canvas không phải là khối tĩnh vô hồn mà phản ánh
 
 ---
 
-### 5.3 Danh Mục 10 Node Tinh Hoa (Lean Orthogonal Catalog)
+### 5.3 Danh Mục 12 Node Chuẩn Hóa & Cơ Chế Liên Chuỗi (Enriched Orthogonal Catalog)
 
-Tuân thủ nguyên tắc **Orthogonal Architecture** (mỗi node đại diện cho một chức năng duy nhất, không trùng lặp):
+Tuân thủ nguyên tắc **Orthogonal Architecture** (mỗi node đại diện cho một chức năng duy nhất, không trùng lặp, mở rộng không gian sáng tạo nhưng không phình to Smart Contract):
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                   REACTIVEFLOW LEAN CATALOG (10 NODES)                 │
+│               REACTIVEFLOW ENRICHED CATALOG (12 NODES)                 │
 ├─────────────────────┬──────────────────────────┬───────────────────────┤
-│ 🔵 TRIGGERS (3)     │ 🟡 CONDITIONS (3)        │ 🟢 ACTIONS (3)        │
+│ 🔵 TRIGGERS (4)     │ 🟡 CONDITIONS (4)        │ 🟢 ACTIONS (3)        │
 │ 1. Watch DEX Price  │ 4. Price Threshold Guard │ 7. DEX Token Swap     │
 │ 2. Watch Transfers  │ 5. Cooldown Rate-Limiter │ 8. Emergency SafeSweep│
 │ 3. Periodic Cron    │ 6. Balance Threshold     │ 9. Notify Log Webhook │
+│ 11. Custom Event    │ 14. Price Velocity Guard │                       │
+│     Watcher (ABI)   │     (% Delta Detector)   │                       │
 ├─────────────────────┴──────────────────────────┴───────────────────────┤
 │ ⚪ CONTROL / LOGIC (1)                                                 │
 │ 10. Logic Gate (Phép toán logic AND / OR kết hợp điều kiện)            │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### Phân Tích Nghiệp Vụ: Tại Sao Loại Bỏ 3 Node Dư Thừa?
+#### Cơ Chế Cross-Chain Bản Địa (Unichain Sepolia ↔ Base Sepolia)
+* **Không sinh Node rời gây gãy DAG:** Thay vì tách Node Cross-Chain làm rối đồ thị, hệ thống tích hợp `Origin Chain` (`84532` Base Sepolia hoặc `1301` Unichain Sepolia) vào Trigger Node và `Destination Chain` vào Action Node.
+* **Canvas Dynamic Badge:** Khi dây nối kết nối giữa 2 chain khác nhau, đồ thị tự động hiển thị huy hiệu `[ 🌐 Cross-Chain: Unichain -> Base ]` kèm hiệu ứng photon đa sắc.
+
+#### Thuật Toán Anchored Sliding Window Cho Node #14 (Price Velocity)
+* Khắc phục triệt để bẫy trượt cửa sổ (Sliding Window Trap) trên block 200ms - 1s bằng cách neo giữ mốc `windowStartPrice` và `windowStartTime` trong suốt chu kỳ `windowSeconds`. Chỉ reset khi hết chu kỳ, đảm bảo không bỏ sót bất kỳ cú xả tích lũy nào.
+
+#### Tính Năng Studio UI Bổ Trợ (Craft & DevTools)
+1. **Nút `[ 🧪 Simulate Flow / Dry-Run ]` trên Canvas Toolbar:** Kích hoạt chuỗi animation giả lập (Trigger chớp xanh $\rightarrow$ Photon pulse trên dây $\rightarrow$ Condition glowing $\rightarrow$ Action tick xanh) có gắn nhãn Sandbox rõ ràng, giúp giám khảo test luồng thị giác ngay cả khi testnet chưa có giao dịch swap thật.
+2. **Tab `[ </> Live Solidity Preview ]` trong Inspector:** Hiển thị mã nguồn `StopLoss_Pipeline.sol` với các hằng số nhảy real-time theo thanh trượt của người dùng, chứng minh tính minh bạch của Graph-to-Solidity Engine.
+
+#### Phân Tích Nghiệp Vụ: Tại Sao Loại Bỏ Các Đề Xuất Trùng Lặp & Vi Phạm EVM?
 1. **Loại bỏ `Take-Profit Scalper Node`:** Bản chất on-chain đều là gọi Uniswap để swap ETH sang USDC. Điểm khác biệt duy nhất là toán tử (`>=` thay vì `<=`) đã được tích hợp gọn gàng trong node `Price Threshold Guard`.
 2. **Loại bỏ `Slippage Guard Node`:** Slippage không thể là một node điều kiện độc lập đứng giữa đồ thị! Trong DeFi, slippage (`minAmountOut`) là tham số cấu hình bắt buộc **nằm bên trong node `DEX Swap`** để router kiểm tra nguyên tử (atomic check).
 3. **Loại bỏ `Whale Alert Node`:** Theo dõi ví cá voi bản chất chính là lắng nghe sự kiện `Transfer(from, to, value)`. Chỉ cần lọc `value >= 500 ETH` trong node `Watch Transfers` là giải quyết trọn vẹn, không sinh node rác.
+4. **Loại bỏ `Revoke Approvals Node`:** ActionVault là Smart Contract, không thể thay mặt ví EOA cá nhân gọi `approve(spender, 0)` do giới hạn phân quyền của EVM. Loại bỏ để tránh gây hiểu lầm kỹ thuật.
 
 ---
 
-### 5.4 Quy Chuẩn Cổng Kết Nối (Constrained Typed Ports)
+### 5.4 Quy Chuẩn Cổng Kết Nối & Ma Trận Typed Ports (Constrained Typed Ports)
 Để ngăn người dùng tạo ra các đồ thị vô nghĩa gây crash hợp đồng, hệ thống áp dụng cơ chế khóa cổng nghiêm ngặt:
 
 ```mermaid
@@ -974,7 +995,10 @@ flowchart LR
 * **Condition / Filter Node:** Sở hữu đúng 1 `Target Handle` (nhận dữ liệu) và 1 `Source Handle` (truyền tín hiệu sau khi lọc).
 * **Action Node:** Chỉ sở hữu `Target Handle` (đầu vào). Đóng vai trò là điểm kết thúc của pipeline.
 * **Logic Gate Node:** Sở hữu 2 `Target Handles` (A và B) và 1 `Source Handle` (kết quả boolean ghép).
-* **Auto-Validation:** Nếu người dùng kéo dây ngược từ Action sang Trigger, đường nối tự biến mất kèm thông báo giải thích trực quan.
+* **Ma Trận Tương Thích Cổng Cho Node #11 (Custom Contract Event):**
+  * ❌ *Cấm nối vào:* Condition #4 (`PriceThresholdGuard`) và Condition #14 (`PriceVelocityGuard`) (do log tùy ý không có `reserve0, reserve1`).
+  * ✅ *Cho phép nối vào:* Condition #5 (`CooldownGuard`) hoặc #6 (`BalanceThreshold`) trước khi chuyển tiếp tới Action #7 (`DEXSwap`), Action #8 (`SafeSweep`), hoặc Action #9 (`NotifyLogWebhook`).
+* **Auto-Validation:** Nếu người dùng kéo dây ngược từ Action sang Trigger hoặc sai ma trận kiểu dữ liệu, đường nối tự biến mất kèm thông báo giải thích trực quan.
 
 ---
 
