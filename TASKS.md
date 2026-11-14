@@ -13,10 +13,10 @@
 | Giai đoạn (Phase) | Thời gian | Tổng Tasks | Hoàn thành | Đang làm | Tỷ lệ hoàn thành |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 6 | 6 | 0 | **100%** |
-| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 0 | 0 | **0%** |
+| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 1 | 0 | **12.5%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 5 | 0 | **45.5%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **30** | **11** | **0** | **36.7%** |
+| **TỔNG CỘNG** | **21 Ngày** | **30** | **12** | **0** | **40.0%** |
 
 ---
 
@@ -94,16 +94,17 @@
 
 ### SPRINT 1: CORE CONTRACTS & LIVE ON-CHAIN LOOP (NGÀY 1 - 7: 15/11 - 21/11)
 
-#### `TASK-101` [TODO] — Khởi tạo Cấu trúc Monorepo & Cài đặt Thư viện
-* **Module / Màn hình:** Monorepo Workspace Root
+#### `TASK-101` [DONE] — Khởi tạo Cấu trúc Monorepo & Cài đặt Thư viện
+* **Module / Màn hình:** Monorepo Workspace Root & `contracts/`
 * **Mục đích:** Thiết lập nền móng dự án chuẩn pnpm workspace với TypeScript và Foundry.
 * **Chi tiết thực thi:**
-  * Tạo cấu trúc `contracts/`, `frontend/`, `backend/`, `packages/shared/`.
-  * Cấu hình `pnpm-workspace.yaml`, `package.json` gốc, và các file `tsconfig.json`.
-  * Khởi tạo dự án Foundry trong `contracts/` và cài đặt `@reactive-network/reactive-lib`.
+  * Cài đặt bộ công cụ Foundry v1.9.0 (`forge`, `cast`, `anvil`) trên Windows.
+  * Khởi tạo dự án Foundry trong `contracts/`.
+  * Cài đặt thư viện chính thức `@reactive-network/reactive-lib` (v0.2.0) và `@openzeppelin/contracts` (v5.0.2).
+  * Cấu hình `foundry.toml` với remappings chuẩn cho `@reactive-network/reactive-lib/=lib/reactive-lib/`.
 * **Ngày tạo:** 14/11/2026 17:35
-* **Ngày hoàn thành:** --
-* **Trạng thái:** `TODO`
+* **Ngày hoàn thành:** 14/11/2026 18:47
+* **Trạng thái:** `DONE`
 
 #### `TASK-102` [TODO] — Phát triển Smart Contract Đích `ActionVault.sol`
 * **Module / Màn hình:** `contracts/src/ActionVault.sol` (Base Sepolia)
