@@ -29,93 +29,93 @@ interface NodeCardProps {
   targetHandles?: { id: string; label: string; topPercent?: number }[];
 }
 
-const CATEGORY_COLORS: Record<NodeCategory, { border: string; badge: string; text: string; bg: string }> = {
+const CATEGORY_CONFIG: Record<NodeCategory, { border: string; badge: string; text: string; accentClass: string }> = {
   trigger: {
-    border: 'border-cyan-500/40',
-    badge: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30',
-    text: 'text-cyan-400',
-    bg: 'from-cyan-950/20 to-slate-900',
+    border: 'border-[#00E5FF]/40',
+    badge: 'bg-[#00E5FF]/10 text-[#00E5FF] border-[#00E5FF]/30',
+    text: 'text-[#00E5FF]',
+    accentClass: 'tech-corner-accent-cyan',
   },
   condition: {
-    border: 'border-amber-500/40',
-    badge: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-    text: 'text-amber-400',
-    bg: 'from-amber-950/20 to-slate-900',
+    border: 'border-[#F59E0B]/40',
+    badge: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30',
+    text: 'text-[#F59E0B]',
+    accentClass: 'tech-corner-accent-amber',
   },
   action: {
-    border: 'border-emerald-500/40',
-    badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-    text: 'text-emerald-400',
-    bg: 'from-emerald-950/20 to-slate-900',
+    border: 'border-[#00FF9D]/40',
+    badge: 'bg-[#00FF9D]/10 text-[#00FF9D] border-[#00FF9D]/30',
+    text: 'text-[#00FF9D]',
+    accentClass: 'tech-corner-accent-emerald',
   },
   logic: {
-    border: 'border-purple-500/40',
-    badge: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
-    text: 'text-purple-400',
-    bg: 'from-purple-950/20 to-slate-900',
+    border: 'border-[#8B5CF6]/40',
+    badge: 'bg-[#8B5CF6]/10 text-[#C084FC] border-[#8B5CF6]/30',
+    text: 'text-[#C084FC]',
+    accentClass: 'tech-corner-accent',
   },
 };
 
-const STATE_CONFIG: Record<VisualNodeState, { label: string; border: string; glow: string; icon: React.ReactNode }> = {
+const STATE_CONFIG: Record<VisualNodeState, { label: string; pipClass: string; textClass: string; icon: React.ReactNode }> = {
   IDLE: {
-    label: 'Ready',
-    border: 'border-slate-700',
-    glow: '',
-    icon: <Settings2 className="w-3 h-3 text-slate-400" />,
+    label: 'READY',
+    pipClass: 'bg-zinc-600',
+    textClass: 'text-zinc-400',
+    icon: <Settings2 className="w-3 h-3 text-zinc-500" />,
   },
   CONFIGURED: {
-    label: 'Configured',
-    border: 'border-blue-500',
-    glow: 'shadow-blue-500/20',
-    icon: <CheckCircle2 className="w-3 h-3 text-blue-400" />,
+    label: 'CONFIGURED',
+    pipClass: 'status-pip-violet',
+    textClass: 'text-[#C084FC]',
+    icon: <CheckCircle2 className="w-3 h-3 text-[#C084FC]" />,
   },
   LISTENING: {
-    label: 'Listening',
-    border: 'border-cyan-400 animate-pulse',
-    glow: 'shadow-cyan-500/30 shadow-lg',
-    icon: <Radio className="w-3 h-3 text-cyan-400" />,
+    label: 'LISTENING',
+    pipClass: 'status-pip-cyan',
+    textClass: 'text-cyan-400',
+    icon: <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />,
   },
   EVENT_CAPTURED: {
-    label: 'Event Captured',
-    border: 'border-cyan-300 ring-2 ring-cyan-400',
-    glow: 'shadow-cyan-400/50 shadow-xl',
+    label: 'CAPTURED',
+    pipClass: 'status-pip-cyan',
+    textClass: 'text-cyan-300 font-bold',
     icon: <Sparkles className="w-3 h-3 text-cyan-300" />,
   },
   EVALUATING: {
-    label: 'Evaluating',
-    border: 'border-amber-400',
-    glow: 'shadow-amber-500/30',
+    label: 'EVALUATING',
+    pipClass: 'status-pip-amber',
+    textClass: 'text-amber-400',
     icon: <Activity className="w-3 h-3 text-amber-400 animate-spin" />,
   },
   CONDITION_MET: {
-    label: 'Trigger Met',
-    border: 'border-yellow-400 ring-2 ring-yellow-400',
-    glow: 'shadow-yellow-400/50 shadow-xl',
-    icon: <Zap className="w-3 h-3 text-yellow-400" />,
+    label: 'TRIGGER MET',
+    pipClass: 'status-pip-amber',
+    textClass: 'text-amber-300 font-bold',
+    icon: <Zap className="w-3 h-3 text-amber-300" />,
   },
   FIRING_CALLBACK: {
-    label: 'Callback Firing',
-    border: 'border-purple-400 ring-2 ring-purple-400',
-    glow: 'shadow-purple-500/50 shadow-xl',
-    icon: <Zap className="w-3 h-3 text-purple-400 animate-pulse" />,
+    label: 'CALLBACK FIRING',
+    pipClass: 'status-pip-violet',
+    textClass: 'text-[#C084FC] font-bold',
+    icon: <Zap className="w-3 h-3 text-[#8B5CF6] animate-pulse" />,
   },
   SUCCESS: {
-    label: 'Executed',
-    border: 'border-emerald-400 ring-1 ring-emerald-400',
-    glow: 'shadow-emerald-500/30',
+    label: 'EXECUTED',
+    pipClass: 'status-pip-emerald',
+    textClass: 'text-emerald-400 font-bold',
     icon: <CheckCircle2 className="w-3 h-3 text-emerald-400" />,
   },
   COOLDOWN: {
-    label: 'Cooldown Active',
-    border: 'border-orange-500',
-    glow: 'shadow-orange-500/30',
-    icon: <Hourglass className="w-3 h-3 text-orange-400 animate-spin" />,
+    label: 'COOLDOWN ACTIVE',
+    pipClass: 'status-pip-amber',
+    textClass: 'text-amber-400',
+    icon: <Hourglass className="w-3 h-3 text-amber-400 animate-spin" />,
   },
   REVERTED: {
-    label: 'Reverted',
-    border: 'border-red-500 ring-2 ring-red-500',
-    glow: 'shadow-red-500/40',
-    icon: <AlertCircle className="w-3 h-3 text-red-400" />,
+    label: 'REVERTED',
+    pipClass: 'status-pip-rose',
+    textClass: 'text-rose-400 font-bold',
+    icon: <AlertCircle className="w-3 h-3 text-rose-400" />,
   },
 };
 
@@ -131,19 +131,20 @@ export function NodeCard({
   targetHandles,
   selected = false,
 }: NodeCardProps) {
-  const cat = CATEGORY_COLORS[category];
+  const cat = CATEGORY_CONFIG[category];
   const st = STATE_CONFIG[state];
 
   return (
     <div
       className={cn(
-        'relative w-72 rounded-xl bg-gradient-to-b border backdrop-blur-md transition-all duration-200 select-none shadow-2xl',
-        cat.bg,
-        selected ? 'ring-2 ring-cyan-400 border-cyan-400 shadow-cyan-500/20' : st.border,
-        st.glow
+        'tech-corner-accent relative w-72 rounded-none bg-[#0B0813] border select-none transition-all duration-150 shadow-xl font-mono',
+        cat.accentClass,
+        selected
+          ? 'border-[#8B5CF6] shadow-lg shadow-[#8B5CF6]/20 ring-1 ring-[#8B5CF6]'
+          : 'border-[#1C142E] hover:border-[#2E1F4A]'
       )}
     >
-      {/* Target Handle(s) on Left */}
+      {/* Target Handle(s) on Left - Square & Precision Styled */}
       {targetHandles ? (
         targetHandles.map((h, i) => (
           <Handle
@@ -152,32 +153,32 @@ export function NodeCard({
             type="target"
             position={Position.Left}
             style={{ top: `${h.topPercent ?? (i === 0 ? 35 : 65)}%` }}
-            className="w-3.5 h-3.5 !bg-slate-400 border-2 border-slate-900 hover:!bg-cyan-400 transition-colors"
+            className="!w-2.5 !h-2.5 !rounded-none !bg-[#06040A] !border !border-zinc-500 hover:!border-[#00E5FF] hover:!bg-[#00E5FF] transition-colors"
           />
         ))
       ) : hasTargetHandle ? (
         <Handle
           type="target"
           position={Position.Left}
-          className="w-3.5 h-3.5 !bg-slate-400 border-2 border-slate-900 hover:!bg-cyan-400 transition-colors"
+          className="!w-2.5 !h-2.5 !rounded-none !bg-[#06040A] !border !border-zinc-500 hover:!border-[#00E5FF] hover:!bg-[#00E5FF] transition-colors"
         />
       ) : null}
 
       {/* Card Header */}
-      <div className="px-4 py-3 border-b border-slate-800/80 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className={cn('p-1.5 rounded-lg border bg-slate-900/80', cat.border)}>
+      <div className="px-3.5 py-2.5 border-b border-[#1C142E] bg-[#0E0919] flex items-center justify-between">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className={cn('p-1.5 rounded-none border bg-[#06040A]', cat.border)}>
             {icon}
           </div>
-          <div>
-            <h4 className="text-sm font-semibold text-slate-100 tracking-tight">{title}</h4>
-            <p className="text-[11px] text-slate-400">{subtitle}</p>
+          <div className="truncate">
+            <h4 className="text-xs font-bold text-zinc-100 uppercase tracking-wide truncate">{title}</h4>
+            <p className="text-[10px] text-zinc-500 truncate">{subtitle}</p>
           </div>
         </div>
 
         <span
           className={cn(
-            'text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded-full border',
+            'text-[9px] uppercase font-mono font-bold px-1.5 py-0.5 rounded-none border tracking-wider ml-2 shrink-0',
             cat.badge
           )}
         >
@@ -186,25 +187,31 @@ export function NodeCard({
       </div>
 
       {/* Card Body / Custom Details */}
-      {children && <div className="p-3 text-xs text-slate-300 space-y-2">{children}</div>}
-
-      {/* Card Footer: Visual State Indicator */}
-      <div className="px-3 py-2 border-t border-slate-800/80 bg-slate-950/60 rounded-b-xl flex items-center justify-between text-[11px]">
-        <div className="flex items-center gap-1.5 font-medium">
-          {st.icon}
-          <span className="text-slate-300">{st.label}</span>
+      {children && (
+        <div className="p-3 text-xs text-zinc-300 space-y-2 bg-[#0B0813]">
+          {children}
         </div>
-        <span className="font-mono text-[10px] text-slate-500">
-          {category === 'trigger' ? 'Out Stream' : category === 'action' ? 'Callback End' : 'In / Out'}
+      )}
+
+      {/* Card Footer: Visual State Indicator with Square Status Pip */}
+      <div className="px-3 py-1.5 border-t border-[#1C142E] bg-[#06040A] flex items-center justify-between text-[10px]">
+        <div className="flex items-center gap-2">
+          <span className={cn('status-pip', st.pipClass)} />
+          <span className={cn('font-bold tracking-wider uppercase', st.textClass)}>
+            {st.label}
+          </span>
+        </div>
+        <span className="text-[9px] text-zinc-600 uppercase tracking-widest">
+          {category === 'trigger' ? 'OUTSTREAM' : category === 'action' ? 'CALLBACK' : 'IN / OUT'}
         </span>
       </div>
 
-      {/* Source Handle on Right */}
+      {/* Source Handle on Right - Square & Precision Styled */}
       {hasSourceHandle && (
         <Handle
           type="source"
           position={Position.Right}
-          className="w-3.5 h-3.5 !bg-cyan-400 border-2 border-slate-900 hover:!bg-cyan-300 transition-colors"
+          className="!w-2.5 !h-2.5 !rounded-none !bg-[#06040A] !border !border-[#8B5CF6] hover:!border-[#00FF9D] hover:!bg-[#00FF9D] transition-colors"
         />
       )}
     </div>

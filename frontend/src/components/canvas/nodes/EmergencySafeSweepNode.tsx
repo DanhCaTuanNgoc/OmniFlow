@@ -24,18 +24,18 @@ function EmergencySafeSweepNodeComponent({ id, data, selected }: NodeProps) {
       hasSourceHandle={false}
       hasTargetHandle={true}
     >
-      <div className="bg-slate-900/90 rounded-lg p-2.5 border border-slate-800 space-y-1.5">
-        <div className="flex justify-between items-center text-slate-400">
+      <div className="bg-[#06040A] rounded-none p-2.5 border border-[#1C142E] space-y-1.5 font-mono text-[11px]">
+        <div className="flex justify-between items-center text-zinc-400">
           <span>Safe Destination:</span>
-          <span className="font-mono text-slate-100">{truncateAddress(safeAddress)}</span>
+          <span className="font-bold text-zinc-100">{truncateAddress(safeAddress)}</span>
         </div>
-        <div className="flex justify-between items-center text-slate-400">
+        <div className="flex justify-between items-center text-zinc-400">
           <span>Scope:</span>
           <span className="text-emerald-400 font-bold">{assetScope === 'ALL' ? '100% ETH + ERC20' : 'ETH Only'}</span>
         </div>
       </div>
-      <div className="flex items-center gap-1.5 text-[11px] text-emerald-400/80">
-        <Flame className="w-3.5 h-3.5 text-orange-400" />
+      <div className="flex items-center gap-1.5 text-[10px] text-emerald-400/80 font-mono">
+        <Flame className="w-3 h-3 text-orange-400" />
         <span>vault.executeSafeSweep(backupSafe)</span>
       </div>
     </NodeCard>

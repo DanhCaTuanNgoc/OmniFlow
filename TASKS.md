@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 14 | 8 | 0 | **57.1%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 15 | 9 | 0 | **60.0%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **36** | **21** | **0** | **58.3%** |
+| **TỔNG CỘNG** | **21 Ngày** | **37** | **22** | **0** | **59.5%** |
 
 ---
 
@@ -382,6 +382,20 @@
   * Khai báo schema Recipe 6: `Unichain-to-Base Cross-Chain Hedge` (Watch DEX Price Unichain $\rightarrow$ Velocity Guard > 5% trong 10s $\rightarrow$ Swap Base Sepolia).
   * Kết nối Graph Hydration Engine để render đồ thị 1-click lên Studio Canvas.
 * **Ngày tạo:** 14/11/2026 19:30 | **Trạng thái:** `TODO`
+
+#### `TASK-215` [DONE] — Chuyển đổi Thiết kế UI theo Chuẩn Tactical Obsidian & Precision Angular Cybernetics
+* **Module / Màn hình:** Toàn bộ Frontend (`frontend/src/`)
+* **Mục đích:** Đồng bộ hóa toàn diện ngôn ngữ thiết kế theo `docs/UI_Design_example.md`: Zero-Radius Geometry, Obsidian Deep Layering (#06040A / #0B0813 / #110C1E), ngàm góc công nghệ L-brackets (`.tech-corner-accent`), square status pips neon, và typography JetBrains Mono tabular-nums.
+* **Chi tiết thực thi:**
+  * Cấu hình lại `tailwind.config.ts` và `globals.css` bổ sung bảng màu Obsidian (#06040A, #0B0813, #110C1E, #171028, #1C142E, #2E1F4A, #8B5CF6, #C084FC, #00FF9D).
+  * Thêm class tiện ích `.tech-corner-accent`, `.status-pip`, `.cyber-grid`, `.scanline-overlay`, và scrollbar góc cạnh Zero-Radius.
+  * Tái cấu trúc App Shell (`Header.tsx`, `Sidebar.tsx`, `layout.tsx`) với phong cách Mission Control Console, góc cạnh sắc nhọn (zero border-radius), đèn vuông neon và tabular-nums.
+  * Tinh chỉnh `NodeCard.tsx`, `StudioCanvas.tsx`, `NodePalette.tsx`, `InspectorPanel.tsx`, `DeployModal.tsx` và toàn bộ 10 visual nodes theo phong cách Obsidian Cybernetics.
+  * Cập nhật các trang màn hình: `Vault Manager`, `Active Automations`, `Template Library`, `Activity Logs` theo cùng ngôn ngữ thiết kế.
+  * Kiểm thử `tsc --noEmit` đạt 0 lỗi biên dịch.
+* **Ngày tạo:** 14/11/2026 19:42
+* **Ngày hoàn thành:** 14/11/2026 19:52
+* **Trạng thái:** `DONE`
 
 ---
 

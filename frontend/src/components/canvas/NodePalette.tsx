@@ -207,41 +207,41 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
   };
 
   return (
-    <div className="w-72 border-r border-slate-800 bg-[#0B1120] flex flex-col h-full z-10 select-none">
+    <div className="w-72 border-r border-[#1C142E] bg-[#0B0813] flex flex-col h-full z-10 select-none font-mono">
       {/* Palette Header */}
-      <div className="p-3.5 border-b border-slate-800 space-y-3">
+      <div className="p-3 border-b border-[#1C142E] bg-[#06040A] space-y-2.5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-            Node Catalog
+          <span className="text-xs font-bold uppercase tracking-wider text-zinc-200">
+            NODE CATALOG
           </span>
-          <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400">
-            10 Nodes
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-none bg-[#110C1E] border border-[#2E1F4A] text-[#C084FC]">
+            10 NODES
           </span>
         </div>
 
         {/* Search */}
         <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" />
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-zinc-500" />
           <input
             type="text"
-            placeholder="Search nodes..."
+            placeholder="Search catalog..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+            className="w-full bg-[#0B0813] border border-[#1C142E] rounded-none pl-8 pr-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-[#8B5CF6] transition-colors"
           />
         </div>
 
         {/* Category Filter Tabs */}
-        <div className="grid grid-cols-4 gap-1 p-1 bg-slate-900/80 rounded-lg border border-slate-800/80 text-[11px]">
+        <div className="grid grid-cols-4 gap-1 p-0.5 bg-[#0B0813] rounded-none border border-[#1C142E] text-[10px]">
           {(['all', 'trigger', 'condition', 'action'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                'py-1 text-center rounded capitalize font-medium transition-colors',
+                'py-1 text-center rounded-none uppercase font-bold tracking-wider transition-colors cursor-pointer',
                 activeTab === tab
-                  ? 'bg-slate-800 text-slate-100 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-[#110C1E] text-white border-b-2 border-[#8B5CF6]'
+                  : 'text-zinc-500 hover:text-zinc-300'
               )}
             >
               {tab === 'all' ? 'All' : tab.slice(0, 4)}
@@ -251,45 +251,45 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
       </div>
 
       {/* Nodes List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
         {filteredItems.map((item) => (
           <div
             key={item.type}
             draggable
             onDragStart={(e) => onDragStart(e, item)}
             onClick={() => onAddNode(item.type, item.defaultData)}
-            className="group relative p-2.5 rounded-xl border border-slate-800/80 bg-slate-900/60 hover:bg-slate-850 hover:border-slate-700 cursor-grab active:cursor-grabbing transition-all duration-150 flex items-start gap-2.5 hover:shadow-lg hover:shadow-cyan-950/20"
+            className="group relative p-2.5 rounded-none border border-[#1C142E] bg-[#06040A] hover:bg-[#110C1E] hover:border-[#8B5CF6] cursor-grab active:cursor-grabbing transition-all duration-150 flex items-start gap-2.5"
           >
-            <div className="p-1.5 rounded-lg border border-slate-800 bg-slate-950/80 group-hover:border-slate-700 transition-colors">
+            <div className="p-1.5 rounded-none border border-[#1C142E] bg-[#0B0813] group-hover:border-[#8B5CF6] transition-colors">
               {item.icon}
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-200 group-hover:text-cyan-400 transition-colors truncate">
+                <span className="text-xs font-bold text-zinc-200 group-hover:text-white uppercase tracking-wider transition-colors truncate">
                   {item.name}
                 </span>
-                <Plus className="w-3.5 h-3.5 text-slate-500 group-hover:text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Plus className="w-3.5 h-3.5 text-zinc-500 group-hover:text-[#8B5CF6] opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
+              <p className="text-[10px] text-zinc-500 line-clamp-1 mt-0.5 font-sans">
                 {item.description}
               </p>
             </div>
 
-            <GripVertical className="w-3.5 h-3.5 text-slate-600 self-center opacity-0 group-hover:opacity-100 transition-opacity" />
+            <GripVertical className="w-3.5 h-3.5 text-zinc-600 self-center opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         ))}
 
         {filteredItems.length === 0 && (
-          <div className="text-center py-8 text-xs text-slate-500">
+          <div className="text-center py-8 text-xs text-zinc-500 uppercase tracking-wider">
             No matching nodes found.
           </div>
         )}
       </div>
 
       {/* Footer Instruction */}
-      <div className="p-3 border-t border-slate-800 text-[11px] text-slate-500 text-center bg-slate-950/40">
-        Drag & drop onto canvas or click to add
+      <div className="p-2.5 border-t border-[#1C142E] text-[10px] text-zinc-500 text-center bg-[#06040A] uppercase tracking-wider">
+        Drag & drop or click to add
       </div>
     </div>
   );

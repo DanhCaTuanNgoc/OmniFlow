@@ -100,81 +100,83 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm select-none">
-      <div className="relative w-full max-w-lg rounded-2xl bg-[#0F172A] border border-slate-800 shadow-2xl p-6 text-slate-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm select-none font-mono">
+      <div className="tech-corner-accent relative w-full max-w-lg rounded-none bg-[#0B0813] border border-[#1C142E] shadow-2xl p-6 text-zinc-200">
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-slate-400 hover:text-slate-100 p-1 rounded-lg"
+          className="absolute right-4 top-4 text-zinc-500 hover:text-white p-1 rounded-none hover:bg-[#110C1E] transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-5">
-          <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
-            <Rocket className="w-6 h-6" />
+        <div className="flex items-center gap-3 mb-5 pb-3 border-b border-[#1C142E]">
+          <div className="p-2.5 rounded-none bg-[#110C1E] border border-[#8B5CF6] text-[#8B5CF6]">
+            <Rocket className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-100">Deploy Reactive Automation</h3>
-            <p className="text-xs text-slate-400">
-              Autonomous execution on Reactive Lasna Testnet (Chain ID: 5318007)
+            <h3 className="text-base font-bold text-white uppercase tracking-wider">
+              DEPLOY REACTIVE AUTOMATION
+            </h3>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">
+              REACTIVE LASNA TESTNET &bull; CHAIN ID: 5318007
             </p>
           </div>
         </div>
 
         {/* Error message */}
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-red-950/40 border border-red-800/50 text-red-300 text-xs flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
-            <span>{error}</span>
+          <div className="mb-4 p-3 rounded-none bg-[#16080E] border border-rose-800/60 text-rose-300 text-xs flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+            <span className="font-mono">{error}</span>
           </div>
         )}
 
         {/* Initial Deploy Step */}
         {!deployResult ? (
           <div className="space-y-4">
-            <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-2">
+            <div className="p-3.5 rounded-none bg-[#06040A] border border-[#1C142E] text-xs space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-400">Pipeline Nodes:</span>
-                <span className="font-mono font-bold text-slate-200">{graph.nodes.length} Nodes</span>
+                <span className="text-zinc-500 uppercase text-[10px]">PIPELINE NODES:</span>
+                <span className="font-bold text-zinc-200 tabular-nums">{graph.nodes.length} NODES</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Connections (DAG):</span>
-                <span className="font-mono font-bold text-slate-200">{graph.edges.length} Edges</span>
+                <span className="text-zinc-500 uppercase text-[10px]">CONNECTIONS (DAG):</span>
+                <span className="font-bold text-zinc-200 tabular-nums">{graph.edges.length} EDGES</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Gas Sponsorship:</span>
-                <span className="font-mono font-bold text-emerald-400">1.0 lREACT (Free)</span>
+                <span className="text-zinc-500 uppercase text-[10px]">GAS SPONSORSHIP:</span>
+                <span className="font-bold text-[#00FF9D] tabular-nums">1.0 lREACT (FREE)</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Owner Wallet:</span>
-                <span className="font-mono text-cyan-400">
-                  {isConnected && userAddress ? truncateAddress(userAddress) : 'Default Demo Wallet'}
+                <span className="text-zinc-500 uppercase text-[10px]">OWNER WALLET:</span>
+                <span className="text-[#C084FC]">
+                  {isConnected && userAddress ? truncateAddress(userAddress) : 'DEFAULT DEMO WALLET'}
                 </span>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-900/40 text-[11px] text-cyan-300 flex gap-2">
-              <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-none bg-[#110C1E] border border-[#2E1F4A] text-[11px] text-zinc-300 flex gap-2">
+              <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-[#8B5CF6]" />
               <span>
-                Pre-compiled parameterized bytecode deploys in under 2 seconds. No compilation stalls or dynamic AST bugs.
+                Pre-compiled parameterized bytecode deploys in under 2 seconds. Zero compilation stalls or dynamic AST bugs.
               </span>
             </div>
 
             <button
               onClick={handleDeploy}
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-mono font-bold uppercase tracking-wider rounded-none border border-[#8B5CF6] bg-[#8B5CF6] hover:bg-[#7C3AED] text-white shadow-md shadow-[#8B5CF6]/20 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Deploying to Lasna...
+                  <span>DEPLOYING TO LASNA...</span>
                 </>
               ) : (
                 <>
                   <Rocket className="w-4 h-4" />
-                  Deploy to Reactive Lasna (1s)
+                  <span>EXECUTE DEPLOY TO LASNA (1s)</span>
                 </>
               )}
             </button>
@@ -182,25 +184,25 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
         ) : (
           /* Step 2: Post-Deploy Non-Custodial Authorization Prompt */
           <div className="space-y-4">
-            <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-800/50 space-y-2 text-xs">
-              <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-                <CheckCircle2 className="w-4 h-4" />
-                RSC Successfully Deployed on Lasna!
+            <div className="p-4 rounded-none bg-[#06040A] border border-emerald-900/60 space-y-2 text-xs">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
+                <span className="status-pip status-pip-emerald" />
+                <span>RSC SUCCESSFULLY DEPLOYED ON LASNA</span>
               </div>
-              <div className="space-y-1 font-mono text-[11px] text-slate-300">
+              <div className="space-y-1 font-mono text-[11px] text-zinc-300">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Pipeline ID:</span>
-                  <span className="text-cyan-400">{deployResult.pipelineId}</span>
+                  <span className="text-zinc-500 uppercase text-[10px]">PIPELINE ID:</span>
+                  <span className="text-cyan-400 font-bold">{deployResult.pipelineId}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">RSC Contract:</span>
-                  <span className="text-slate-200">
+                  <span className="text-zinc-500 uppercase text-[10px]">RSC CONTRACT:</span>
+                  <span className="text-zinc-200">
                     {truncateAddress(deployResult.contracts?.rscAddress)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Sponsored Gas:</span>
-                  <span className="text-emerald-400">1.0 lREACT (~5,000 Callbacks)</span>
+                  <span className="text-zinc-500 uppercase text-[10px]">SPONSORED GAS:</span>
+                  <span className="text-emerald-400 font-bold tabular-nums">1.0 lREACT (~5,000 CALLBACKS)</span>
                 </div>
               </div>
 
@@ -209,43 +211,42 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
                   href={deployResult.explorerUrls.reactscan}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[11px] text-cyan-400 hover:underline pt-1"
+                  className="inline-flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 uppercase tracking-wider pt-1"
                 >
-                  View on ReactScan Explorer <ExternalLink className="w-3 h-3" />
+                  <span>VIEW ON REACTSCAN EXPLORER</span> <ExternalLink className="w-3 h-3" />
                 </a>
               )}
             </div>
 
             {/* Non-Custodial Step */}
-            <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-900/50 text-xs space-y-2">
-              <div className="flex items-center gap-2 text-amber-300 font-semibold">
+            <div className="p-3.5 rounded-none bg-[#110C1E] border border-amber-900/50 text-xs space-y-2">
+              <div className="flex items-center gap-2 text-amber-400 font-bold uppercase tracking-wider">
                 <KeyRound className="w-4 h-4 text-amber-400" />
-                Non-Custodial Authorization (ActionVault)
+                <span>NON-CUSTODIAL AUTHORIZATION (ACTIONVAULT)</span>
               </div>
-              <p className="text-[11px] text-slate-300">
-                To guarantee zero-trust non-custodial security, the owner must sign 1 lightweight
-                transaction calling <code className="text-amber-300">setAuthorizedRSC()</code> on Base Sepolia.
+              <p className="text-[11px] text-zinc-300 font-sans">
+                To guarantee zero-trust non-custodial security, the owner must sign 1 lightweight transaction calling <code className="text-amber-300 font-mono">setAuthorizedRSC()</code> on Base Sepolia.
               </p>
               {authSuccess ? (
-                <div className="p-2 rounded-lg bg-emerald-900/40 border border-emerald-700/50 text-emerald-300 text-xs font-semibold flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4" />
-                  RSC is now officially Authorized on ActionVault!
+                <div className="p-2 rounded-none bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 text-xs font-bold uppercase tracking-wide flex items-center gap-2">
+                  <span className="status-pip status-pip-emerald" />
+                  <span>RSC IS NOW AUTHORIZED ON ACTIONVAULT</span>
                 </div>
               ) : (
                 <button
                   onClick={handleAuthorizeVault}
                   disabled={isAuthPending}
-                  className="w-full py-2.5 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-500/20 disabled:opacity-50"
+                  className="w-full py-2.5 px-3 rounded-none bg-[#F59E0B] hover:bg-[#D97706] text-black font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-500/20 disabled:opacity-50 cursor-pointer"
                 >
                   {isAuthPending ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Sign on MetaMask...
+                      <span>SIGNING ON METAMASK...</span>
                     </>
                   ) : (
                     <>
                       <KeyRound className="w-3.5 h-3.5" />
-                      Authorize RSC on ActionVault (Owner Signature)
+                      <span>AUTHORIZE RSC ON ACTIONVAULT</span>
                     </>
                   )}
                 </button>
@@ -254,9 +255,9 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
 
             <button
               onClick={onClose}
-              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+              className="w-full py-2 rounded-none bg-[#110C1E] hover:bg-[#1A102E] text-zinc-300 hover:text-white border border-[#2E1F4A] hover:border-[#8B5CF6] text-xs font-mono font-bold uppercase tracking-wider transition-colors cursor-pointer"
             >
-              Done & Return to Studio
+              DONE & RETURN TO STUDIO
             </button>
           </div>
         )}

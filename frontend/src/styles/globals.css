@@ -3,8 +3,20 @@
 @tailwind utilities;
 
 :root {
-  --background: #070B12;
+  --background: #06040A;
   --foreground: #F8FAFC;
+  --bg-obsidian-deep: #06040A;
+  --bg-obsidian-surface: #0B0813;
+  --bg-obsidian-elevated: #110C1E;
+  --bg-obsidian-highlight: #171028;
+  --border-subtle: #1C142E;
+  --border-focus: #2E1F4A;
+  --border-active: #8B5CF6;
+  --brand-violet: #8B5CF6;
+  --brand-amethyst: #C084FC;
+  --neon-emerald: #00FF9D;
+  --tactical-amber: #F59E0B;
+  --danger-rose: #EF4444;
 }
 
 body {
@@ -15,23 +27,30 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Custom Web3 Scrollbar */
+/* Monospace font settings with tabular-nums & slashed zero */
+code, kbd, samp, pre, .font-mono {
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+  letter-spacing: -0.015em;
+}
+
+/* Custom Tactical Obsidian Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #070B12;
+  background: #080512;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1E293B;
-  border-radius: 9999px;
+  background: #261B42;
+  border-radius: 0px !important;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #4C2889;
 }
 
 /* Tabular figures for financial and latency metrics */
@@ -39,48 +58,172 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* XYFlow Custom Canvas Styling */
+/* Tech Corner Accents (L-Brackets) */
+.tech-corner-accent {
+  position: relative;
+}
+
+.tech-corner-accent::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  border-top: 2px solid #8B5CF6;
+  border-left: 2px solid #8B5CF6;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.tech-corner-accent::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 6px;
+  height: 6px;
+  border-bottom: 2px solid #8B5CF6;
+  border-right: 2px solid #8B5CF6;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Tech Corner Accent Variations */
+.tech-corner-accent-cyan::before {
+  border-top-color: #00E5FF;
+  border-left-color: #00E5FF;
+}
+.tech-corner-accent-cyan::after {
+  border-bottom-color: #00E5FF;
+  border-right-color: #00E5FF;
+}
+
+.tech-corner-accent-amber::before {
+  border-top-color: #F59E0B;
+  border-left-color: #F59E0B;
+}
+.tech-corner-accent-amber::after {
+  border-bottom-color: #F59E0B;
+  border-right-color: #F59E0B;
+}
+
+.tech-corner-accent-emerald::before {
+  border-top-color: #00FF9D;
+  border-left-color: #00FF9D;
+}
+.tech-corner-accent-emerald::after {
+  border-bottom-color: #00FF9D;
+  border-right-color: #00FF9D;
+}
+
+/* Square Status Pips */
+.status-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 0px !important;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.status-pip-emerald {
+  background-color: #00FF9D;
+  box-shadow: 0 0 6px rgba(0, 255, 157, 0.8);
+}
+
+.status-pip-amber {
+  background-color: #F59E0B;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.8);
+}
+
+.status-pip-rose {
+  background-color: #EF4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+}
+
+.status-pip-violet {
+  background-color: #8B5CF6;
+  box-shadow: 0 0 6px rgba(139, 92, 246, 0.8);
+}
+
+.status-pip-cyan {
+  background-color: #00E5FF;
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.8);
+}
+
+/* Atmospheric Textures */
+.cyber-grid {
+  background-size: 32px 32px;
+  background-image:
+    linear-gradient(to right, rgba(139, 92, 246, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(139, 92, 246, 0.05) 1px, transparent 1px);
+}
+
+.cyber-dots {
+  background-image: radial-gradient(rgba(168, 85, 247, 0.16) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.scanline-overlay {
+  background: linear-gradient(
+    rgba(14, 10, 30, 0) 50%,
+    rgba(0, 0, 0, 0.28) 50%
+  );
+  background-size: 100% 4px;
+}
+
+.glow-orb-violet {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  filter: blur(120px);
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.18) 0%, transparent 70%);
+}
+
+/* XYFlow Custom Canvas Styling (Zero-Radius Obsidian) */
 .react-flow__background {
-  background-color: #070B12 !important;
+  background-color: #06040A !important;
 }
 
 .react-flow__controls {
-  border: 1px solid #1E293B !important;
-  background: #0F172A !important;
-  border-radius: 8px !important;
+  border: 1px solid #1C142E !important;
+  background: #0B0813 !important;
+  border-radius: 0px !important;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
 }
 
 .react-flow__controls-button {
-  background: #0F172A !important;
-  border-bottom: 1px solid #1E293B !important;
-  fill: #94A3B8 !important;
+  background: #0B0813 !important;
+  border-bottom: 1px solid #1C142E !important;
+  border-radius: 0px !important;
+  fill: #A1A1AA !important;
 }
 
 .react-flow__controls-button:hover {
-  background: #1E293B !important;
-  fill: #38BDF8 !important;
+  background: #171028 !important;
+  fill: #C084FC !important;
 }
 
 .react-flow__minimap {
-  background-color: #0B1120 !important;
-  border: 1px solid #1E293B !important;
-  border-radius: 8px !important;
+  background-color: #0B0813 !important;
+  border: 1px solid #1C142E !important;
+  border-radius: 0px !important;
 }
 
 /* Animated Photon Pulse Edge */
 @keyframes photonPulseAnimation {
   0% {
     stroke-dashoffset: 100%;
-    stroke: #00E5FF;
+    stroke: #8B5CF6;
   }
   50% {
-    stroke: #FFD600;
+    stroke: #00E5FF;
   }
   100% {
     stroke-dashoffset: 0%;
-    stroke: #00E676;
+    stroke: #00FF9D;
   }
 }
 

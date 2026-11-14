@@ -25,33 +25,33 @@ function DEXSwapNodeComponent({ id, data, selected }: NodeProps) {
       hasSourceHandle={false}
       hasTargetHandle={true}
     >
-      <div className="bg-slate-900/90 rounded-lg p-2.5 border border-slate-800 space-y-2">
-        <div className="flex justify-between items-center text-slate-400">
+      <div className="bg-[#06040A] rounded-none p-2.5 border border-[#1C142E] space-y-2 font-mono text-[11px]">
+        <div className="flex justify-between items-center text-zinc-400">
           <span>Action:</span>
           <span className="font-bold text-emerald-400">Swap {fromToken} &rarr; {toToken}</span>
         </div>
         <div className="space-y-1">
-          <div className="flex justify-between text-[11px] text-slate-400">
+          <div className="flex justify-between text-[10px] text-zinc-400">
             <span>Portfolio Liquidation:</span>
-            <span className="font-bold text-slate-100 tabular-nums">{percent}% of Vault</span>
+            <span className="font-bold text-zinc-100 tabular-nums">{percent}% of Vault</span>
           </div>
-          <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+          <div className="w-full bg-[#110C1E] rounded-none h-1.5 overflow-hidden border border-[#1C142E]">
             <div
-              className="bg-emerald-400 h-1.5 rounded-full transition-all duration-300"
+              className="bg-[#00FF9D] h-1.5 rounded-none transition-all duration-300"
               style={{ width: `${percent}%` }}
             />
           </div>
         </div>
-        <div className="flex justify-between items-center text-[11px] text-slate-400">
+        <div className="flex justify-between items-center text-[10px] text-zinc-400">
           <span className="flex items-center gap-1">
             <Sliders className="w-3 h-3 text-emerald-400" />
             Max Slippage:
           </span>
-          <span className="font-mono text-emerald-300">{slippage}% (MEV Safe)</span>
+          <span className="text-emerald-300 tabular-nums">{slippage}% (MEV Safe)</span>
         </div>
       </div>
-      <div className="flex items-center gap-1.5 text-[11px] text-emerald-400/80">
-        <Layers className="w-3.5 h-3.5" />
+      <div className="flex items-center gap-1.5 text-[10px] text-emerald-400/80 font-mono">
+        <Layers className="w-3 h-3" />
         <span>emit Callback(ActionVault.executeStopLoss)</span>
       </div>
     </NodeCard>

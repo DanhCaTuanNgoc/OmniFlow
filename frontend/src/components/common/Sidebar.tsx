@@ -9,9 +9,9 @@ import {
   Library, 
   Vault, 
   FileText, 
-  Radio, 
   ExternalLink,
-  Zap
+  Zap,
+  Radio
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,7 +20,7 @@ const NAV_ITEMS = [
     name: 'Pipeline Studio',
     href: '/workspace/studio',
     icon: Network,
-    badge: '10 Nodes',
+    badge: '10 NODES',
   },
   {
     name: 'Active Automations',
@@ -48,34 +48,34 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 border-r border-slate-800 bg-[#0B1120] flex flex-col justify-between select-none">
+    <aside className="w-64 border-r border-[#1C142E] bg-[#0B0813] flex flex-col justify-between select-none">
       {/* Brand Header */}
       <div>
-        <div className="p-4 border-b border-slate-800">
+        <div className="p-4 border-b border-[#1C142E] bg-[#06040A]">
           <Link href="/workspace/studio" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
-              <Zap className="w-5 h-5 text-slate-950 fill-slate-950" />
+            <div className="w-9 h-9 rounded-none bg-[#110C1E] border border-[#8B5CF6] flex items-center justify-center shadow-md shadow-[#8B5CF6]/20 group-hover:bg-[#8B5CF6]/20 transition-all">
+              <Zap className="w-5 h-5 text-[#8B5CF6]" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-base tracking-tight text-slate-100">
-                  OmniFlow
+                <span className="font-extrabold text-sm tracking-wider uppercase text-white font-mono">
+                  OMNIFLOW
                 </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 font-bold">
+                <span className="text-[9px] font-mono px-1 py-0.2 rounded-none bg-[#110C1E] text-[#C084FC] border border-[#2E1F4A] font-bold">
                   v1.0
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 font-medium tracking-tight">
-                The Zapier of Web3
+              <p className="text-[9px] text-zinc-500 font-mono tracking-widest uppercase">
+                THE ZAPIER OF WEB3
               </p>
             </div>
           </Link>
         </div>
 
         {/* Navigation Items */}
-        <nav className="p-3 space-y-1.5">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 py-1">
-            Workspace
+        <nav className="p-2 space-y-1">
+          <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-zinc-500 px-3 py-1.5">
+            // CONSOLE MODULES
           </div>
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href || (item.href === '/workspace/studio' && pathname === '/workspace');
@@ -85,18 +85,18 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150',
+                  'flex items-center justify-between px-3 py-2 text-xs font-mono tracking-wider uppercase transition-colors cursor-pointer rounded-none border-l-2',
                   isActive
-                    ? 'bg-slate-800 text-cyan-400 border border-slate-700 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                    ? 'bg-[#110C1E] text-white border-[#8B5CF6] font-bold'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-[#110C1E]/60 border-transparent'
                 )}
               >
                 <div className="flex items-center gap-2.5">
-                  <Icon className={cn('w-4 h-4', isActive ? 'text-cyan-400' : 'text-slate-400')} />
+                  <Icon className={cn('w-4 h-4', isActive ? 'text-[#8B5CF6]' : 'text-zinc-500')} />
                   <span>{item.name}</span>
                 </div>
                 {item.badge && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-none bg-[#171028] text-[#C084FC] border border-[#2E1F4A]">
                     {item.badge}
                   </span>
                 )}
@@ -106,36 +106,41 @@ export function Sidebar() {
         </nav>
       </div>
 
-      {/* Network Live Pulse Footer */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950/60 space-y-2 text-xs">
-        <div className="flex items-center justify-between text-[11px] text-slate-400">
-          <span className="flex items-center gap-1.5 font-medium">
-            <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
-            Live Networks
-          </span>
-          <span className="font-mono text-[10px] text-emerald-400">Online</span>
-        </div>
-
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-900 border border-slate-800/80 text-[11px]">
-            <span className="text-slate-300">Base Sepolia</span>
-            <span className="font-mono text-cyan-400 text-[10px]">200ms Denim</span>
+      {/* Network Live Telemetry Footer (Tech Corner Accent) */}
+      <div className="p-3 bg-[#06040A] border-t border-[#1C142E]">
+        <div className="tech-corner-accent p-3 bg-[#0B0813] border border-[#1C142E] space-y-2.5 font-mono">
+          <div className="flex items-center justify-between pb-2 border-b border-[#1C142E] text-[10px]">
+            <div className="flex items-center gap-2">
+              <span className="status-pip status-pip-emerald" />
+              <span className="text-zinc-400 font-bold tracking-widest uppercase">LIVE NETWORKS</span>
+            </div>
+            <span className="text-emerald-400 font-bold px-1 py-0.2 border border-emerald-900/60 bg-emerald-950/40 text-[9px]">
+              ONLINE
+            </span>
           </div>
 
-          <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-900 border border-slate-800/80 text-[11px]">
-            <span className="text-slate-300">Reactive Lasna</span>
-            <span className="font-mono text-purple-400 text-[10px]">~1s RVM</span>
-          </div>
-        </div>
+          <div className="space-y-1.5 text-[10px]">
+            <div className="flex items-center justify-between p-1.5 bg-[#06040A] border border-[#1C142E]">
+              <span className="text-zinc-400">BASE SEPOLIA</span>
+              <span className="text-cyan-400 font-bold tabular-nums">200ms DENIM</span>
+            </div>
 
-        <a
-          href="https://lasna.reactscan.net"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors pt-1"
-        >
-          ReactScan Explorer <ExternalLink className="w-2.5 h-2.5" />
-        </a>
+            <div className="flex items-center justify-between p-1.5 bg-[#06040A] border border-[#1C142E]">
+              <span className="text-zinc-400">REACTIVE LASNA</span>
+              <span className="text-[#C084FC] font-bold tabular-nums">~1s RVM</span>
+            </div>
+          </div>
+
+          <a
+            href="https://lasna.reactscan.net"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between text-[9px] text-zinc-500 hover:text-zinc-300 pt-1 transition-colors uppercase tracking-wider"
+          >
+            <span>REACTSCAN EXPLORER</span>
+            <ExternalLink className="w-2.5 h-2.5" />
+          </a>
+        </div>
       </div>
     </aside>
   );

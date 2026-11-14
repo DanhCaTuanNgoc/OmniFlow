@@ -24,22 +24,22 @@ function WatchDEXPriceNodeComponent({ id, data, selected }: NodeProps) {
       hasSourceHandle={true}
       hasTargetHandle={false}
     >
-      <div className="bg-slate-900/90 rounded-lg p-2.5 border border-slate-800 space-y-1.5">
-        <div className="flex justify-between items-center text-slate-400">
+      <div className="bg-[#06040A] rounded-none p-2.5 border border-[#1C142E] space-y-1.5 font-mono text-[11px]">
+        <div className="flex justify-between items-center text-zinc-400">
           <span>Pair:</span>
-          <span className="font-semibold text-slate-100">{pairLabel}</span>
+          <span className="font-bold text-zinc-100">{pairLabel}</span>
         </div>
-        <div className="flex justify-between items-center text-slate-400">
+        <div className="flex justify-between items-center text-zinc-400">
           <span>DEX:</span>
-          <span className="text-cyan-400 font-mono">{dexRouter}</span>
+          <span className="text-cyan-400">{dexRouter}</span>
         </div>
-        <div className="flex justify-between items-center text-slate-400">
+        <div className="flex justify-between items-center text-zinc-400">
           <span>Origin Chain:</span>
-          <span className="font-mono text-emerald-400">Base Sepolia ({chainId})</span>
+          <span className="text-emerald-400 tabular-nums">Base Sepolia ({chainId})</span>
         </div>
       </div>
-      <div className="flex items-center gap-1.5 text-[11px] text-cyan-400/80">
-        <Database className="w-3.5 h-3.5" />
+      <div className="flex items-center gap-1.5 text-[10px] text-cyan-400/80 font-mono">
+        <Database className="w-3 h-3" />
         <span>Sync(reserve0, reserve1)</span>
       </div>
     </NodeCard>
