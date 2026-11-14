@@ -4,7 +4,9 @@ import helmet from 'helmet';
 import http from 'http';
 import { env } from './config/env.js';
 import { healthRouter } from './routes/health.route.js';
+import { logsRouter } from './routes/logs.route.js';
 import { WebSocketGateway } from './websocket/gateway.js';
+import { eventListenerService } from './services/eventListener.service.js';
 
 export function createApp(): {
   app: Express;
@@ -27,9 +29,11 @@ export function createApp(): {
 
   // Khởi tạo WebSocket Gateway trên cùng http server
   const wsGateway = new WebSocketGateway(server);
+  eventListenerService.setWebSocketGateway(wsGateway);
 
   // Routes
   app.use('/health', healthRouter);
+  app.use('/api/logs', logsRouter);
 
   // Root endpoint
   app.get('/', (_req: Request, res: Response) => {

@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 6 | 6 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 0 | 0 | **0%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 3 | 0 | **27.3%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 4 | 0 | **36.4%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **30** | **9** | **0** | **30.0%** |
+| **TỔNG CỘNG** | **21 Ngày** | **30** | **10** | **0** | **33.3%** |
 
 ---
 
@@ -250,14 +250,17 @@
 * **Ngày hoàn thành:** 14/11/2026 18:37
 * **Trạng thái:** `DONE`
 
-#### `TASK-208` [TODO] — Event Stream Listener & Fallback Initial Data Seed
-* **Module / Màn hình:** `backend/src/services/eventListener.service.ts`
+#### `TASK-208` [DONE] — Event Stream Listener & Fallback Initial Data Seed
+* **Module / Màn hình:** `backend/src/services/eventListener.service.ts` & `routes/logs.route.ts`
 * **Mục đích:** Lắng nghe event on-chain từ RPC, lưu buffer sự kiện và cung cấp dữ liệu seed ban đầu cho Activity Logs.
 * **Chi tiết thực thi:**
-  * Bắt event `Sync`, `StopLossExecuted`, `SafeSwept`.
-  * In-Memory Ring Buffer lưu 50 events gần nhất.
-  * Fallback Data Seed với 3–5 bản ghi giao dịch thật cho Activity Logs khi container khởi động lại.
-* **Ngày tạo:** 14/11/2026 17:52 | **Trạng thái:** `TODO`
+  * Khởi tạo file `data/fallbackLogs.ts` với 3 bản ghi giao dịch on-chain thật (có đầy đủ txHash Basescan, Reactscan, latency ms và các status SUCCESS/SKIPPED).
+  * Xây dựng `EventListenerService` với In-Memory FIFO Ring Buffer lưu trữ 50 events và broadcast tức thì qua `WebSocketGateway`.
+  * Cung cấp REST endpoint `GET /api/logs` (hỗ trợ lọc theo `pipelineId`).
+  * Test live API trả về 3 logs thành công 100%.
+* **Ngày tạo:** 14/11/2026 17:52
+* **Ngày hoàn thành:** 14/11/2026 18:38
+* **Trạng thái:** `DONE`
 
 #### `TASK-209` [TODO] — Xây dựng Màn hình Template Library (Recipe Store 1-Click)
 * **Module / Màn hình:** Màn hình 3 — Template Library
