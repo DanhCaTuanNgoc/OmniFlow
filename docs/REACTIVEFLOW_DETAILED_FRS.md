@@ -672,27 +672,24 @@ function execute(
 
 ---
 
-### 5.2 In-Flight Callback Protection & Cooldown Timestamp Pattern (Chống dội callback trên block 200ms & Triệt tiêu Deadlock)
+### 5.2 In-Flight Callback Protection & Stateless Cooldown Pattern (Chống dội callback trên block 200ms & Triệt tiêu Deadlock)
 
 #### Thách thức kỹ thuật:
-Mạng Base Sepolia tạo block với tốc độ cực nhanh (**200ms/block**). Khi giá thị trường chạm ngưỡng cắt lỗ, có thể phát sinh liên tiếp 5-10 sự kiện `Sync` trong vòng 1 giây trước khi callback đầu tiên kịp hoàn tất trên Base. Nếu không kiểm soát, RSC sẽ phát ra 5-10 callback trùng lặp, làm cạn kiệt gas `lREACT` và gây lãng phí phí mạng. Mặt khác, nếu chỉ dùng cờ `bool isCallbackInFlight` mà không có cơ chế reset tự động sẽ dễ gây Deadlock vĩnh viễn cho hợp đồng.
+Mạng Base Sepolia tạo block với tốc độ cực nhanh (**200ms/block**). Khi giá thị trường chạm ngưỡng cắt lỗ, có thể phát sinh liên tiếp 5-10 sự kiện `Sync` trong vòng 1 giây trước khi callback đầu tiên kịp hoàn tất trên Base. Nếu không kiểm soát, RSC sẽ phát ra 5-10 callback trùng lặp, làm cạn kiệt gas `lREACT` và gây lãng phí phí mạng. Mặt khác, nếu dùng cờ `bool isCallbackInFlight` mà không reset được thì sẽ gây Deadlock khóa cứng hợp đồng sau lần chạy đầu tiên (không cắt lỗ bậc thang lần 2 được).
 
-#### Mẫu thiết kế giải quyết (Timestamp Cooldown First + In-Flight Safe Guard):
-1. Trong hợp đồng RSC trên Reactive Omni, cấu trúc quản lý đặt điều kiện Cooldown Timestamp lên **ưu tiên hàng đầu**:
+#### Mẫu thiết kế giải quyết (Stateless Cooldown Timestamp):
+1. Trong hợp đồng RSC trên Reactive Omni, cấu trúc quản lý sử dụng **Stateless Cooldown Timestamp**:
    ```solidity
-   // Chốt chặn 1: Tự động miễn nhiễm mọi block 200ms trong thời gian Cooldown
+   // Chốt chặn duy nhất: Tự động miễn nhiễm mọi block 200ms trong thời gian Cooldown
    if (block.timestamp - lastTriggeredTimestamp < cooldownSeconds) {
        return;
    }
-
-   // Chốt chặn 2: Kiểm tra cờ đang bay nếu có
-   if (isCallbackInFlight) return;
    ```
 2. Khi phát hiện giá chạm ngưỡng bảo vệ:
-   * Gán ngay `lastTriggeredTimestamp = block.timestamp` và `isCallbackInFlight = true`.
+   * Gán ngay `lastTriggeredTimestamp = block.timestamp`.
    * Phát duy nhất **1 lệnh Callback**.
-   * Bất kỳ block 200ms nào tiếp theo đều bị ngắt ngay lập tức ở Chốt chặn 1 (`return`) mà không tốn gas VM.
-3. Hết thời gian `cooldownSeconds`, hợp đồng tự động mở lại khả năng phát hiện sự kiện mà **không cần phụ thuộc vào bất kỳ bot off-chain nào gọi hàm reset**, loại trừ 100% nguy cơ Deadlock. Đồng thời, hàm `resetInFlight()` vẫn được giữ lại để cho phép reset chủ động khi cần.
+   * Bất kỳ block 200ms nào tiếp theo đều bị ngắt ngay lập tức ở Chốt chặn trên (`return`) mà không tốn gas VM.
+3. Hết thời gian `cooldownSeconds`, hợp đồng tự động mở lại khả năng phát hiện sự kiện mà **không cần phụ thuộc vào bất kỳ bot off-chain nào**, loại trừ 100% nguy cơ Deadlock và hỗ trợ cắt lỗ bậc thang nhiều đợt hoàn hảo!
 
 ---
 

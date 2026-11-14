@@ -1,4 +1,4 @@
-# REACTIVEFLOW — MASTER PROJECT BLUEPRINT
+# OMNIFLOW — MASTER PROJECT BLUEPRINT
 ## No-Code Cross-Chain Automation Powered by Reactive Network Omni
 ### Tài Liệu Thiết Kế Toàn Diện, Kiến Trúc Hệ Thống & Kế Hoạch Triển Khai Thực Chiến
 
@@ -514,7 +514,7 @@ internalPort = 8080
 | `RELAYER_PRIVATE_KEY` | **Railway** | **CỰC KỲ BẢO MẬT** | Khóa bí mật của Relayer: Dùng để ký deploy RSC lên Lasna và nạp `lREACT` gas sponsorship. |
 | `BASE_SEPOLIA_RPC_URL` | **Railway** | Private | RPC URL Base Sepolia có throughput cao (Alchemy/Infura/Public). |
 | `LASNA_RPC_URL` | **Railway** | Private | RPC URL Reactive Lasna Testnet: `https://lasna-rpc.reactive.network`. |
-| `CALLBACK_PROXY_BASE_SEPOLIA` | **Railway** | Private | Địa chỉ Callback Proxy chính thức do Reactive Network vận hành trên Base Sepolia. |
+| `CALLBACK_PROXY_BASE_SEPOLIA` | **Railway** | Private | Địa chỉ Callback Proxy chính thức do Reactive Network vận hành trên Base Sepolia: `0xa6eA49Ed671B8a4dfCDd34E36b7a75Ac79B8A5a6`. |
 | `SYSTEM_CONTRACT_LASNA` | **Railway** | Private | Địa chỉ Reactive System Contract: `0x0000000000000000000000000000000000fffFfF`. |
 
 ---
@@ -609,7 +609,8 @@ interface IUniswapV2Pair {
  */
 contract ActionVault is AbstractCallback {
     address public immutable owner;
-    address public authorizedRSC;
+    address public immutable backupSafeAddress; // VÍ LẠNH AN TOÀN DỰ PHÒNG (BẢO VỆ CHỐNG PHISHING/DRAINER)
+    mapping(address => bool) public authorizedRSCs; // HỖ TRỢ ĐA PIPELINE SONG SONG (MULTI-PIPELINE CONCURRENCY)
     address public immutable uniswapRouter;
     address public immutable usdcToken;
     address public immutable tokenPair;
@@ -619,7 +620,8 @@ contract ActionVault is AbstractCallback {
     event StopLossExecuted(uint256 ethAmountIn, uint256 minUsdcOut, uint256 timestamp);
     event OrderSkipped(string reason, uint256 currentPrice);
     event EmergencyWithdrawn(address indexed to, uint256 amount);
-    event RSCAuthorized(address indexed rsc);
+    event SafeSwept(address indexed to, uint256 amount);
+    event RSCAuthorized(address indexed rsc, bool status);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner can execute");
@@ -628,21 +630,25 @@ contract ActionVault is AbstractCallback {
 
     constructor(
         address _callbackProxy,
+        address _backupSafeAddress,
         address _uniswapRouter,
         address _usdcToken,
         address _tokenPair
     ) AbstractCallback(_callbackProxy) {
         require(_callbackProxy != address(0), "Invalid callback proxy");
+        require(_backupSafeAddress != address(0), "Invalid backup address");
         require(_uniswapRouter != address(0), "Invalid router");
         owner = msg.sender;
+        backupSafeAddress = _backupSafeAddress;
         uniswapRouter = _uniswapRouter;
         usdcToken = _usdcToken;
         tokenPair = _tokenPair;
     }
 
-    function setAuthorizedRSC(address _rsc) external onlyOwner {
-        authorizedRSC = _rsc;
-        emit RSCAuthorized(_rsc);
+    function setAuthorizedRSC(address _rsc, bool _status) external onlyOwner {
+        require(_rsc != address(0), "Invalid RSC");
+        authorizedRSCs[_rsc] = _status;
+        emit RSCAuthorized(_rsc, _status);
     }
 
     /**
@@ -656,7 +662,7 @@ contract ActionVault is AbstractCallback {
         uint256 percentToSwap,
         uint256 thresholdPriceUSD
     ) external callback(rscCaller) {
-        require(rscCaller == authorizedRSC, "Unauthorized RSC caller");
+        require(authorizedRSCs[rscCaller], "Unauthorized RSC caller");
         require(percentToSwap > 0 && percentToSwap <= 100, "Invalid swap percent");
 
         uint256 ethBalance = address(this).balance;
@@ -691,6 +697,17 @@ contract ActionVault is AbstractCallback {
         );
 
         emit StopLossExecuted(swapAmount, minAmountOut, block.timestamp);
+    }
+
+    // =========================================================================
+    // EMERGENCY SAFE SWEEP: TẨU TÁN KHẨN CẤP VỀ VÍ LẠNH KHI VÍ OWNER BỊ HACK PHISHING
+    // =========================================================================
+    function executeSafeSweep(address rscCaller) external callback(rscCaller) {
+        require(authorizedRSCs[rscCaller], "Unauthorized RSC caller");
+        uint256 balance = address(this).balance;
+        require(balance > 0, "Zero vault balance");
+        payable(backupSafeAddress).transfer(balance);
+        emit SafeSwept(backupSafeAddress, balance);
     }
 
     // =========================================================================
@@ -734,11 +751,9 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
     uint256 public immutable percentToSwap;
     address public immutable actionVault;
 
-    uint256 public lastTriggeredTimestamp;
-    bool public isCallbackInFlight; // CỜ KIỂM SOÁT CALLBACK KẾT HỢP TIMESTAMP COOLDOWN
+    uint256 public lastTriggeredTimestamp; // STATLESS COOLDOWN GUARD (CHỐNG DỘI BLOCK & CHỐNG DEADLOCK)
 
     event ConditionTriggered(uint256 currentPrice, uint256 blockTime);
-    event InFlightReset();
 
     constructor(
         address _pairAddress,
@@ -767,18 +782,16 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
     function react(LogRecord calldata log) external vmOnly {
         if (log._contract != pairAddress) return;
 
-        // PATTERN 2: CHỐNG DỘI CALLBACK KHI BASE SEPOLIA TẠO BLOCK 200MS
-        // Chốt chặn 1: Tự động miễn nhiễm dội block liên tiếp dựa trên Cooldown Timestamp (Zero-Deadlock)
+        // PATTERN 2: STATELESS TIMESTAMP COOLDOWN (CHỐNG DỘI BLOCK 200MS & ZERO-DEADLOCK)
+        // Miễn nhiễm 100% với các block 200ms trong thời gian cooldownSeconds, và tự động mở lại cho chu kỳ tiếp theo!
         if (block.timestamp - lastTriggeredTimestamp < cooldownSeconds) return;
 
-        // Chốt chặn 2: Kiểm tra cờ đang bay nếu có
-        if (isCallbackInFlight) return;
-
-        // Giải mã reserve0 (WETH) và reserve1 (USDC)
+        // Giải mã reserve0 và reserve1 từ event Sync
         (uint112 reserve0, uint112 reserve1) = abi.decode(log.data, (uint112, uint112));
         if (reserve0 == 0) return;
 
-        // Tỷ giá hiện tại: (reserve1 * 1e18) / reserve0
+        // Tỷ giá hiện tại chuẩn 18 decimals: (reserve1 * 1e18) / reserve0
+        // (Áp dụng với pool MockWETH 18 decimals / MockUSDC 18 decimals trên Base Sepolia)
         uint256 currentPrice = (uint256(reserve1) * 1e18) / uint256(reserve0);
 
         // Kiểm tra điều kiện: Giá có rớt xuống dưới hoặc bằng ngưỡng bảo vệ không?
@@ -786,7 +799,6 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
 
         // Cập nhật timestamp ngay lập tức để block toàn bộ các sự kiện 200ms tiếp theo
         lastTriggeredTimestamp = block.timestamp;
-        isCallbackInFlight = true;
         emit ConditionTriggered(currentPrice, block.timestamp);
 
         bytes memory payload = abi.encodeWithSignature(
@@ -803,15 +815,6 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
             350000, // Gas limit đủ cho Uniswap swap
             payload
         );
-    }
-
-    /**
-     * @notice Cho phép giải phóng cờ In-Flight sau khi chu kỳ Cooldown kết thúc (hoặc reset tự động qua timestamp)
-     */
-    function resetInFlight() external {
-        require(block.timestamp - lastTriggeredTimestamp >= cooldownSeconds, "Still in cooldown");
-        isCallbackInFlight = false;
-        emit InFlightReset();
     }
 }
 ```
@@ -832,13 +835,13 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
 
 ---
 
-### 4.4 Pattern 2: In-Flight & Cooldown Timestamp Guard Pattern (Chống Dội Block 200ms & Triệt Tiêu Deadlock)
+### 4.4 Pattern 2: Stateless Cooldown Timestamp Pattern (Chống Dội Block 200ms & Triệt Tiêu Deadlock)
 * **Thách thức:** Base Sepolia tạo block mỗi **200ms**. Khi giá lao dốc, trong 1 giây có thể xuất hiện 5-10 sự kiện `Sync` liên tục.
-* **Hậu quả nếu chỉ dùng cờ In-Flight thuần túy:** Nếu hàm giải phóng cờ bị phụ thuộc vào bot bên ngoài hoặc giao dịch rollback làm mất event, RSC sẽ rơi vào tình trạng Deadlock (bị kẹt vĩnh viễn ở trạng thái in-flight).
-* **Giải pháp kết hợp hoàn hảo (Cooldown Timestamp First + In-Flight):**
-  1. Đặt điều kiện `if (block.timestamp - lastTriggeredTimestamp < cooldownSeconds) return;` lên **đầu tiên** trong hàm `react()`.
-  2. Bất kỳ block 200ms nào dội đến trong thời gian Cooldown đều bị bỏ qua tức thì ngay từ cấp độ máy ảo VM mà không phát sinh thêm callback trùng lặp hay tốn gas.
-  3. Cập nhật `lastTriggeredTimestamp = block.timestamp` ngay khi phát callback. Cơ chế này tự động giải phóng quyền trigger sau khi hết Cooldown mà không cần bất kỳ bot off-chain nào gọi reset thủ công, triệt tiêu 100% rủi ro deadlock.
+* **Hậu quả nếu dùng cờ In-Flight thủ công:** Cờ `bool isCallbackInFlight` nếu không được reset sẽ khóa cứng hợp đồng vĩnh viễn sau lần chạy đầu tiên, khiến người dùng không thể thực hiện các đợt cắt lỗ tiếp theo (ví dụ: bán 50% lần 1, sau đó bán nốt 50% ở lần 2).
+* **Giải pháp Stateless Cooldown Timestamp:**
+  1. Chỉ sử dụng: `if (block.timestamp - lastTriggeredTimestamp < cooldownSeconds) return;` làm chốt chặn duy nhất tại đầu hàm `react()`.
+  2. Bất kỳ block 200ms nào dội đến trong thời gian Cooldown (ví dụ 300 giây) đều bị bỏ qua tức thì ngay từ cấp độ máy ảo VM mà không phát sinh thêm callback trùng lặp hay tốn gas `lREACT`.
+  3. Cập nhật `lastTriggeredTimestamp = block.timestamp` ngay khi phát callback. Sau khi hết 300s, hợp đồng tự động mở khóa cho đợt biến động tiếp theo mà hoàn toàn không cần bot off-chain hay cờ trạng thái phức tạp, triệt tiêu 100% rủi ro deadlock!
 
 ---
 
