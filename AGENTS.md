@@ -110,3 +110,4 @@ Mandatory whenever testing, verifying data bindings, or running integration suit
   - **Upon finishing a task**: Update the task status to `DONE`, fill in the completion timestamp (`Ngày hoàn thành`), and record any relevant commit hashes or outputs.
   - **If a task is paused, unfinished, or blocked**: You MUST update its current progress, notes on what was completed, and remaining items into `TASKS.md` (status: `IN_PROGRESS` or `BLOCKED`). Never leave progress untracked across context turns!
   - Always recalculate and update the **Progress Summary Table** at the top of `TASKS.md`.
+  - **Strict Scope Prohibition**: NEVER add video demo recording or final hackathon submission tasks to `TASKS.md` (these are deferred indefinitely until future explicit user instruction).

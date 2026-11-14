@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 5 | 5 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 0 | 0 | **0%** |
 | **Sprint 2: Studio Canvas, Workspace & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 8 | 0 | 0 | **0%** |
-| **Sprint 3: Live Visualizer, Hardening, Video & Nộp Bài** | Ngày 15 - 21 (29/11 - 5/12) | 7 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **28** | **5** | **0** | **17.8%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
+| **TỔNG CỘNG** | **21 Ngày** | **26** | **5** | **0** | **19.2%** |
 
 ---
 
@@ -224,7 +224,7 @@
 
 ---
 
-### SPRINT 3: LIVE VISUALIZER, HARDENING, VIDEO & NỘP BÀI (NGÀY 15 - 21: 29/11 - 5/12)
+### SPRINT 3: LIVE VISUALIZER, HARDENING & DEPLOYMENT (NGÀY 15 - 21: 29/11 - 5/12)
 
 #### `TASK-301` [TODO] — Hiệu ứng Chớp Xung Photon trên Canvas (Pulse Visualizer)
 * **Module / Màn hình:** Pipeline Studio Canvas & Activity Logs
@@ -254,24 +254,4 @@
 * **Module / Màn hình:** Toàn bộ Frontend & Smart Contracts
 * **Mục đích:** Đảm bảo hệ thống mượt mà, zero-bug, độ tương phản cao và tuân thủ Web Guidelines.
 * **Chi tiết thực thi:** Audit accessibility, kiểm tra tải trang dưới 500ms, test trên các kích thước màn hình.
-* **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
-
-#### `TASK-306` [TODO] — Quay Video Demo < 3 Phút Chuẩn 5-Hồi (Winning Demo)
-* **Module / Màn hình:** Video Demo Hackathon Submission
-* **Mục đích:** Trình diễn trực quan trọn vẹn sản phẩm thuyết phục Ban Giám Khảo.
-* **Chi tiết thực thi:**
-  * Hồi 1 (0:00 - 0:30): Nỗi đau DeFi & Giá trị của Reactive Omni.
-  * Hồi 2 (0:30 - 1:15): Kéo thả Canvas Studio & 1-Click Recipe.
-  * Hồi 3 (1:15 - 2:00): Live Execution — Swap ép giá & Photon Pulse rực sáng.
-  * Hồi 4 (2:00 - 2:30): Kiểm tra On-chain Basescan & Reactscan.
-  * Hồi 5 (2:30 - 2:45): Kêu gọi hành động & Tầm nhìn "Zapier of Web3".
-* **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
-
-#### `TASK-307` [TODO] — Hoàn thiện Hồ Sơ Submission & Đóng Gói Public Repo
-* **Module / Màn hình:** Hackathon Submission Portal
-* **Mục đích:** Nộp bài chính thức trước deadline 5/12/2026.
-* **Chi tiết thực thi:**
-  * README.md hoàn thiện với sơ đồ kiến trúc, link demo live, hướng dẫn chạy local.
-  * Cung cấp danh sách địa chỉ hợp đồng đã deploy và 3 Tx Hashes chứng minh Full Loop.
-  * Submit link repo GitHub và link video YouTube lên cổng thi.
 * **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
