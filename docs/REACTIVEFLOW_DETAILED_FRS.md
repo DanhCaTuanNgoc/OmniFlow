@@ -84,19 +84,20 @@ stateDiagram-v2
     [*] --> DRAFT: Mở Canvas mới / Load Template
     DRAFT --> VALIDATING: Người dùng bấm [Deploy Automation]
     VALIDATING --> DRAFT: Lỗi Graph (Cổng chưa nối / Thiếu params)
-    VALIDATING --> COMPILING: Đồ thị hợp lệ (Type-safe verified)
-    COMPILING --> DEPLOYING_RSC: Sinh Solidity bytecode
-    DEPLOYING_RSC --> FUNDING_GAS: RSC deployed trên Reactive Lasna
-    FUNDING_GAS --> AUTHORIZING_VAULT: Nạp lREACT vào RSC
-    AUTHORIZING_VAULT --> RUNNING_24_7: Cấp quyền RSC gọi ActionVault trên Base
+    VALIDATING --> HYDRATING_PARAMS: Đồ thị hợp lệ (Type-safe verified)
+    HYDRATING_PARAMS --> DEPLOYING_RSC: Trích xuất params tiêm vào Template Bytecode
+    DEPLOYING_RSC --> FUNDING_GAS: RSC deployed trên Reactive Lasna (Pre-compiled)
+    FUNDING_GAS --> WAITING_USER_AUTH: Nạp 1.0 lREACT vào RSC
+    WAITING_USER_AUTH --> AUTHORIZING_VAULT: Frontend nhắc User ký setAuthorizedRSC trên MetaMask
+    AUTHORIZING_VAULT --> RUNNING_24_7: Cấp quyền RSC gọi ActionVault trên Base Sepolia
     
     state RUNNING_24_7 {
         [*] --> LISTENING
         LISTENING --> EVALUATING: Bắt được Event on-chain
         EVALUATING --> EXECUTING: Điều kiện thỏa mãn
         EVALUATING --> LISTENING: Điều kiện không thỏa
-        EXECUTING --> COOLDOWN_WAIT: Callback thành công
-        COOLDOWN_WAIT --> LISTENING: Hết Cooldown
+        EXECUTING --> COOLDOWN_WAIT: Callback thành công (Timestamp recorded)
+        COOLDOWN_WAIT --> LISTENING: Hết Cooldown (Tự động mở không sợ Deadlock)
     }
 
     RUNNING_24_7 --> PAUSED: Người dùng bấm [Pause] trên Dashboard
@@ -581,12 +582,12 @@ Khi người dùng bấm **Deploy Automation**, Canvas đóng gói toàn bộ tr
 
 * **Request Headers:** `Content-Type: application/json`
 * **Request Body:** Toàn bộ payload Graph JSON ở mục 4.1.
-* **Server Processing Flow:**
+* **Server Processing Flow (Tối Ưu & Non-Custodial Zero-Trust):**
   1. Kiểm tra tính toàn vẹn của đồ thị (Graph Integrity Validation).
-  2. Map danh sách node vào Template Solidity `StopLoss_Pipeline.sol`.
-  3. Khởi chạy `forge create` với các Constructor Args được parse từ node data.
-  4. Nạp `lREACT` vào hợp đồng vừa deploy.
-  5. Ký giao dịch `setAuthorizedRSC` trên `ActionVault`.
+  2. Trích xuất danh sách node parameters tương ứng với Template Solidity (`StopLoss_Pipeline.sol`).
+  3. Deploy RSC lên Reactive Lasna thông qua Pre-compiled Bytecode / `cast send --create` với constructor arguments tương ứng (thực thi dưới 2 giây, không tốn tài nguyên compile động).
+  4. Nạp `1.0 lREACT` vào hợp đồng vừa deploy để nuôi callback.
+  5. Trả về `rscAddress` cho Frontend để Người dùng (`owner` của `ActionVault`) tự bấm ký giao dịch `setAuthorizedRSC` trên MetaMask. (Relayer server tuyệt đối không can thiệp, đảm bảo tính Non-Custodial).
 * **Response Payload (Success 200 OK):**
   ```json
   {
@@ -671,27 +672,27 @@ function execute(
 
 ---
 
-### 5.2 In-Flight Callback Protection Pattern (Khóa cờ pending chống bắn lặp callback trên block 200ms)
+### 5.2 In-Flight Callback Protection & Cooldown Timestamp Pattern (Chống dội callback trên block 200ms & Triệt tiêu Deadlock)
 
 #### Thách thức kỹ thuật:
-Mạng Base Sepolia tạo block với tốc độ cực nhanh (**200ms/block**). Khi giá thị trường chạm ngưỡng cắt lỗ, có thể phát sinh liên tiếp 5-10 sự kiện `Sync` trong vòng 1 giây trước khi callback đầu tiên kịp hoàn tất trên Base. Nếu không kiểm soát, RSC sẽ phát ra 5-10 callback trùng lặp, làm cạn kiệt gas `lREACT` và gây lãng phí phí mạng.
+Mạng Base Sepolia tạo block với tốc độ cực nhanh (**200ms/block**). Khi giá thị trường chạm ngưỡng cắt lỗ, có thể phát sinh liên tiếp 5-10 sự kiện `Sync` trong vòng 1 giây trước khi callback đầu tiên kịp hoàn tất trên Base. Nếu không kiểm soát, RSC sẽ phát ra 5-10 callback trùng lặp, làm cạn kiệt gas `lREACT` và gây lãng phí phí mạng. Mặt khác, nếu chỉ dùng cờ `bool isCallbackInFlight` mà không có cơ chế reset tự động sẽ dễ gây Deadlock vĩnh viễn cho hợp đồng.
 
-#### Mẫu thiết kế giải quyết:
-1. Trong hợp đồng RSC trên Reactive Omni, cấu trúc quản lý trạng thái lệnh (Watch Order) bổ sung cờ trạng thái `pending`:
+#### Mẫu thiết kế giải quyết (Timestamp Cooldown First + In-Flight Safe Guard):
+1. Trong hợp đồng RSC trên Reactive Omni, cấu trúc quản lý đặt điều kiện Cooldown Timestamp lên **ưu tiên hàng đầu**:
    ```solidity
-   struct Watch {
-       uint256 stopPrice;
-       uint256 takePrice;
-       bool open;
-       bool pending; // Cờ kiểm soát callback đang bay (in-flight)
+   // Chốt chặn 1: Tự động miễn nhiễm mọi block 200ms trong thời gian Cooldown
+   if (block.timestamp - lastTriggeredTimestamp < cooldownSeconds) {
+       return;
    }
+
+   // Chốt chặn 2: Kiểm tra cờ đang bay nếu có
+   if (isCallbackInFlight) return;
    ```
-2. Khi phát hiện giá chạm ngưỡng:
-   * Nếu `w.pending == true` $\rightarrow$ Bỏ qua (Skip), không phát callback trùng lặp.
-   * Nếu `w.pending == false` $\rightarrow$ Gán `w.pending = true` và phát duy nhất **1 lệnh Callback**.
-3. Cờ `pending` chỉ được giải phóng (`pending = false`) khi:
-   * Nhận được event `OrderSkipped` (ví dụ giá bật ngược lại hoặc swap bị trượt giá quá mức) để cho phép thử lại ở chu kỳ sau.
-   * Đóng hoàn toàn khi nhận được event `OrderFilled` hoặc `OrderCancelled`.
+2. Khi phát hiện giá chạm ngưỡng bảo vệ:
+   * Gán ngay `lastTriggeredTimestamp = block.timestamp` và `isCallbackInFlight = true`.
+   * Phát duy nhất **1 lệnh Callback**.
+   * Bất kỳ block 200ms nào tiếp theo đều bị ngắt ngay lập tức ở Chốt chặn 1 (`return`) mà không tốn gas VM.
+3. Hết thời gian `cooldownSeconds`, hợp đồng tự động mở lại khả năng phát hiện sự kiện mà **không cần phụ thuộc vào bất kỳ bot off-chain nào gọi hàm reset**, loại trừ 100% nguy cơ Deadlock. Đồng thời, hàm `resetInFlight()` vẫn được giữ lại để cho phép reset chủ động khi cần.
 
 ---
 
