@@ -13,10 +13,10 @@
 | Giai đoạn (Phase) | Thời gian | Tổng Tasks | Hoàn thành | Đang làm | Tỷ lệ hoàn thành |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 6 | 6 | 0 | **100%** |
-| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 1 | 0 | **12.5%** |
+| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 2 | 0 | **25.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 5 | 0 | **45.5%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **30** | **12** | **0** | **40.0%** |
+| **TỔNG CỘNG** | **21 Ngày** | **30** | **13** | **0** | **43.3%** |
 
 ---
 
@@ -106,16 +106,20 @@
 * **Ngày hoàn thành:** 14/11/2026 18:47
 * **Trạng thái:** `DONE`
 
-#### `TASK-102` [TODO] — Phát triển Smart Contract Đích `ActionVault.sol`
+#### `TASK-102` [DONE] — Phát triển Smart Contract Đích `ActionVault.sol`
 * **Module / Màn hình:** `contracts/src/ActionVault.sol` (Base Sepolia)
 * **Mục đích:** Cung cấp két an toàn phi lưu ký với Panic Button, Safe Sweep và Multi-Pipeline Mapping.
 * **Chi tiết thực thi:**
-  * Kế thừa `AbstractCallback` với địa chỉ Callback Proxy Base Sepolia: `0xa6eA49Ed671B8a4dfCDd34E36b7a75Ac79B8A5a6`.
-  * Triển khai hàm `executeStopLoss`, `executeSafeSweep`, `emergencyWithdraw`.
-  * Tích hợp `getAmountsOut` bảo vệ trượt giá.
+  * Kế thừa `AbstractCallback` từ `@reactive-network/reactive-lib/src/abstract-base/AbstractCallback.sol`.
+  * Áp dụng Two-Slot parameter (`rvmId`, `rscContract`) và modifier chuẩn `authorizedSenderOnly`.
+  * Triển khai `mapping(address => bool) public authorizedRSCs` hỗ trợ đa pipeline song song.
+  * Tích hợp `backupSafeAddress` và hàm `executeSafeSweep` chống tấn công rút ruột ví owner.
+  * Tích hợp `uniswapRouter.getAmountsOut` bảo vệ trượt giá chuẩn xác theo đường cong $x \cdot y = k$.
+  * Hàm `emergencyWithdraw()` và `receive() external payable override {}`.
+  * Biên dịch thành công 100% với Solc 0.8.20 qua Foundry.
 * **Ngày tạo:** 14/11/2026 17:35
-* **Ngày hoàn thành:** --
-* **Trạng thái:** `TODO`
+* **Ngày hoàn thành:** 14/11/2026 18:49
+* **Trạng thái:** `DONE`
 
 #### `TASK-103` [TODO] — Phát triển Mock Uniswap V2 Pair & Mock Tokens
 * **Module / Màn hình:** `contracts/src/mocks/` (Base Sepolia Testbed)
