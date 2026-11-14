@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #070B12;
+  --foreground: #F8FAFC;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Web3 Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #070B12;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1E293B;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Tabular figures for financial and latency metrics */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* XYFlow Custom Canvas Styling */
+.react-flow__background {
+  background-color: #070B12 !important;
+}
+
+.react-flow__controls {
+  border: 1px solid #1E293B !important;
+  background: #0F172A !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+.react-flow__controls-button {
+  background: #0F172A !important;
+  border-bottom: 1px solid #1E293B !important;
+  fill: #94A3B8 !important;
+}
+
+.react-flow__controls-button:hover {
+  background: #1E293B !important;
+  fill: #38BDF8 !important;
+}
+
+.react-flow__minimap {
+  background-color: #0B1120 !important;
+  border: 1px solid #1E293B !important;
+  border-radius: 8px !important;
+}
+
+/* Animated Photon Pulse Edge */
+@keyframes photonPulseAnimation {
+  0% {
+    stroke-dashoffset: 100%;
+    stroke: #00E5FF;
+  }
+  50% {
+    stroke: #FFD600;
+  }
+  100% {
+    stroke-dashoffset: 0%;
+    stroke: #00E676;
+  }
+}
+
+.edge-pulse-active path {
+  stroke-dasharray: 8 4 !important;
+  animation: photonPulseAnimation 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
+}

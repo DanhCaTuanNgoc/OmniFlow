@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 6 | 6 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 6 | 0 | **75.0%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 5 | 0 | **45.5%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 8 | 0 | **72.7%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **30** | **17** | **0** | **56.7%** |
+| **TỔNG CỘNG** | **21 Ngày** | **30** | **20** | **0** | **66.7%** |
 
 ---
 
@@ -195,23 +195,51 @@
 
 ### SPRINT 2: WORKSPACE UI, CANVAS & BACKEND RELAYER (NGÀY 8 - 14: 22/11 - 28/11)
 
-#### `TASK-201` [TODO] — Khởi tạo Next.js 14 Frontend & Cấu hình Web3 Wagmi/Viem
-* **Module / Màn hình:** `frontend/` (App Shell)
-* **Mục đích:** Xây dựng khung giao diện Web3 Dark Theme chuẩn chỉnh, chống lỗi Hydration.
-* **Chi tiết thực thi:** Next.js 14 App Router, Tailwind CSS, Wagmi Provider, RainbowKit/AppKit.
-* **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
+#### `TASK-201` [DONE] — Khởi tạo Next.js 14 Frontend & Cấu hình Web3 Wagmi/Viem
+* **Module / Màn hình:** `frontend/` (App Shell & Navigation)
+* **Mục đích:** Xây dựng khung giao diện Web3 Dark Theme chuẩn chỉnh, chống lỗi Hydration, điều hướng 5 màn hình Workspace.
+* **Chi tiết thực thi:**
+  * Cấu hình Next.js 14 App Router với Tailwind CSS, Web3 Dark Theme (`#070B12`, Slate-900 surface).
+  * Tích hợp Wagmi v2 + Viem kết nối Base Sepolia (`84532`) và Reactive Lasna (`5318007`).
+  * Xây dựng App Shell với `Sidebar` điều hướng 5 màn hình (Studio, Active, Templates, Vault, Logs), network pills, và `Header` kết nối ví MetaMask.
+  * Prerender thành công 100% không lỗi SSR.
+* **Ngày tạo:** 14/11/2026 17:35
+* **Ngày hoàn thành:** 14/11/2026 19:15
+* **Trạng thái:** `DONE`
 
-#### `TASK-202` [TODO] — Xây dựng Pipeline Studio Canvas với XYFlow (`@xyflow/react`)
+#### `TASK-202` [DONE] — Xây dựng Pipeline Studio Canvas với XYFlow (`@xyflow/react`)
 * **Module / Màn hình:** Màn hình 1 — Pipeline Studio (`StudioCanvas.tsx`)
-* **Mục đích:** Cung cấp trải nghiệm kéo thả tự động hóa trực quan không cần viết code.
-* **Chi tiết thực thi:** DAG graph enforcement, Constrained Typed Ports, custom nodes và edge styles.
-* **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
+* **Mục đích:** Cung cấp trải nghiệm kéo thả tự động hóa trực quan không cần viết code với DAG enforcement và Animated Edges.
+* **Chi tiết thực thi:**
+  * Tích hợp `@xyflow/react` v12 với `nodeTypes` và `edgeTypes` khai báo tĩnh ngoài scope chống re-render giật lag.
+  * Thiết lập Constrained Typed Ports & `isValidConnection` chặn kết nối vòng lặp (DAG) và cấm nối ngược Action -> Trigger.
+  * Cạnh nối tùy biến `CustomEdge.tsx` với hiệu ứng chớp xung ánh sáng Photon Pulse GPU-accelerated.
+  * Inspector Panel trượt từ bên phải cho phép tùy chỉnh thông số trực tiếp của từng Node.
+  * Tích hợp `DeployModal.tsx` gọi REST API backend và nhắc nhở phân quyền Non-Custodial trên `ActionVault`.
+* **Ngày tạo:** 14/11/2026 17:35
+* **Ngày hoàn thành:** 14/11/2026 19:15
+* **Trạng thái:** `DONE`
 
-#### `TASK-203` [TODO] — Phát triển Bộ 10 Node Tinh Hoa (Lean Node Components)
-* **Module / Màn hình:** Pipeline Studio (`frontend/src/components/canvas/nodes/`)
-* **Mục đích:** Cung cấp đầy đủ 10 nodes cấu hình thuộc 4 nhóm (Trigger, Condition, Action, Logic).
-* **Chi tiết thực thi:** 3 Triggers, 3 Conditions, 3 Actions, 1 Logic Gate Node.
-* **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
+#### `TASK-203` [DONE] — Phát triển Bộ 10 Node Tinh Hoa (Lean Node Components)
+* **Module / Màn hình:** Pipeline Studio (`frontend/src/components/canvas/nodes/` & `NodePalette.tsx`)
+* **Mục đích:** Cung cấp đầy đủ 10 nodes cấu hình thuộc 4 nhóm (Trigger, Condition, Action, Logic) với Node Palette kéo thả.
+* **Chi tiết thực thi:**
+  * Phát triển 10 custom nodes bọc trong `React.memo()`:
+    1. `WatchDEXPriceNode` (Trigger AMM Pair Sync)
+    2. `WatchTransfersNode` (Trigger ERC-20 / Native flow)
+    3. `PeriodicCronNode` (Trigger Reactive Cron Tick)
+    4. `PriceThresholdGuardNode` (Condition Stop-Loss / Take-Profit)
+    5. `CooldownGuardNode` (Condition Rate-Limiter chống block 200ms)
+    6. `BalanceThresholdNode` (Condition Solvency check)
+    7. `DEXSwapNode` (Action tích hợp thanh trượt Slippage + Liquidation %)
+    8. `EmergencySafeSweepNode` (Action sơ tán ví lạnh)
+    9. `NotifyLogWebhookNode` (Action log event 0-gas)
+    10. `LogicGateNode` (Logic 2 cổng vào AND / OR)
+  * Xây dựng `NodePalette.tsx` kéo thả linh hoạt, chia danh mục, tìm kiếm nhanh và nút thêm 1-click.
+  * Thiết kế bảng trạng thái 10 Visual States (IDLE, LISTENING, EVENT_CAPTURED, CONDITION_MET, SUCCESS, COOLDOWN, REVERTED, ...).
+* **Ngày tạo:** 14/11/2026 17:35
+* **Ngày hoàn thành:** 14/11/2026 19:15
+* **Trạng thái:** `DONE`
 
 #### `TASK-204` [DONE] — Backend Foundation & Health Check Service
 * **Module / Màn hình:** `backend/` (Railway Node.js Service)
