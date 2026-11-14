@@ -2,8 +2,8 @@ export const APP_CONFIG = {
   name: 'OmniFlow',
   tagline: 'The Zapier of Web3',
   description: 'No-Code Cross-Chain Automation Powered by Reactive Omni',
-  backendUrl: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001',
-  wsUrl: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001/stream',
+  backendUrl: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080',
+  wsUrl: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/stream',
 };
 
 export const CONTRACT_ADDRESSES = {
