@@ -13,10 +13,10 @@
 | Giai đoạn (Phase) | Thời gian | Tổng Tasks | Hoàn thành | Đang làm | Tỷ lệ hoàn thành |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 6 | 6 | 0 | **100%** |
-| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 2 | 0 | **25.0%** |
+| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 8 | 3 | 0 | **37.5%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 11 | 5 | 0 | **45.5%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **30** | **13** | **0** | **43.3%** |
+| **TỔNG CỘNG** | **21 Ngày** | **30** | **14** | **0** | **46.7%** |
 
 ---
 
@@ -121,16 +121,18 @@
 * **Ngày hoàn thành:** 14/11/2026 18:49
 * **Trạng thái:** `DONE`
 
-#### `TASK-103` [TODO] — Phát triển Mock Uniswap V2 Pair & Mock Tokens
+#### `TASK-103` [DONE] — Phát triển Mock Uniswap V2 Pair & Mock Tokens
 * **Module / Màn hình:** `contracts/src/mocks/` (Base Sepolia Testbed)
 * **Mục đích:** Tạo môi trường thanh khoản chủ động để thử nghiệm và quay video ép giá demo.
 * **Chi tiết thực thi:**
-  * Tạo `MockWETH.sol` (18 decimals) và `MockUSDC.sol` (18 decimals).
-  * Tạo `MockUniswapV2Pair.sol` và `MockUniswapV2Router.sol`.
-  * Script mint token và nạp thanh khoản ban đầu.
+  * Tạo `MockWETH.sol` (18 decimals) với hàm `deposit()` và `withdraw()`.
+  * Tạo `MockUSDC.sol` (18 decimals) giúp công thức tỷ giá $reserve1 \times 1e18 / reserve0$ không bị lệch số 0.
+  * Tạo `MockUniswapV2Pair.sol` phát ra event `Sync(uint112, uint112)` và hàm `setReserves()` để ép giá tùy ý.
+  * Tạo `MockUniswapV2Router.sol` với hàm `getAmountsOut()` chuẩn $x \cdot y = k$ và `swapExactETHForTokens()`.
+  * Biên dịch thành công 100% bằng Foundry.
 * **Ngày tạo:** 14/11/2026 17:35
-* **Ngày hoàn thành:** --
-* **Trạng thái:** `TODO`
+* **Ngày hoàn thành:** 14/11/2026 18:50
+* **Trạng thái:** `DONE`
 
 #### `TASK-104` [TODO] — Phát triển Reactive Smart Contract `StopLoss_Pipeline.sol`
 * **Module / Màn hình:** `contracts/src/StopLoss_Pipeline.sol` (Reactive Lasna)
