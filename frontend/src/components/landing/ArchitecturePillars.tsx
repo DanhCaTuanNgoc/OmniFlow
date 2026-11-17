@@ -42,14 +42,14 @@ export function ArchitecturePillars() {
   return (
     <section id="architecture" className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="text-center mb-16">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-50 border border-violet-200 text-violet-700 text-xs font-mono mb-3 font-medium">
-          <Cpu className="w-3.5 h-3.5 text-violet-600" />
-          Core Engineering Principles
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/10 border border-white/15 text-white/90 text-xs font-mono mb-4 font-medium shadow-badge-dark backdrop-blur-md">
+          <Cpu className="w-3.5 h-3.5 text-violet-400" />
+          <span>Core Engineering Principles</span>
         </div>
-        <h2 className="text-3xl sm:text-5xl font-light text-slate-900 tracking-tight mb-4 font-sans">
+        <h2 className="text-3xl sm:text-5xl font-semibold text-white tracking-[-0.03em] mb-4 font-sans">
           Engineered for Security, Speed &amp; Non-Custodial Safety
         </h2>
-        <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto">
+        <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto">
           Built strictly according to the Reactive Omni specifications. Zero compromises on decentralization.
         </p>
       </div>
@@ -60,24 +60,24 @@ export function ArchitecturePillars() {
           return (
             <div
               key={idx}
-              className="bg-white/95 border border-slate-200/90 hover:border-violet-300 rounded-2xl p-8 transition-all shadow-[0_4px_20px_rgba(15,23,42,0.03)] hover:shadow-[0_10px_35px_rgba(124,58,237,0.08)] group flex flex-col justify-between"
+              className="bg-[#0e1017]/90 border border-white/10 hover:border-violet-500/30 rounded-3xl p-8 transition-all shadow-xl backdrop-blur-xl group flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-5">
-                  <div className="w-10 h-10 rounded-xl bg-violet-50 border border-violet-200 flex items-center justify-center text-violet-700 group-hover:scale-110 transition-transform">
-                    <Icon className="w-5 h-5" />
+                  <div className="w-12 h-12 rounded-2xl bg-violet-600/15 border border-violet-500/30 flex items-center justify-center text-violet-300 group-hover:scale-105 transition-transform shadow-badge-dark">
+                    <Icon className="w-6 h-6" />
                   </div>
-                  <span className="text-xs font-mono text-violet-800 px-2.5 py-1 rounded-full bg-violet-50 border border-violet-200 font-medium">
+                  <span className="text-xs font-mono text-violet-300 px-3 py-1 rounded-full bg-white/5 border border-white/10 font-medium">
                     {p.tagline}
                   </span>
                 </div>
 
-                <h3 className="text-xl font-medium text-slate-900 mb-3 tracking-tight">{p.title}</h3>
-                <p className="text-sm text-slate-600 leading-relaxed mb-6">{p.description}</p>
+                <h3 className="text-xl font-bold text-white mb-3 tracking-tight font-sans">{p.title}</h3>
+                <p className="text-sm text-slate-300/90 leading-relaxed mb-6">{p.description}</p>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 text-xs font-mono text-slate-700 flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+              <div className="pt-4 border-t border-white/10 text-xs font-mono text-slate-400 flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-violet-400 shrink-0" />
                 <span>{p.highlight}</span>
               </div>
             </div>

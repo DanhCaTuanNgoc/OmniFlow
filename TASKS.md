@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 1 | 0 | **20.0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **40** | **26** | **0** | **65.0%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 6 | 2 | 0 | **33.3%** |
+| **TỔNG CỘNG** | **21 Ngày** | **41** | **27** | **0** | **65.9%** |
 
 ---
 
@@ -474,3 +474,24 @@
 * **Mục đích:** Đảm bảo hệ thống mượt mà, zero-bug, độ tương phản cao và tuân thủ Web Guidelines.
 * **Chi tiết thực thi:** Audit accessibility, kiểm tra tải trang dưới 500ms, test trên các kích thước màn hình.
 * **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
+
+#### `TASK-306` [DONE] — Đại phẫu Toàn diện UI OmniFlow theo Chuẩn Đẳng Cấp Canary
+* **Module / Màn hình:** Toàn bộ UI Frontend (`Landing Page`, `Header/Navbar`, `Hero Stage`, `Wall Surfaces`, `Buttons & Tokens`, `Workspace Shell & Dashboard Kit`)
+* **Mục đích:** Nâng cấp độ tương đồng và chiều sâu thẩm mỹ từ 40% lên 100% so với bản mẫu https://portal-canary-app.vercel.app/ (truy xuất trực tiếp mã nguồn `portalcanary/`). Khắc phục toàn bộ các chi tiết thiếu sót về background đa tầng (`page-background-lights.png`, vector header, title/button/app frames), hệ thống buttons cao cấp (`button-primary`, `button-dark` với specular highlights và micro-interactions), navbar scroll-morphing thành floating pill, hover follower pill với spring physics, Wall surfaces với dock phóng to macOS (`motion`), Hero stage 3-act đồng bộ timeline, banner CTA pastel gradient (`SimplerCTA`), đồng thời **giữ trọn vẹn 100% font chữ hiện tại** (`Plus Jakarta Sans`, `Inter`, `JetBrains Mono`).
+* **Chi tiết thực thi:**
+  * Lập bản kế hoạch chi tiết `canary_ui_upgrade_plan.md` trong Artifact Brain và được User phê duyệt.
+  * Cài đặt thư viện `motion` cho micro-interactions và hiệu ứng dock phóng đại.
+  * Bổ sung tài nguyên ảnh và vector frames vào `frontend/public/assets/` (`page-background-lights.png`, `header/vector.png`, `hero/orbit/circle.png`, `title-frame-1/2`, `button-frame-1/2`, `app-frame-1/2`).
+  * Tinh chỉnh `globals.css` với hệ thống nút bấm `.button-primary`, `.button-dark`, `.button-light`, `.shadow-badge-dark`, hiệu ứng quay `hero-orbit` và `hero-app-bulletproof-app-frame`.
+  * Tái cấu trúc `PageBackground.tsx` với layer ảnh quang học thực + vector chân trời.
+  * Tái cấu trúc `Navbar.tsx` hỗ trợ tự động cuộn >300px morph thành Floating Pill cố định ở đỉnh, kèm viên nang highlight trượt theo trỏ chuột bằng thuật toán lò xo WAAPI (`spring.ts`).
+  * Nâng cấp `Hero.tsx` với cụm quay quỹ đạo `hero-orbit`, 4 khung góc vector tiêu đề và 2 cánh nút bấm, giữ nguyên font Plus Jakarta Sans với tracking chặt `-0.03em`.
+  * Xây dựng `HeroCanvasPreview.tsx` với 3 Acts đồng bộ thanh tiến trình liên tục `hero-tabs-progress` và viền góc frame app.
+  * Tạo mới `SurfacesWall.tsx` với thanh dock phóng đại macOS mượt mà dựa trên tọa độ chuột tương tác với 7 bề mặt trực tiếp của OmniFlow.
+  * Tạo mới `SimplerCTA.tsx` với thẻ pastel gradient `#D1E9FF` $\rightarrow$ `#F7F7F7` và lưới 2 cột tính năng.
+  * Tạo mới bộ Universal Dashboard Kit `frontend/src/components/ui/kit.tsx` (`Panel`, `Stats`, `KV`, `Status`, `Mark`, `fmt`, `downloadJson`).
+  * Nâng cấp `ArchitecturePillars.tsx`, `LiveTelemetry.tsx`, `HonestyLedger.tsx` và `Footer.tsx` đồng bộ với theme Obsidian Luminous.
+  * Biên dịch `pnpm --filter frontend build` thành công 100%, render trọn vẹn 9/9 static routes với 0 lỗi TypeScript.
+* **Ngày tạo:** 17/11/2026 10:50
+* **Ngày hoàn thành:** 17/11/2026 11:04
+* **Trạng thái:** `DONE`

@@ -4,10 +4,11 @@ import { PageBackground } from '@/components/landing/PageBackground';
 import { Navbar } from '@/components/landing/Navbar';
 import { Hero } from '@/components/landing/Hero';
 import { HeroCanvasPreview } from '@/components/landing/HeroCanvasPreview';
+import { SurfacesWall } from '@/components/landing/SurfacesWall';
 import { LiveTelemetry } from '@/components/landing/LiveTelemetry';
 import { ArchitecturePillars } from '@/components/landing/ArchitecturePillars';
+import { SimplerCTA } from '@/components/landing/SimplerCTA';
 import { HonestyLedger } from '@/components/landing/HonestyLedger';
-import { CallToAction } from '@/components/landing/CallToAction';
 import { Footer } from '@/components/landing/Footer';
 
 export const metadata: Metadata = {
@@ -18,24 +19,38 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#FAFAFC] text-slate-900 selection:bg-violet-500/20 selection:text-violet-900 relative overflow-x-hidden font-sans">
-      {/* Luminous Ambient Background Layer */}
+    <div className="min-h-screen bg-[#08090D] text-white selection:bg-violet-500/30 selection:text-white relative overflow-x-hidden font-sans">
+      {/* 1. Luminous Ambient Photographic Layer + Vector Horizon */}
       <PageBackground />
 
-      {/* Fixed Navbar */}
+      {/* 2. Scroll-Morphing Floating Pill Navbar with Spring Follower */}
       <Navbar />
 
-      {/* Main Content Stream */}
+      {/* 3. Main Content Stream */}
       <main className="relative z-10">
+        {/* Hero Section: Orbit comets + Title frames + Button wings + Metric strip */}
         <Hero />
+
+        {/* Hero Stage: 3-Act Synchronized Interactive Canvas Preview */}
         <HeroCanvasPreview />
+
+        {/* Live Surfaces Wall: macOS Magnifying Dock with Motion */}
+        <SurfacesWall />
+
+        {/* Live Multi-Chain Telemetry (Base Sepolia 200ms Denim + Reactive Lasna) */}
         <LiveTelemetry />
+
+        {/* Architecture Pillars: Clean Canary Ghost Cards & Hairline Dividers */}
         <ArchitecturePillars />
+
+        {/* Simpler CTA: High-Fidelity Pastel Gradient Card */}
+        <SimplerCTA />
+
+        {/* Honesty Ledger: Verifiable On-Chain Evidence & Judge Verification */}
         <HonestyLedger />
-        <CallToAction />
       </main>
 
-      {/* Footer */}
+      {/* 4. Minimalist FinTech Footer */}
       <Footer />
     </div>
   );

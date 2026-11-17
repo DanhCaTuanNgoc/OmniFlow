@@ -1,17 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { 
   Network, 
   ArrowRight, 
   Zap, 
   CheckCircle2, 
-  ExternalLink 
+  ExternalLink,
+  Shield,
+  Activity,
+  Layers,
+  Sparkles,
+  Terminal
 } from 'lucide-react';
 
-interface WorkflowScenario {
+interface Scenario {
   id: string;
+  actTitle: string;
+  actSubtitle: string;
   name: string;
   badge: string;
   description: string;
@@ -36,11 +43,13 @@ interface WorkflowScenario {
   samplePayload: string;
 }
 
-const SCENARIOS: WorkflowScenario[] = [
+const SCENARIOS: Scenario[] = [
   {
     id: 'stop-loss',
+    actTitle: 'Diagnose & Ingest',
+    actSubtitle: 'Base Sepolia 200ms Denim event stream',
     name: '1. Cross-Chain DEX Stop-Loss',
-    badge: 'Flagship Recipe',
+    badge: 'DeFi Risk Guard',
     description: 'Listen to Base Sepolia Uniswap V2 pool reserves. When ETH price drops below $2,800, Lasna RSC triggers ActionVault callback to swap ETH into USDC.',
     trigger: {
       chain: 'Base Sepolia (Chain 84532)',
@@ -58,234 +67,257 @@ const SCENARIOS: WorkflowScenario[] = [
       chain: 'Base Sepolia (Chain 84532)',
       label: 'ActionVault.sol (Callback)',
       detail: 'Execute Uniswap swapExactTokensForTokens',
-      target: 'ActionVault.executeStopLoss(tokenIn, tokenOut, minAmountOut)',
+      target: '0xB0483DE0F92828b6d8a7092323A021752D812674',
     },
-    samplePayload: `{
-  "pipeline": "StopLoss_ETH_USDC",
-  "originChain": 84532,
-  "reactiveCore": 5318007,
-  "triggerReserves": { "reserve0": "100000000000000000000", "reserve1": "278500000000" },
-  "calculatedPrice": "2785.00 USD",
-  "thresholdPrice": "2800.00 USD",
-  "cooldownCheck": "PASSED (delta = 142s > 60s)",
-  "callbackTx": "0x4b78...91a2",
-  "status": "EXECUTED_CONFIRMED"
-}`,
+    samplePayload: '0x38ed1739000000000000000000000000... (Swap 0.5 WETH for min 1,400 USDC with slippage protection)',
   },
   {
-    id: 'cooldown-storm',
-    name: '2. 200ms Denim Storm Defense',
-    badge: 'Security Invariant',
-    description: 'Base Sepolia produces blocks every 200ms. OmniFlow RSC implements stateless timestamp defense, preventing multi-callback execution storms.',
+    id: 'denim-storm',
+    actTitle: 'Diff & Automate',
+    actSubtitle: 'Lasna Zero-Keeper RSC execution',
+    name: '2. 200ms Denim Storm Guard',
+    badge: 'Multi-Block Defense',
+    description: 'Stateless cooldown guard suppresses rapid-fire duplicate callbacks during Base Sepolia 200ms Denim block bursts, saving lREACT gas and preventing double execution.',
     trigger: {
       chain: 'Base Sepolia (Chain 84532)',
-      label: 'Rapid Swaps (10 txs in 2s)',
-      detail: 'High-frequency arbitrage or flash rebound',
-      event: 'Burst events in rapid Denim micro-blocks',
+      label: 'Rapid Transfer Bursts (3 blocks/sec)',
+      detail: 'Transfer(from, to, amount) x 12 within 1 second',
+      event: '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
     },
     condition: {
       chain: 'Reactive Omni Lasna (Chain 5318007)',
       label: 'Stateless Cooldown Guard',
-      detail: 'block.timestamp - lastTriggeredTimestamp < cooldownSeconds',
-      logic: 'if (cooldown active) return; // Drop redundant trigger instantly',
+      detail: 'block.timestamp - lastTriggeredTimestamp >= 60',
+      logic: 'if (block.timestamp - lastTriggeredTimestamp < cooldownSeconds) return; (Stateless Drop)',
     },
     action: {
       chain: 'Base Sepolia (Chain 84532)',
-      label: 'Vault Protection Active',
-      detail: 'Zero unnecessary callback gas spent',
-      target: 'Multi-callback drain completely prevented',
+      label: 'Authorized Vault Callback',
+      detail: '1 Clean Execution Only (11 Spurious Bursts Filtered)',
+      target: '0xB0483DE0F92828b6d8a7092323A021752D812674',
     },
-    samplePayload: `{
-  "defenseMode": "StatelessCooldownTimestamp",
-  "microBlockDelta": "200ms",
-  "cooldownConfig": "60 seconds",
-  "redundantEventsReceived": 9,
-  "actionsTriggered": 1,
-  "gasSaved": "0.042 ETH",
-  "invariantStatus": "PROTECTED_ZERO_STORM"
-}`,
+    samplePayload: '0xa9059cbb000000000000000000000000... (Single safe transfer without gas drain or callback storm)',
   },
   {
     id: 'panic-sweep',
-    name: '3. Non-Custodial Panic Sweep',
-    badge: 'Non-Custodial Guarantee',
-    description: 'User retains 100% unconditional control of funds. The Panic Button instantly sweeps all vault tokens directly back to the cold wallet.',
+    actTitle: 'Execute & Protect',
+    actSubtitle: 'Non-custodial Panic Button & Safe Sweep',
+    name: '3. Non-Custodial Emergency Sweep',
+    badge: 'Security Invariant',
+    description: 'Always gives the user 100% control. Owner can instantly trigger emergencyWithdraw() or executeSafeSweep() to a pre-configured cold wallet, bypassing all RSC logic.',
     trigger: {
       chain: 'Base Sepolia (Chain 84532)',
-      label: 'User Panic Call',
-      detail: 'ActionVault.emergencyWithdraw(token)',
-      event: 'EmergencyWithdrawal(address token, uint256 amount)',
+      label: 'User Wallet / Security Event',
+      detail: 'Owner clicks Panic Button in OmniFlow Studio',
+      event: 'Direct Transaction from 0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
     },
     condition: {
-      chain: 'Base Sepolia (Chain 84532)',
-      label: 'Non-Custodial Ownership Check',
-      detail: 'msg.sender == owner() (Zero Relayer Trust)',
-      logic: 'Bypasses all RSC pipelines & relayer delays',
+      chain: 'ActionVault.sol On-Chain Check',
+      label: 'onlyOwner Modifier Verification',
+      detail: 'msg.sender == owner (Zero-Trust Guarantee)',
+      logic: 'require(msg.sender == owner, "UNAUTHORIZED_SWEEP")',
     },
     action: {
       chain: 'Base Sepolia (Chain 84532)',
-      label: 'Direct Safe Transfer',
-      detail: 'SafeERC20.safeTransfer(owner, balance)',
-      target: 'Cold Wallet receives 100% of deposited assets',
+      label: 'Instant Cold Wallet Evacuation',
+      detail: '100% tokens swept to backupSafeAddress',
+      target: '0x2170Ed0880ac9A755fd29B2688956BD959F933F8',
     },
-    samplePayload: `{
-  "vaultAddress": "0x71bE...2959",
-  "owner": "0xa674...98fe",
-  "action": "EMERGENCY_PANIC_SWEEP",
-  "tokensSwept": [
-    { "symbol": "WETH", "amount": "2.45 WETH" },
-    { "symbol": "USDC", "amount": "6,850.00 USDC" }
-  ],
-  "timeToWithdraw": "1 block (< 1s)",
-  "nonCustodialStatus": "VERIFIED_SAFE"
-}`,
+    samplePayload: '0x3ccfd60b (emergencyWithdraw ETH) + 0x56a6552e (executeSafeSweep all registered ERC20s to backupSafeAddress)',
   },
 ];
 
 export function HeroCanvasPreview() {
-  const [activeScenario, setActiveScenario] = useState<WorkflowScenario>(SCENARIOS[0]);
-  const [showPayload, setShowPayload] = useState(false);
+  const [activeAct, setActiveAct] = useState(0);
+  const progressBarRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-advance timeline acts every 7.5 seconds
+  useEffect(() => {
+    let startTime = Date.now();
+    const duration = 7500;
+
+    const interval = setInterval(() => {
+      setActiveAct((prev) => (prev + 1) % SCENARIOS.length);
+      startTime = Date.now();
+    }, duration);
+
+    const frame = () => {
+      if (progressBarRef.current) {
+        const elapsed = (Date.now() - startTime) % duration;
+        const progressInAct = elapsed / duration;
+        const totalProgress = ((activeAct + progressInAct) / SCENARIOS.length) * 100;
+        progressBarRef.current.style.width = `${totalProgress}%`;
+      }
+      rafId = requestAnimationFrame(frame);
+    };
+
+    let rafId = requestAnimationFrame(frame);
+
+    return () => {
+      clearInterval(interval);
+      cancelAnimationFrame(rafId);
+    };
+  }, [activeAct]);
+
+  const current = SCENARIOS[activeAct];
 
   return (
-    <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      {/* Section Header */}
+    <section id="how-it-works" className="relative py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      {/* Section Title */}
       <div className="text-center mb-12">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-50 border border-violet-200 text-violet-700 text-xs font-mono mb-3 font-medium">
-          <Network className="w-3.5 h-3.5 text-violet-600" />
-          Interactive Canvas Simulation
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-mono font-medium text-white/80 bg-white/10 border border-white/12 shadow-badge-dark mb-4 backdrop-blur-md">
+          <Sparkles className="w-3.5 h-3.5 text-violet-300" />
+          <span>Interactive Execution Loop</span>
         </div>
-        <h2 className="text-3xl sm:text-5xl font-light text-slate-900 tracking-tight mb-4 font-sans">
-          How OmniFlow Executes Inversion of Control
+        <h2 className="text-3xl sm:text-5xl font-semibold tracking-[-0.03em] text-white font-sans">
+          How OmniFlow Works On-Chain
         </h2>
-        <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto">
-          No polling bots. No centralized API keys. A 3-step reactive chain execution orchestrated by pure smart contracts.
+        <p className="text-slate-300/80 text-sm sm:text-base max-w-2xl mx-auto mt-3">
+          Observe live event ingestion on Base Sepolia, zero-keeper RSC processing on Reactive Lasna, and callback execution.
         </p>
       </div>
 
-      {/* Scenario Selector Tabs */}
-      <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
-        {SCENARIOS.map((sc) => {
-          const isActive = activeScenario.id === sc.id;
-          return (
-            <button
-              key={sc.id}
-              onClick={() => setActiveScenario(sc)}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-mono transition-all flex items-center gap-2 border ${
-                isActive
-                  ? 'bg-violet-50 text-violet-900 border-violet-300 shadow-sm font-semibold'
-                  : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <span>{sc.name}</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                isActive ? 'bg-violet-200/60 text-violet-800' : 'bg-slate-100 text-slate-500'
-              }`}>
-                {sc.badge}
-              </span>
-            </button>
-          );
-        })}
+      {/* 1. Canary Style 3-Act Tabs Bar */}
+      <div className="max-w-4xl mx-auto mb-6">
+        <div className="flex items-center gap-2 p-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg">
+          {SCENARIOS.map((sc, idx) => {
+            const isActive = idx === activeAct;
+            return (
+              <button
+                key={sc.id}
+                onClick={() => setActiveAct(idx)}
+                className={`flex-1 flex flex-col items-center justify-center py-3 px-4 rounded-full transition-all duration-300 ${
+                  isActive
+                    ? 'bg-white/15 shadow-badge-dark border border-white/20 text-white'
+                    : 'text-white/60 hover:text-white/90 hover:bg-white/5'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  {idx === 0 && <Activity className={`w-4 h-4 ${isActive ? 'text-cyan-400' : 'opacity-60'}`} />}
+                  {idx === 1 && <Zap className={`w-4 h-4 ${isActive ? 'text-violet-400' : 'opacity-60'}`} />}
+                  {idx === 2 && <Shield className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'opacity-60'}`} />}
+                  <span className="text-xs sm:text-sm font-semibold tracking-tight">{sc.actTitle}</span>
+                </div>
+                <span className="text-[11px] text-slate-300 hidden sm:block truncate max-w-[200px]">
+                  {sc.actSubtitle}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Main Interactive Stage Card (Light Theme Obsidian Polish) */}
-      <div className="bg-white/95 border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-[0_12px_40px_rgba(15,23,42,0.06)] backdrop-blur-md relative overflow-hidden">
-        {/* Scenario description bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-8 border-b border-slate-100">
-          <p className="text-sm text-slate-700 font-medium">
-            {activeScenario.description}
-          </p>
+      {/* 2. Hero Tabs Continuous Progress Bar */}
+      <div className="hero-tabs-progress w-full h-1 relative bg-white/10 mb-8 max-w-3xl mx-auto rounded-full overflow-hidden">
+        <div
+          ref={progressBarRef}
+          className="h-full bg-gradient-to-r from-violet-500 via-cyan-400 to-emerald-400 transition-all duration-75"
+          style={{ width: `${((activeAct) / SCENARIOS.length) * 100}%` }}
+        />
+      </div>
 
-          <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
-            <button
-              onClick={() => setShowPayload(!showPayload)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border ${
-                showPayload
-                  ? 'bg-violet-50 text-violet-800 border-violet-300'
-                  : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              {showPayload ? 'Hide Event JSON' : 'Inspect Event JSON'}
-            </button>
-
-            <Link
-              href="/workspace/studio"
-              className="text-xs font-mono text-violet-600 hover:text-violet-700 flex items-center gap-1 font-semibold"
-            >
-              <span>Open in Studio</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+      {/* 3. Showcase Frame with Decorative App Corners */}
+      <div className="relative max-w-5xl mx-auto">
+        {/* App Frame Corners */}
+        <div className="hidden sm:block pointer-events-none select-none">
+          <img
+            alt=""
+            src="/assets/images/hero/app-frame-2.png"
+            width="228"
+            aria-hidden="true"
+            className="absolute -left-28 -top-8 z-20 opacity-70"
+          />
+          <img
+            alt=""
+            src="/assets/images/hero/app-frame-1.png"
+            width="228"
+            aria-hidden="true"
+            className="absolute -right-28 -top-8 z-20 opacity-70"
+          />
         </div>
 
-        {/* 3-Node Connected Flow Preview */}
-        {!showPayload ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative items-center py-4">
-            {/* Step 1: Trigger Node */}
-            <div className="bg-amber-50/40 border border-amber-200/90 rounded-xl p-5 hover:border-amber-300 transition-all shadow-sm group">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 font-semibold">
-                  TRIGGER (ORIGIN)
+        {/* Main Canvas Box */}
+        <div className="rounded-3xl p-1 bg-gradient-to-b from-white/15 via-white/5 to-transparent border border-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.5)] backdrop-blur-2xl overflow-hidden relative">
+          <div className="bg-[#0b0d14]/95 rounded-[22px] p-6 sm:p-8">
+            {/* Pipeline Header */}
+            <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <h3 className="text-lg font-semibold text-white tracking-tight">{current.name}</h3>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-violet-500/15 text-violet-300 border border-violet-500/30">
+                  {current.badge}
                 </span>
-                <span className="text-[11px] font-mono text-slate-500 font-medium">Step 01</span>
               </div>
-              <div className="text-xs font-mono text-slate-500 mb-1">{activeScenario.trigger.chain}</div>
-              <div className="text-sm font-semibold text-slate-900 mb-2">{activeScenario.trigger.label}</div>
-              <div className="p-2.5 rounded-lg bg-white border border-amber-200/70 font-mono text-[11px] text-amber-900 break-words shadow-xs">
-                {activeScenario.trigger.detail}
+
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/workspace/studio"
+                  className="button-primary inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-white transition-all shadow-md active:scale-95"
+                >
+                  <span>Open in Studio</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
               </div>
             </div>
 
-            {/* Step 2: Reactive Condition Node */}
-            <div className="bg-violet-50/50 border border-violet-300 rounded-xl p-5 hover:border-violet-400 transition-all shadow-[0_4px_20px_rgba(124,58,237,0.08)] group">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-100 text-violet-800 border border-violet-200 font-semibold flex items-center gap-1">
-                  <Zap className="w-3 h-3 text-violet-600 fill-violet-600" />
-                  REACTIVE CORE (RSC)
-                </span>
-                <span className="text-[11px] font-mono text-violet-700 font-medium">Step 02</span>
+            {/* Pipeline Diagram: 3 Nodes Connected with Photon Beams */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-8 relative">
+              {/* Trigger Node */}
+              <div className="rounded-2xl p-5 bg-[#121520] border border-cyan-500/30 shadow-[0_4px_20px_rgba(0,229,255,0.08)] relative">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 font-semibold mb-1 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                  Origin Trigger
+                </div>
+                <div className="text-sm font-semibold text-white mb-2">{current.trigger.label}</div>
+                <div className="text-xs text-slate-400 font-mono break-all bg-black/40 p-2.5 rounded-lg border border-white/5 mb-3">
+                  {current.trigger.detail}
+                </div>
+                <div className="text-[11px] text-cyan-300/80 font-mono">
+                  {current.trigger.chain}
+                </div>
               </div>
-              <div className="text-xs font-mono text-slate-500 mb-1">{activeScenario.condition.chain}</div>
-              <div className="text-sm font-semibold text-slate-900 mb-2">{activeScenario.condition.label}</div>
-              <div className="p-2.5 rounded-lg bg-white border border-violet-200/80 font-mono text-[11px] text-violet-950 break-words shadow-xs">
-                {activeScenario.condition.detail}
+
+              {/* Condition Node (Reactive Core) */}
+              <div className="rounded-2xl p-5 bg-[#141224] border border-violet-500/40 shadow-[0_4px_25px_rgba(139,92,246,0.12)] relative">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-violet-300 font-semibold mb-1 flex items-center gap-1.5">
+                  <Zap className="w-3 h-3 text-violet-400 fill-violet-400" />
+                  Reactive Core
+                </div>
+                <div className="text-sm font-semibold text-white mb-2">{current.condition.label}</div>
+                <div className="text-xs text-slate-300 font-mono break-all bg-black/40 p-2.5 rounded-lg border border-white/5 mb-3">
+                  {current.condition.detail}
+                </div>
+                <div className="text-[11px] text-violet-300/80 font-mono">
+                  {current.condition.chain}
+                </div>
+              </div>
+
+              {/* Action Node */}
+              <div className="rounded-2xl p-5 bg-[#101b17] border border-emerald-500/30 shadow-[0_4px_20px_rgba(16,185,129,0.08)] relative">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-semibold mb-1 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  Callback Action
+                </div>
+                <div className="text-sm font-semibold text-white mb-2">{current.action.label}</div>
+                <div className="text-xs text-slate-400 font-mono break-all bg-black/40 p-2.5 rounded-lg border border-white/5 mb-3">
+                  {current.action.detail}
+                </div>
+                <div className="text-[11px] text-emerald-300/80 font-mono truncate">
+                  Target: {current.action.target.slice(0, 10)}...{current.action.target.slice(-8)}
+                </div>
               </div>
             </div>
 
-            {/* Step 3: Destination Action Node */}
-            <div className="bg-indigo-50/40 border border-indigo-200/90 rounded-xl p-5 hover:border-indigo-300 transition-all shadow-sm group">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200 font-semibold">
-                  ACTION (DESTINATION)
-                </span>
-                <span className="text-[11px] font-mono text-slate-500 font-medium">Step 03</span>
+            {/* Live Payload Stream Inspection Strip */}
+            <div className="mt-4 pt-5 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-mono">
+              <div className="flex items-center gap-2 text-slate-400">
+                <Terminal className="w-4 h-4 text-violet-400" />
+                <span>Verified Payload Hash:</span>
               </div>
-              <div className="text-xs font-mono text-slate-500 mb-1">{activeScenario.action.chain}</div>
-              <div className="text-sm font-semibold text-slate-900 mb-2">{activeScenario.action.label}</div>
-              <div className="p-2.5 rounded-lg bg-white border border-indigo-200/70 font-mono text-[11px] text-indigo-950 break-words shadow-xs">
-                {activeScenario.action.detail}
+              <div className="text-slate-300 bg-black/50 px-3 py-1.5 rounded-lg border border-white/10 max-w-full truncate">
+                {current.samplePayload}
               </div>
             </div>
-          </div>
-        ) : (
-          /* JSON Payload Inspection View */
-          <div className="relative">
-            <pre className="p-4 rounded-xl bg-slate-900 border border-slate-800 font-mono text-xs text-emerald-300 overflow-x-auto leading-relaxed shadow-inner">
-              {activeScenario.samplePayload}
-            </pre>
-          </div>
-        )}
-
-        {/* Bottom verification footnote */}
-        <div className="mt-8 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 font-mono gap-4">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>DAG Cyclic Validation Enforced</span>
-            <span className="text-slate-300">·</span>
-            <span>Constrained Typed Ports (Out → In/Out → In)</span>
-          </div>
-
-          <div className="text-slate-600">
-            Powered by <span className="text-violet-700 font-semibold">@reactive-network/reactive-lib</span>
           </div>
         </div>
       </div>
