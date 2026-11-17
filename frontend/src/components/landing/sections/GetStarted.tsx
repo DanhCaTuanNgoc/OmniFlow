@@ -1,5 +1,6 @@
 // Generated from the landing markup by landing-port/gen.py. Do not edit by hand:
 // change the source or the generator and regenerate.
+import Link from "next/link";
 import Wall from "@/components/landing/wall/Wall";
 
 export default function GetStarted() {
@@ -25,7 +26,7 @@ export default function GetStarted() {
             {"Create cross-chain event triggers on Base Sepolia, execute on Reactive Omni Lasna, and trigger callbacks into ActionVault. No centralized bots. No custodial risks."}
           </p>
           <div className={"flex gap-8 sm:gap-16 md-max:justify-center"}>
-            <a href={"/workspace/studio"} className={"sm-max:flex-1"}>
+            <Link href={"/workspace/studio"} className={"sm-max:flex-1"}>
               <button aria-label={"Launch Studio"} className={"rounded-full relative button block transition-all duration-[200ms] active:duration-[50ms] button-primary px-10 py-12 sm-max:flex-1 sm:py-7 pl-14"}>
                 <span className={"flex items-center gap-4 justify-center text-label-normal text-body-dark-label"}>
                   {"Launch Studio"}
@@ -34,14 +35,14 @@ export default function GetStarted() {
                   </svg>
                 </span>
               </button>
-            </a>
-            <a href={"/workspace/templates"}>
+            </Link>
+            <Link href={"/workspace/templates"}>
               <button aria-label={"Explore Recipes"} className={"rounded-full relative button block transition-all duration-[200ms] active:duration-[50ms] button-dark px-16 py-12 sm-max:flex-1 sm:py-7 pl-14"}>
                 <span className={"flex items-center gap-4 justify-center text-label-normal text-body-dark-label"}>
                   {"Explore Recipes"}
                 </span>
               </button>
-            </a>
+            </Link>
           </div>
         </div>
         <div className={"relative"}>

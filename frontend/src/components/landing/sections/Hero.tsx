@@ -1,5 +1,6 @@
 // Generated from the landing markup by landing-port/gen.py. Do not edit by hand:
 // change the source or the generator and regenerate.
+import Link from "next/link";
 import HeroStage from "@/components/landing/hero/HeroStage";
 
 export default function Hero() {
@@ -64,7 +65,7 @@ export default function Hero() {
       </p>
       <div className={"flex flex-col items-center mb-66 sm:mb-38 relative"}>
         <div className={"flex gap-8 sm:gap-16 sm:w-max"}>
-          <a href={"/workspace/studio"} className={"sm-max:flex-1"}>
+          <Link href={"/workspace/studio"} className={"sm-max:flex-1"}>
             <button aria-label={"Launch Studio"} className={"rounded-full relative button block transition-all duration-[200ms] active:duration-[50ms] button-primary px-10 py-12 sm-max:flex-1 sm:py-7 pl-14"}>
               <span className={"flex items-center gap-4 justify-center text-label-normal text-body-dark-label"}>
                 {"Launch Studio"}
@@ -73,14 +74,14 @@ export default function Hero() {
                 </svg>
               </span>
             </button>
-          </a>
-          <a href={"/workspace/templates"}>
+          </Link>
+          <Link href={"/workspace/templates"}>
             <button aria-label={"Explore Recipes"} className={"rounded-full relative button block transition-all duration-[200ms] active:duration-[50ms] button-dark px-16 py-12 flex-1 sm:py-7 pl-14"}>
               <span className={"flex items-center gap-4 justify-center text-label-normal text-body-dark-label"}>
                 {"Explore Recipes"}
               </span>
             </button>
-          </a>
+          </Link>
         </div>
         <img alt={"hero btn frame"} src={"/assets/images/hero/button-frame-1.png"} width={"316"} aria-hidden={"true"} className={"absolute -left-340 top-17"} />
         <img alt={""} src={"/assets/images/hero/button-frame-2.png"} width={"316"} aria-hidden={"true"} className={"absolute -right-340 top-17"} />

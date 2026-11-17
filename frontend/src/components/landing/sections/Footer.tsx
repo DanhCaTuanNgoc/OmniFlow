@@ -1,14 +1,16 @@
+import Link from "next/link";
+
 export default function Footer() {
   return (
     <footer style={{"--body-light-loud": "#141414", "--body-light-ghost": "#A4A4A4", "--body-light-muted": "#656565"} as React.CSSProperties} className={"footer"}>
       <div className={"footer-container px-24 sm:px-32 lg:px-24 xl:px-0"}>
         <div className={"footer-header"}>
-          <a href={"/"} className={"footer-brand"}>
+          <Link href={"/"} className={"footer-brand"}>
             <img alt={"OmniFlow logo"} decoding={"async"} fetchPriority={"low"} height={"44"} src={"/assets/images/cta/logo-mark.png"} width={"44"} className={"footer-logo footer-brand-logo"} />
             <span className={"footer-brand-name"}>
               {"OmniFlow"}
             </span>
-          </a>
+          </Link>
           <a aria-label={"System status: All systems are operational"} data-footer-status={""} href={"https://kopli.reactscan.net"} className={"footer-status-pill"} target={"_blank"} rel={"noopener"}>
             <span data-footer-status-indicator={""} style={{"--status-dot": "#14A362", "--status-ring": "rgba(18, 163, 98, 0.12)", "--status-glow": "rgba(20, 163, 98, 1)"} as React.CSSProperties} className={"footer-status-indicator"}>
               <span className={"footer-status-dot"}></span>
@@ -26,24 +28,24 @@ export default function Footer() {
             </h2>
             <ul className={"footer-section-links"}>
               <li>
-                <a href={"/workspace/studio"} className={"footer-link"}>
+                <Link href={"/workspace/studio"} className={"footer-link"}>
                   {"Studio Canvas"}
-                </a>
+                </Link>
               </li>
               <li>
-                <a href={"/workspace/templates"} className={"footer-link"}>
+                <Link href={"/workspace/templates"} className={"footer-link"}>
                   {"Recipe Store"}
-                </a>
+                </Link>
               </li>
               <li>
-                <a href={"/workspace/vault"} className={"footer-link"}>
+                <Link href={"/workspace/vault"} className={"footer-link"}>
                   {"ActionVault Escrow"}
-                </a>
+                </Link>
               </li>
               <li>
-                <a href={"/workspace/active"} className={"footer-link"}>
+                <Link href={"/workspace/active"} className={"footer-link"}>
                   {"Active Pipelines"}
-                </a>
+                </Link>
               </li>
             </ul>
           </nav>
@@ -80,14 +82,14 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href={"/workspace/vault"} className={"footer-link"}>
+                <Link href={"/workspace/vault"} className={"footer-link"}>
                   {"ActionVault.sol"}
-                </a>
+                </Link>
               </li>
               <li>
-                <a href={"/workspace/logs"} className={"footer-link"}>
+                <Link href={"/workspace/logs"} className={"footer-link"}>
                   {"Full Loop Telemetry"}
-                </a>
+                </Link>
               </li>
             </ul>
           </nav>
@@ -107,9 +109,9 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href={"/workspace/studio"} className={"footer-link"}>
+                <Link href={"/workspace/studio"} className={"footer-link"}>
                   {"Launch Studio"}
-                </a>
+                </Link>
               </li>
             </ul>
           </nav>

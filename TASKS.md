@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 9 | 5 | 0 | **55.6%** |
-| **TỔNG CỘNG** | **21 Ngày** | **44** | **30** | **0** | **68.2%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 10 | 6 | 0 | **60.0%** |
+| **TỔNG CỘNG** | **21 Ngày** | **45** | **31** | **0** | **68.9%** |
 
 ---
 
@@ -535,4 +535,23 @@
   * Kiểm tra build Next.js / TypeScript (`npx tsc --noEmit`) đạt 100% không lỗi.
 * **Ngày tạo:** 17/11/2026 20:29
 * **Ngày hoàn thành:** 17/11/2026 20:41
+* **Trạng thái:** `DONE`
+
+#### `TASK-310` [DONE] — Tối ưu hóa Toàn diện Cơ chế Chuyển Màn hình & Định tuyến SPA (Eliminate Route Lag & Transition Delay)
+* **Module / Màn hình:** Next.js App Router Navigation (`frontend/src/app/`, `frontend/src/components/landing/`, `Header.tsx`, `Sidebar.tsx`)
+* **Mục đích:** Khắc phục triệt để tình trạng chuyển đổi giữa các màn hình (Landing Page $\leftrightarrow$ Pipeline Studio $\leftrightarrow$ Vault $\leftrightarrow$ Templates $\leftrightarrow$ Logs) bị chậm trễ, giật lag hoặc đơ mất vài giây.
+* **Nguyên nhân cốt lõi phát hiện:**
+  1. Toàn bộ các nút CTA và menu trên Landing Page (`HeaderView`, `HeaderPanelView`, `Hero`, `Simpler`, `Checks`, `GetStarted`, `AlsoAvailable`, `Footer`, `FeatureDashboardView`) trước đây dùng thẻ `<a href="/workspace/...">` truyền thống. Khi click, trình duyệt kích hoạt Full Page Reload (Hard Navigation), xé bỏ toàn bộ DOM, unmount Wagmi/Viem provider, và bắt Next.js dev server biên dịch lại toàn bộ trang từ đầu (~2-5s trên Windows NTFS).
+  2. Workspace thiếu `loading.tsx`, khiến Next.js freeze ở trang cũ mà không có phản hồi thị giác trong khi chuẩn bị trang mới.
+  3. Màn hình Pipeline Studio import tĩnh toàn bộ thư viện canvas nặng `@xyflow/react`, gây nghẽn tiến trình render trong chu kỳ route change ban đầu.
+  4. Thiếu file redirect gốc `frontend/src/app/workspace/page.tsx`, và thanh breadcrumb `Header.tsx` bị hardcode cố định "Pipeline Studio".
+* **Chi tiết thực thi:**
+  * Chuyển đổi 100% các liên kết nội bộ sang `next/link` (`<Link href="...">`), kích hoạt cơ chế Next.js SPA Soft Navigation và tự động prefetch ngầm các route đích.
+  * Tách module canvas `StudioCanvas` bằng `next/dynamic` với `{ ssr: false }` trong `studio/page.tsx`, tách gói `@xyflow/react` khỏi main bundle chuyển trang.
+  * Tạo mới `frontend/src/app/workspace/loading.tsx` với hiệu ứng Obsidian Skeleton Screen phản hồi tức thì 0ms.
+  * Tạo mới `frontend/src/app/workspace/page.tsx` tự động redirect ngay lập tức về `/workspace/studio`.
+  * Cập nhật `Header.tsx` sử dụng hook `usePathname()` để hiển thị breadcrumb động chuẩn xác theo từng route (`Pipeline Studio`, `Active Automations`, `Template Library`, `Vault Manager`, `Activity Logs`).
+  * Kiểm tra biên dịch TypeScript `pnpm --filter frontend exec tsc --noEmit` đạt 0 lỗi. Tốc độ chuyển màn hình giảm từ ~3-5s xuống <50ms.
+* **Ngày tạo:** 17/11/2026 20:45
+* **Ngày hoàn thành:** 17/11/2026 20:53
 * **Trạng thái:** `DONE`

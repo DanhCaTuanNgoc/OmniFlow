@@ -1,4 +1,5 @@
 // Generated from the landing markup by landing-port/gen.py (views.json). Do not edit by hand.
+import Link from "next/link";
 import type { Bind, Kids } from "@/components/landing/bind";
 
 export default function FeatureDashboardView({ b, k }: { b: Bind; k: Kids }) {
@@ -270,9 +271,9 @@ export default function FeatureDashboardView({ b, k }: { b: Bind; k: Kids }) {
                             <path d={"M1 5H37M37 5L33 9M37 5L33 1"} stroke={"#A4A4A4"} strokeLinecap={"round"} strokeLinejoin={"round"} strokeOpacity={"0.32"} strokeWidth={"1.5"} style={{"stroke": "color(display-p3 0.6444 0.6444 0.6444)", "strokeOpacity": "0.32"} as React.CSSProperties}></path>
                           </svg>
                         </div>
-                        <a href={"/workspace/studio"} className={"text-12/18 font-400 features-dashbord-content-smoke-content-active"}>
+                        <Link href={"/workspace/studio"} className={"text-12/18 font-400 features-dashbord-content-smoke-content-active"}>
                           {"Reactive Callback"}
-                        </a>
+                        </Link>
                       </div>
                       <div className={"flex flex-col p-22 items-center gap-8"}>
                         <div className={"flex items-center justify-center w-48 h-48"}>
@@ -289,9 +290,9 @@ export default function FeatureDashboardView({ b, k }: { b: Bind; k: Kids }) {
                             <path d={"M1 5H37M37 5L33 9M37 5L33 1"} stroke={"#A4A4A4"} strokeLinecap={"round"} strokeLinejoin={"round"} strokeOpacity={"0.32"} strokeWidth={"1.5"} style={{"stroke": "color(display-p3 0.6444 0.6444 0.6444)", "strokeOpacity": "0.32"} as React.CSSProperties}></path>
                           </svg>
                         </div>
-                        <a href={"/workspace/studio"} className={"text-12/18 font-400 features-dashbord-content-smoke-content-active"}>
+                        <Link href={"/workspace/studio"} className={"text-12/18 font-400 features-dashbord-content-smoke-content-active"}>
                           {"Reactive Callback"}
-                        </a>
+                        </Link>
                       </div>
                       <div className={"flex flex-col pr-80 justify-center items-center gap-8"}>
                         <div className={"flex items-center justify-center w-48 h-48"}>

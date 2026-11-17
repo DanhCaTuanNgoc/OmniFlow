@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Simpler() {
   return (
     <section aria-labelledby={"dashboard-cta-title"} id={"dashboard-cta"} className={"py-56 md:py-120 px-8 isolate overflow-hidden"}>
@@ -68,7 +70,7 @@ export default function Simpler() {
               </li>
             </ul>
             <div className={"mt-40 flex flex-wrap items-center gap-12"}>
-              <a href={"/workspace/studio"}>
+              <Link href={"/workspace/studio"}>
                 <button aria-label={"Launch Studio"} className={"rounded-full relative button block transition-all duration-[200ms] active:duration-[50ms] button-primary h-40 min-w-170 px-16 py-9"}>
                   <span className={"flex items-center gap-4 justify-center text-label-normal text-body-dark-label"}>
                     {"Launch Studio"}
@@ -77,14 +79,14 @@ export default function Simpler() {
                     </span>
                   </span>
                 </button>
-              </a>
-              <a href={"/workspace/templates"}>
+              </Link>
+              <Link href={"/workspace/templates"}>
                 <button aria-label={"Explore Recipes"} className={"rounded-full relative button block transition-all duration-[200ms] active:duration-[50ms] button-light h-40 min-w-158 px-16 py-9"}>
                   <span className={"flex items-center gap-4 justify-center text-label-normal text-body-light-loud"}>
                     {"Explore Recipes"}
                   </span>
                 </button>
-              </a>
+              </Link>
             </div>
             <div className={"relative mt-24 h-220 overflow-hidden rounded-16 sm:h-260 lg:hidden"}>
               <img alt={"OmniFlow Studio DAG Canvas"} loading={"lazy"} src={"/assets/images/simpler/dashboard.png"} className={"absolute left-0 top-0 h-full w-full rounded-16 object-cover object-left-top"} />

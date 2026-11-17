@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Checks() {
   return (
     <section className={"pricing py-56 lg:py-120"}>
@@ -40,13 +42,13 @@ export default function Checks() {
                   {"/ Auth"}
                 </div>
               </div>
-              <a href={"/workspace/vault"} className={"block"}>
+              <Link href={"/workspace/vault"} className={"block"}>
                 <button aria-label={"Open ActionVault"} className={"rounded-full relative button block transition-all duration-[200ms] active:duration-[50ms] button-light p-13 w-full"}>
                   <span className={"flex items-center gap-4 justify-center text-label-normal text-body-light-loud"}>
                     {"Open ActionVault"}
                   </span>
                 </button>
-              </a>
+              </Link>
               <svg fill={"none"} height={"2"} viewBox={"0 0 280 2"} width={"280"} className={"my-31 w-full text-body-stroke-muted"} xmlns={"http://www.w3.org/2000/svg"}>
                 <line stroke={"currentColor"} strokeDasharray={"0.01 6"} strokeLinecap={"round"} strokeWidth={"1.5"} x1={"0.75"} x2={"279.25"} y1={"1.25"} y2={"1.25002"}></line>
               </svg>
@@ -129,13 +131,13 @@ export default function Checks() {
                   {"/ Protection"}
                 </div>
               </div>
-              <a href={"/workspace/templates"} className={"block"}>
+              <Link href={"/workspace/templates"} className={"block"}>
                 <button aria-label={"Explore Recipes"} className={"rounded-full relative button block transition-all duration-[200ms] active:duration-[50ms] button-primary p-13 w-full"}>
                   <span className={"flex items-center gap-4 justify-center text-label-normal text-body-dark-label"}>
                     {"Explore Recipes"}
                   </span>
                 </button>
-              </a>
+              </Link>
               <svg fill={"none"} height={"2"} viewBox={"0 0 280 2"} width={"280"} className={"my-31 w-full text-white/12"} xmlns={"http://www.w3.org/2000/svg"}>
                 <line stroke={"currentColor"} strokeDasharray={"0.01 6"} strokeLinecap={"round"} strokeWidth={"1.5"} x1={"0.75"} x2={"279.25"} y1={"1.25"} y2={"1.25002"}></line>
               </svg>
@@ -218,13 +220,13 @@ export default function Checks() {
                   {"/ MEV Loss"}
                 </div>
               </div>
-              <a href={"/workspace/studio"} className={"block"}>
+              <Link href={"/workspace/studio"} className={"block"}>
                 <button aria-label={"Launch Studio"} className={"rounded-full relative button block transition-all duration-[200ms] active:duration-[50ms] button-light p-13 w-full"}>
                   <span className={"flex items-center gap-4 justify-center text-label-normal text-body-light-loud"}>
                     {"Launch Studio"}
                   </span>
                 </button>
-              </a>
+              </Link>
               <svg fill={"none"} height={"2"} viewBox={"0 0 280 2"} width={"280"} className={"my-31 w-full text-body-stroke-muted"} xmlns={"http://www.w3.org/2000/svg"}>
                 <line stroke={"currentColor"} strokeDasharray={"0.01 6"} strokeLinecap={"round"} strokeWidth={"1.5"} x1={"0.75"} x2={"279.25"} y1={"1.25"} y2={"1.25002"}></line>
               </svg>
@@ -299,22 +301,22 @@ export default function Checks() {
                   {"Guaranteed 1-tx asset recovery with emergencyWithdraw() & executeSafeSweep(). Funds are never locked."}
                 </p>
               </div>
-              <a href={"/workspace/vault"} className={"hidden lg:block"}>
+              <Link href={"/workspace/vault"} className={"hidden lg:block"}>
                 <button aria-label={"Inspect ActionVault"} className={"rounded-full relative button block transition-all duration-[200ms] active:duration-[50ms] button-gray p-13 w-full"}>
                   <span className={"flex items-center gap-4 justify-center text-label-normal text-body-dark-label"}>
                     {"Inspect ActionVault"}
                   </span>
                 </button>
-              </a>
+              </Link>
             </div>
             <div className={"p-36 lg:w-2/3"}>
-              <a href={"/workspace/vault"} className={"block lg:hidden mb-24"}>
+              <Link href={"/workspace/vault"} className={"block lg:hidden mb-24"}>
                 <button aria-label={"Inspect ActionVault"} className={"rounded-full relative button block transition-all duration-[200ms] active:duration-[50ms] button-gray p-13 w-full"}>
                   <span className={"flex items-center gap-4 justify-center text-label-normal text-body-dark-label"}>
                     {"Inspect ActionVault"}
                   </span>
                 </button>
-              </a>
+              </Link>
               <div className={"text-special-mono mb-24 text-body-light-muted"}>
                 {"Vault protections:"}
               </div>

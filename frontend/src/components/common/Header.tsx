@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { 
   Wallet, 
@@ -11,7 +12,17 @@ import {
 } from 'lucide-react';
 import { truncateAddress } from '@/lib/utils';
 
+const ROUTE_NAMES: Record<string, string> = {
+  '/workspace/studio': 'Pipeline Studio',
+  '/workspace/active': 'Active Automations',
+  '/workspace/templates': 'Template Library',
+  '/workspace/vault': 'Vault Manager',
+  '/workspace/logs': 'Activity Logs',
+};
+
 export function Header() {
+  const pathname = usePathname();
+  const currentTitle = ROUTE_NAMES[pathname] || 'Pipeline Studio';
   const { address, isConnected, chain } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
@@ -31,7 +42,7 @@ export function Header() {
         <div className="flex items-center gap-2 text-xs font-medium">
           <span className="text-slate-400">Workspace</span>
           <span className="text-slate-600">/</span>
-          <span className="font-semibold text-white">Pipeline Studio</span>
+          <span className="font-semibold text-white">{currentTitle}</span>
         </div>
 
         <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-[11px] font-medium shadow-sm">
