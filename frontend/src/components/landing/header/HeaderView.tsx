@@ -28,39 +28,39 @@ export default function HeaderView({ b, k }: { b: Bind; k: Kids }) {
               </button>
               <div aria-hidden={"true"} id={"mobile-products-panel"} role={"menu"} className={"md:hidden overflow-hidden transition-all duration-6 hidden"} {...b("mPanel", 0, "md:hidden overflow-hidden transition-all duration-6 hidden")}>
                 <div className={"flex flex-col"}>
-                  <a href={"https://github.com/Venkat5599/portalcanary#readme"} className={"mt-6 flex justify-between gap-12 rounded-12 px-12 py-10 hover:bg-white/6 items-start"} target={"_blank"} rel={"noopener"}>
-                    <img src={"/assets/images-original/nav/cli.png"} srcSet={"/assets/images-original/nav/cli.png 1x, /assets/images-original/nav/cli@2x.png 2x, /assets/images-original/nav/cli@3x.png 3x"} alt={""} aria-hidden={"true"} decoding={"async"} height={"36"} width={"36"} className={"h-36 w-36 flex-shrink-0"} />
-                    <div className={"min-w-0 flex-1"}>
-                      <div className={"text-14/20 font-600 text-white/90 truncate"}>
-                        {"Canary CLI"}
-                      </div>
-                      <div className={"mt-4 text-12/18 text-white/60 truncate"}>
-                        {"Doctor, compare, invariants, test and upgrade from one Rust binary. Exits non-zero when an upgrade would break something."}
-                      </div>
-                    </div>
-                    <svg fill={"none"} height={"24"} viewBox={"0 0 24 24"} width={"24"} className={"opacity-50 shrink-0 mt-6"} xmlns={"http://www.w3.org/2000/svg"}>
-                      <path fill={"white"} style={{"fill": "white", "fillOpacity": "1"} as React.CSSProperties} clipRule={"evenodd"} d={"M9.29289 7.29289C9.68342 6.90237 10.3166 6.90237 10.7071 7.29289L13.6464 10.2322C14.6228 11.2085 14.6228 12.7915 13.6464 13.7678L10.7071 16.7071C10.3166 17.0976 9.68342 17.0976 9.29289 16.7071C8.90237 16.3166 8.90237 15.6834 9.29289 15.2929L12.2322 12.3536C12.4275 12.1583 12.4275 11.8417 12.2322 11.6464L9.29289 8.70711C8.90237 8.31658 8.90237 7.68342 9.29289 7.29289Z"} fillRule={"evenodd"}></path>
-                    </svg>
-                  </a>
-                  <a href={"/dashboard#compare"} className={"mt-6 flex justify-between gap-12 rounded-12 px-12 py-10 hover:bg-white/6 items-start"}>
+                  <a href={"/workspace/studio"} className={"mt-6 flex justify-between gap-12 rounded-12 px-12 py-10 hover:bg-white/6 items-start"}>
                     <img src={"/assets/images-original/nav/dashboard.png"} srcSet={"/assets/images-original/nav/dashboard.png 1x, /assets/images-original/nav/dashboard@2x.png 2x, /assets/images-original/nav/dashboard@3x.png 3x"} alt={""} aria-hidden={"true"} decoding={"async"} height={"36"} width={"36"} className={"h-36 w-36 flex-shrink-0"} />
                     <div className={"min-w-0 flex-1"}>
                       <div className={"text-14/20 font-600 text-white/90 truncate"}>
-                        {"Browser dashboard"}
+                        {"Studio Canvas"}
                       </div>
                       <div className={"mt-4 text-12/18 text-white/60 truncate"}>
-                        {"Visual drag-and-drop studio. Orchestrate reactive cross-chain pipelines with zero off-chain keeper bots."}
+                        {"Visual drag-and-drop reactive studio with 10-node orthogonal catalog and 1-click deploy."}
                       </div>
                     </div>
                     <svg fill={"none"} height={"24"} viewBox={"0 0 24 24"} width={"24"} className={"opacity-50 shrink-0 mt-6"} xmlns={"http://www.w3.org/2000/svg"}>
                       <path fill={"white"} style={{"fill": "white", "fillOpacity": "1"} as React.CSSProperties} clipRule={"evenodd"} d={"M9.29289 7.29289C9.68342 6.90237 10.3166 6.90237 10.7071 7.29289L13.6464 10.2322C14.6228 11.2085 14.6228 12.7915 13.6464 13.7678L10.7071 16.7071C10.3166 17.0976 9.68342 17.0976 9.29289 16.7071C8.90237 16.3166 8.90237 15.6834 9.29289 15.2929L12.2322 12.3536C12.4275 12.1583 12.4275 11.8417 12.2322 11.6464L9.29289 8.70711C8.90237 8.31658 8.90237 7.68342 9.29289 7.29289Z"} fillRule={"evenodd"}></path>
                     </svg>
                   </a>
-                  <a href={"/dashboard#compare"} className={"mt-6 flex justify-between gap-12 rounded-12 px-12 py-10 hover:bg-white/6 items-center"}>
+                  <a href={"/workspace/templates"} className={"mt-6 flex justify-between gap-12 rounded-12 px-12 py-10 hover:bg-white/6 items-start"}>
                     <img src={"/assets/images-original/nav/compare.png"} srcSet={"/assets/images-original/nav/compare.png 1x, /assets/images-original/nav/compare@2x.png 2x, /assets/images-original/nav/compare@3x.png 3x"} alt={""} aria-hidden={"true"} decoding={"async"} height={"36"} width={"36"} className={"h-36 w-36 flex-shrink-0"} />
                     <div className={"min-w-0 flex-1"}>
                       <div className={"text-14/20 font-600 text-white/90 truncate"}>
-                        {"Live compare"}
+                        {"Recipe Store"}
+                      </div>
+                      <div className={"mt-4 text-12/18 text-white/60 truncate"}>
+                        {"Pre-built 1-click recipes: Stop-Loss DEX, Whale Alert, and Anti-Drainer SafeSweep."}
+                      </div>
+                    </div>
+                    <svg fill={"none"} height={"24"} viewBox={"0 0 24 24"} width={"24"} className={"opacity-50 shrink-0 mt-6"} xmlns={"http://www.w3.org/2000/svg"}>
+                      <path fill={"white"} style={{"fill": "white", "fillOpacity": "1"} as React.CSSProperties} clipRule={"evenodd"} d={"M9.29289 7.29289C9.68342 6.90237 10.3166 6.90237 10.7071 7.29289L13.6464 10.2322C14.6228 11.2085 14.6228 12.7915 13.6464 13.7678L10.7071 16.7071C10.3166 17.0976 9.68342 17.0976 9.29289 16.7071C8.90237 16.3166 8.90237 15.6834 9.29289 15.2929L12.2322 12.3536C12.4275 12.1583 12.4275 11.8417 12.2322 11.6464L9.29289 8.70711C8.90237 8.31658 8.90237 7.68342 9.29289 7.29289Z"} fillRule={"evenodd"}></path>
+                    </svg>
+                  </a>
+                  <a href={"/workspace/vault"} className={"mt-6 flex justify-between gap-12 rounded-12 px-12 py-10 hover:bg-white/6 items-center"}>
+                    <img src={"/assets/images-original/nav/cli.png"} srcSet={"/assets/images-original/nav/cli.png 1x, /assets/images-original/nav/cli@2x.png 2x, /assets/images-original/nav/cli@3x.png 3x"} alt={""} aria-hidden={"true"} decoding={"async"} height={"36"} width={"36"} className={"h-36 w-36 flex-shrink-0"} />
+                    <div className={"min-w-0 flex-1"}>
+                      <div className={"text-14/20 font-600 text-white/90 truncate"}>
+                        {"ActionVault Escrow"}
                       </div>
                     </div>
                     <svg fill={"none"} height={"24"} viewBox={"0 0 24 24"} width={"24"} className={"opacity-50 shrink-0"} xmlns={"http://www.w3.org/2000/svg"}>
@@ -99,7 +99,7 @@ export default function HeaderView({ b, k }: { b: Bind; k: Kids }) {
                 </svg>
               </a>
             </div>
-            <a href={"https://github.com/Venkat5599/portalcanary"} className={"block w-full md:hidden transition-all delay-[250ms] md-max:translate-y-full md-max:opacity-0"} target={"_blank"} rel={"noopener"} {...b("mGit", 0, "block w-full md:hidden transition-all delay-[250ms] md-max:translate-y-full md-max:opacity-0")}>
+            <a href={"https://github.com/Reactive-Network"} className={"block w-full md:hidden transition-all delay-[250ms] md-max:translate-y-full md-max:opacity-0"} target={"_blank"} rel={"noopener"} {...b("mGit", 0, "block w-full md:hidden transition-all delay-[250ms] md-max:translate-y-full md-max:opacity-0")}>
               <button aria-label={"GitHub"} className={"rounded-full relative button block transition-all duration-[200ms] active:duration-[50ms] button-dark p-12 whitespace-nowrap w-full"} {...b("variantBtn", 0, "rounded-full relative button block transition-all duration-[200ms] active:duration-[50ms] button-dark p-12 whitespace-nowrap w-full")}>
                 <span className={"flex items-center gap-4 justify-center text-label-normal text-body-dark-label"}>
                   {"GitHub"}

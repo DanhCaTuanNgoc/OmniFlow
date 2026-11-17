@@ -13,14 +13,14 @@ export default function FeatureDashboardView({ b, k }: { b: Bind; k: Kids }) {
           </div>
           <div className={"md:hidden flex-center gap-8 text-12/20 tracking-[-0.06] text-black/72"}>
             <img alt={""} decoding={"async"} height={"24"} loading={"lazy"} src={"/assets/images/features/dashboard/sidebar/logo.png"} style={{} as React.CSSProperties} width={"24"} className={"lazy-image opacity-0"} />
-            {"Portal Canary"}
+            {"OmniFlow"}
           </div>
           <div className={"center-x px-8 hidden py-4 bg-black/4 rounded-6 w-max md:flex gap-8 items-center"}>
             <svg fill={"none"} height={"16"} viewBox={"0 0 16 16"} width={"16"} xmlns={"http://www.w3.org/2000/svg"}>
               <path d={"M10.8332 6.5V4.83333C10.8332 3.26853 9.56464 2 7.99984 2C6.43503 2 5.1665 3.26853 5.1665 4.83333V6.5M7.99984 9.33333V11.3333M3.83317 14.1667H12.1665C12.5347 14.1667 12.8332 13.8682 12.8332 13.5V7.16667C12.8332 6.79848 12.5347 6.5 12.1665 6.5H3.83317C3.46498 6.5 3.1665 6.79848 3.1665 7.16667V13.5C3.1665 13.8682 3.46498 14.1667 3.83317 14.1667Z"} stroke={"#A4A4A4"} strokeLinecap={"round"} strokeLinejoin={"round"} strokeWidth={"1.5"} style={{"stroke": "color(display-p3 0.6444 0.6444 0.6444)", "strokeOpacity": "1"} as React.CSSProperties}></path>
             </svg>
             <span className={"text-12/20 font-500 md:flex hidden text-black/72 truncate max-w-250"}>
-              {"/reports/upgrade-ed100x/report.html"}
+              {"/workspace/studio"}
             </span>
           </div>
         </div>
@@ -270,8 +270,8 @@ export default function FeatureDashboardView({ b, k }: { b: Bind; k: Kids }) {
                             <path d={"M1 5H37M37 5L33 9M37 5L33 1"} stroke={"#A4A4A4"} strokeLinecap={"round"} strokeLinejoin={"round"} strokeOpacity={"0.32"} strokeWidth={"1.5"} style={{"stroke": "color(display-p3 0.6444 0.6444 0.6444)", "strokeOpacity": "0.32"} as React.CSSProperties}></path>
                           </svg>
                         </div>
-                        <a href={"https://github.com/Venkat5599/portalcanary"} className={"text-12/18 font-400 features-dashbord-content-smoke-content-active"} target={"_blank"} rel={"noopener"}>
-                          {"setCode upgrade"}
+                        <a href={"/workspace/studio"} className={"text-12/18 font-400 features-dashbord-content-smoke-content-active"}>
+                          {"Reactive Callback"}
                         </a>
                       </div>
                       <div className={"flex flex-col p-22 items-center gap-8"}>
@@ -289,8 +289,8 @@ export default function FeatureDashboardView({ b, k }: { b: Bind; k: Kids }) {
                             <path d={"M1 5H37M37 5L33 9M37 5L33 1"} stroke={"#A4A4A4"} strokeLinecap={"round"} strokeLinejoin={"round"} strokeOpacity={"0.32"} strokeWidth={"1.5"} style={{"stroke": "color(display-p3 0.6444 0.6444 0.6444)", "strokeOpacity": "0.32"} as React.CSSProperties}></path>
                           </svg>
                         </div>
-                        <a href={"https://github.com/Venkat5599/portalcanary"} className={"text-12/18 font-400 features-dashbord-content-smoke-content-active"} target={"_blank"} rel={"noopener"}>
-                          {"setCode upgrade"}
+                        <a href={"/workspace/studio"} className={"text-12/18 font-400 features-dashbord-content-smoke-content-active"}>
+                          {"Reactive Callback"}
                         </a>
                       </div>
                       <div className={"flex flex-col pr-80 justify-center items-center gap-8"}>
@@ -1056,7 +1056,7 @@ export default function FeatureDashboardView({ b, k }: { b: Bind; k: Kids }) {
                       </div>
                       <div className={"flex py-20 px-24 items-center gap-6 text-10/24 font-500 tracking-[-0.1px] text-body-light-loud"}>
                         <pre>
-                          {"$ canary upgrade --ws ws://127.0.0.1:9945 --wasm runtimes/out/ed100x.compact.wasm\nbefore     spec_version 1002\nevents     system.CodeUpdated, sudo.Sudid, system.ExtrinsicSuccess\nafter      spec_version 1004\nliveness   ok (#9 -> #12 under the new runtime)\n\n$ canary compare --baseline ws://127.0.0.1:9944 --candidate ws://127.0.0.1:9945\n~ Balances.constant.ExistentialDeposit\n    baseline:  T::Balance = 100000000000000\n    candidate: T::Balance = 10000000000000000\n\n$ canary test --baseline ws://127.0.0.1:9944 --candidate ws://127.0.0.1:9945 --injected \"ed100x\"\nPASS          Info      balances.keep_alive\nREGRESSION    High      balances.transfer.basic\n    step 0 dispatch success  baseline: success  candidate: failed (balances.ExistentialDeposit)\n    delta receiver.free      baseline: +100000000000000  candidate: +0\nPASS          Info      balances.transfer.insufficient\nPASS          Info      identity.deposit\n\n$ canary upgrade --ws ws://127.0.0.1:9946 --wasm runtimes/out/source-60s.compact.wasm --timeout 40\nafter      spec_version 1003\nliveness   HALTED: best block stuck at #85 for 40s after the upgrade (needed #88)\nverdict    REGRESSION Critical: runtime accepted by setCode but block production stopped\nnode log:  panicked at 'Timestamp slot must match `CurrentSlot`'"}
+                          {"$ forge test --match-contract FullLoopTest -vvv\n[PASS] test_CrossChainEventTriggerAndCallback() (gas: 142850)\nLogs:\n  [Base Sepolia] Uniswap V2 SwapDetected: amount0In=1000000000000000000 (1.0 WETH)\n  [Reactive Omni] RSC react() invoked at block #3492104\n  [Reactive Omni] Stateless cooldown passed (delta: 300s >= 60s)\n  [Reactive Omni] Emitted Callback(chain_id=84532, target=ActionVault, payload=0x5c4a1b...)\n  [Base Sepolia] CallbackProxy authenticated msg.sender\n  [Base Sepolia] ActionVault executed swap with live price re-validation (slippage: 0.12% <= 0.5%)\n\nSuite result: ok. 1 passed; 0 failed; 0 skipped"}
                         </pre>
                       </div>
                       <div className={"flex py-8 px-10 justify-between items-center bg-black/4"}>

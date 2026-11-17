@@ -94,7 +94,7 @@ function DockItem({ index, active, onPick }: { index: number; active: number; on
     <div className={index > 6 ? "relative group sm-max:hidden" : "relative group"}>
       {dot && <div className={cls("center-x -bottom-2 w-3 rounded-full h-3 bg-white/30 transition-all duration-[200ms]", dot !== "shown" && "opacity-0")}></div>}
       <button aria-label="dock logo" className="select-none relative block" onClick={(e) => onPick(index, e.currentTarget)}>
-        <img alt="Portal Canary surface" decoding="async" height="72" loading="lazy" src={`/assets/images/wall/${it.key}/logo.png`} style={{}} width="72" className="lazy-image opacity-0 select-none !transition-none md-max:w-40 md-max:h-40" />
+        <img alt="OmniFlow surface" decoding="async" height="72" loading="lazy" src={`/assets/images/wall/${it.key}/logo.png`} style={{}} width="72" className="lazy-image opacity-0 select-none !transition-none md-max:w-40 md-max:h-40" />
         <div className={TOOLTIP}>{it.label}</div>
       </button>
     </div>

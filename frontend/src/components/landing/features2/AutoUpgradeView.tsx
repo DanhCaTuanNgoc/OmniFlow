@@ -34,7 +34,7 @@ export default function AutoUpgradeView({ b, k }: { b: Bind; k: Kids }) {
           </div>
           <div className={"pt-60 pb-34 pointer-events-none"}>
             <div className={"w-30 h-30 relative mx-auto"}>
-              <img alt={"Portal Canary surface"} decoding={"async"} height={"200"} loading={"lazy"} src={"/assets/images/features/auto/app-logo-light.png"} style={{} as React.CSSProperties} width={"200"} className={"lazy-image opacity-0 center"} {...b("logo", 0, "lazy-image opacity-0 center")} />
+              <img alt={"OmniFlow surface"} decoding={"async"} height={"200"} loading={"lazy"} src={"/assets/images/features/auto/app-logo-light.png"} style={{} as React.CSSProperties} width={"200"} className={"lazy-image opacity-0 center"} {...b("logo", 0, "lazy-image opacity-0 center")} />
             </div>
           </div>
           <div className={"flex overflow-hidden transition-all p-20 features-auto-app-action-wrapper"} {...b("actions", 0, "flex overflow-hidden transition-all p-20 features-auto-app-action-wrapper")}>

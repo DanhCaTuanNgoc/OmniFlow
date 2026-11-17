@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 8 | 4 | 0 | **50.0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **43** | **29** | **0** | **67.4%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 9 | 5 | 0 | **55.6%** |
+| **TỔNG CỘNG** | **21 Ngày** | **44** | **30** | **0** | **68.2%** |
 
 ---
 
@@ -521,8 +521,18 @@
   * Tinh chỉnh `BuildCards.tsx`: Chuyển đổi các thẻ runtime sang 3 giai đoạn pipeline OmniFlow (`Trigger: Uniswap Swap`, `Reactive Omni RSC Core`, `ActionVault Callback Execution`).
   * Tinh chỉnh `MeasureChart.tsx` và `MeasureChartView.tsx`: Đổi dải màu cột sang tím amethyst/violet và hiển thị độ trễ full loop end-to-end (~1.4s).
   * Tinh chỉnh `SmokeChecks.tsx`: Cập nhật các bước kiểm tra tự động sang xác minh full-loop Reactive Omni.
-  * Tinh chỉnh copy toàn bộ `Features.tsx`: Thay thế toàn bộ từ khóa Substrate/Canary còn sót lại bằng các khái niệm chuẩn xác của OmniFlow và Reactive Buildathon.
-  * Xác minh `tsc --noEmit` và `pnpm --filter frontend build` đạt 100% không lỗi (9/9 trang tĩnh prerender thành công).
-* **Ngày tạo:** 17/11/2026 11:45
-* **Ngày hoàn thành:** 17/11/2026 12:05
+
+#### `TASK-309` [DONE] — Tinh chỉnh & May đo Toàn diện UI Landing Page theo Blueprint
+* **Module / Màn hình:** Landing Page (`/`), `HeaderBar`, `HeaderPanelView`, `Hero`, `Checks` (Security), `Simpler` (Studio CTA), `GetStarted`, `Features`, `Faq`, `Wall`
+* **Mục đích:** Tinh chỉnh toàn bộ landing page theo đúng đặc tả `docs/LANDING_PAGE_REDESIGN_BLUEPRINT.md`. Giữ nguyên phong cách chủ đạo Tím Obsidian (`#7C3AED`, `#8B5CF6`) và nền trắng sáng tinh tế ở các section dưới, đồng thời bảo tồn Hero Section nền đen - tím galaxy nhạt dần; thanh lọc 100% tàn dư text/link của Canary và biến toàn bộ thành các widget chuyên sâu cho OmniFlow (Reactive Omni, Base Sepolia 200ms Denim, 4 Defensive Patterns, Studio DAG, 10-Node Catalog).
+* **Chi tiết thực thi:**
+  * Cập nhật `HeaderView.tsx` & `HeaderPanelView.tsx`: Xóa toàn bộ liên kết `portalcanary`, thay menu Tools thành Studio Canvas, Recipe Store, ActionVault Escrow, và Live Telemetry Logs.
+  * Cập nhật `Hero.tsx` & `HeroStage.tsx`: Đồng bộ headline, subtitle ("Drag, drop, deploy. Your pipelines run 24/7 on Reactive Omni"), badge 1s Finality, và các tab 3-act (Origin Trigger, Reactive Core, Vault Execution).
+  * Cập nhật `Checks.tsx` sang Security Invariants: Chuyển đổi từ "Doctor" sang 4 Defensive Patterns (Callback Proxy Auth, Stateless Cooldown, Live Price Re-Validation, Non-Custodial Panic Button & Safe Sweep).
+  * Cập nhật `Simpler.tsx`: Thay thế nội dung cũ bằng thông điệp trực quan về Studio DAG Canvas, 10-Node Orthogonal Catalog và Pre-compiled Bytecode Deployer dưới 2s.
+  * Cập nhật `FeatureDashboardView.tsx`, `Faq.tsx`, `IssueButton.tsx`, `Wall.tsx`, `AutoUpgradeView.tsx`: Loại bỏ 100% các liên kết external và chuỗi text Canary còn sót lại.
+  * Cập nhật `GetStarted.tsx`: Headline "Build and automate with OmniFlow Zero Keepers", nút bấm trực tiếp vào Studio và Recipes.
+  * Kiểm tra build Next.js / TypeScript (`npx tsc --noEmit`) đạt 100% không lỗi.
+* **Ngày tạo:** 17/11/2026 20:29
+* **Ngày hoàn thành:** 17/11/2026 20:41
 * **Trạng thái:** `DONE`

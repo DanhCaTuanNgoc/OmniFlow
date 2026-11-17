@@ -9,46 +9,46 @@ export default function HeaderPanelView({ b, k }: { b: Bind; k: Kids }) {
           <div aria-hidden={"true"} className={"absolute -top-2 left-0 h-16 w-full"}></div>
           <div className={"rounded-16 p-6 relative backdrop-blur-16 shadow-products-dropdown-dark"}>
             <div>
-              <a href={"https://github.com/Venkat5599/portalcanary#readme"} className={"group/item flex items-start gap-12 rounded-12 px-12 py-10 hover:bg-white/5 hover:outline hover:outline-1 hover:outline-white/8"} target={"_blank"} rel={"noopener"}>
-                <div className={"grid h-36 w-36 place-items-center flex-shrink-0"}>
-                  <img src={"/assets/images-original/nav/cli.png"} srcSet={"/assets/images-original/nav/cli.png 1x, /assets/images-original/nav/cli@2x.png 2x, /assets/images-original/nav/cli@3x.png 3x"} alt={""} aria-hidden={"true"} decoding={"async"} height={"36"} width={"36"} className={"h-36 w-36"} />
-                </div>
-                <div className={"min-w-0 flex-1"}>
-                  <div className={"flex items-start justify-between"}>
-                    <p className={"truncate text-14/22 font-600 text-white"}>
-                      {"Canary CLI"}
-                    </p>
-                  </div>
-                  <p className={"text-14/22 text-white/64"}>
-                    {"Doctor, compare, invariants, test and upgrade from one Rust binary. Exits non-zero when an upgrade would break something."}
-                  </p>
-                </div>
-              </a>
-              <a href={"/dashboard#compare"} className={"group/item flex items-start gap-12 rounded-12 px-12 py-10 hover:bg-white/5 hover:outline hover:outline-1 hover:outline-white/8"}>
+              <a href={"/workspace/studio"} className={"group/item flex items-start gap-12 rounded-12 px-12 py-10 hover:bg-white/5 hover:outline hover:outline-1 hover:outline-white/8"}>
                 <div className={"grid h-36 w-36 place-items-center flex-shrink-0"}>
                   <img src={"/assets/images-original/nav/dashboard.png"} srcSet={"/assets/images-original/nav/dashboard.png 1x, /assets/images-original/nav/dashboard@2x.png 2x, /assets/images-original/nav/dashboard@3x.png 3x"} alt={""} aria-hidden={"true"} decoding={"async"} height={"36"} width={"36"} className={"h-36 w-36"} />
                 </div>
                 <div className={"min-w-0 flex-1"}>
                   <div className={"flex items-start justify-between"}>
                     <p className={"truncate text-14/22 font-600 text-white"}>
-                      {"Browser dashboard"}
+                      {"Studio Canvas"}
                     </p>
                   </div>
                   <p className={"text-14/22 text-white/64"}>
-                    {"Visual drag-and-drop studio. Orchestrate reactive cross-chain pipelines with zero off-chain keeper bots."}
+                    {"Visual drag-and-drop reactive studio with 10-node orthogonal catalog, instant DAG validation, and 1-click deployment."}
+                  </p>
+                </div>
+              </a>
+              <a href={"/workspace/templates"} className={"group/item flex items-start gap-12 rounded-12 px-12 py-10 hover:bg-white/5 hover:outline hover:outline-1 hover:outline-white/8"}>
+                <div className={"grid h-36 w-36 place-items-center flex-shrink-0"}>
+                  <img src={"/assets/images-original/nav/compare.png"} srcSet={"/assets/images-original/nav/compare.png 1x, /assets/images-original/nav/compare@2x.png 2x, /assets/images-original/nav/compare@3x.png 3x"} alt={""} aria-hidden={"true"} decoding={"async"} height={"36"} width={"36"} className={"h-36 w-36"} />
+                </div>
+                <div className={"min-w-0 flex-1"}>
+                  <div className={"flex items-start justify-between"}>
+                    <p className={"truncate text-14/22 font-600 text-white"}>
+                      {"Recipe Store"}
+                    </p>
+                  </div>
+                  <p className={"text-14/22 text-white/64"}>
+                    {"Pre-built 1-click recipes for Stop-Loss DEX, Anti-Drainer SafeSweep, Whale Alert, and Portfolio Rebalancing."}
                   </p>
                 </div>
               </a>
             </div>
             <div className={"mt-6 pt-6 border-t border-white/12 text-white"}>
-              <a href={"/dashboard#compare"} className={"group/item flex items-center gap-12 rounded-12 px-12 py-10 hover:bg-white/5 hover:outline hover:outline-1 hover:outline-white/8"}>
+              <a href={"/workspace/vault"} className={"group/item flex items-center gap-12 rounded-12 px-12 py-10 hover:bg-white/5 hover:outline hover:outline-1 hover:outline-white/8"}>
                 <div className={"grid h-36 w-36 place-items-center flex-shrink-0"}>
-                  <img src={"/assets/images-original/nav/compare.png"} srcSet={"/assets/images-original/nav/compare.png 1x, /assets/images-original/nav/compare@2x.png 2x, /assets/images-original/nav/compare@3x.png 3x"} alt={""} aria-hidden={"true"} decoding={"async"} height={"36"} width={"36"} className={"h-36 w-36"} />
+                  <img src={"/assets/images-original/nav/cli.png"} srcSet={"/assets/images-original/nav/cli.png 1x, /assets/images-original/nav/cli@2x.png 2x, /assets/images-original/nav/cli@3x.png 3x"} alt={""} aria-hidden={"true"} decoding={"async"} height={"36"} width={"36"} className={"h-36 w-36"} />
                 </div>
                 <div className={"min-w-0 flex-1"}>
                   <div className={"flex items-center"}>
                     <p className={"truncate text-14/22 font-600 text-white"}>
-                      {"Live compare"}
+                      {"ActionVault Escrow & Panic Button"}
                     </p>
                   </div>
                 </div>
@@ -62,46 +62,46 @@ export default function HeaderPanelView({ b, k }: { b: Bind; k: Kids }) {
           <div aria-hidden={"true"} className={"absolute -top-2 left-0 h-16 w-full"}></div>
           <div className={"rounded-16 p-6 relative border border-[var(--body-stroke-lighter)] bg-[#FFFFFFE0] backdrop-blur-12 shadow-[0px_1px_2px_0px_#00000014,_0px_4px_16px_0px_#00000014,_0px_16px_56px_0px_#00000014]"}>
             <div>
-              <a href={"https://github.com/Venkat5599/portalcanary#readme"} className={"group/item flex items-start gap-12 rounded-12 px-12 py-10 hover:bg-[#00000005] hover:outline hover:outline-1 hover:outline-[#0000000A]"} target={"_blank"} rel={"noopener"}>
-                <div className={"grid h-36 w-36 place-items-center flex-shrink-0"}>
-                  <img src={"/assets/images-original/nav/cli-light.png"} srcSet={"/assets/images-original/nav/cli-light.png 1x, /assets/images-original/nav/cli-light@2x.png 2x, /assets/images-original/nav/cli-light@3x.png 3x"} alt={""} aria-hidden={"true"} decoding={"async"} height={"36"} width={"36"} className={"h-36 w-36"} />
-                </div>
-                <div className={"min-w-0 flex-1"}>
-                  <div className={"flex items-start justify-between"}>
-                    <p className={"truncate text-14/22 font-600 text-[var(--body-light-loud)]"}>
-                      {"Canary CLI"}
-                    </p>
-                  </div>
-                  <p className={"text-14/22 text-[var(--body-light-muted)]"}>
-                    {"Doctor, compare, invariants, test and upgrade from one Rust binary. Exits non-zero when an upgrade would break something."}
-                  </p>
-                </div>
-              </a>
-              <a href={"/dashboard#compare"} className={"group/item flex items-start gap-12 rounded-12 px-12 py-10 hover:bg-[#00000005] hover:outline hover:outline-1 hover:outline-[#0000000A]"}>
+              <a href={"/workspace/studio"} className={"group/item flex items-start gap-12 rounded-12 px-12 py-10 hover:bg-[#00000005] hover:outline hover:outline-1 hover:outline-[#0000000A]"}>
                 <div className={"grid h-36 w-36 place-items-center flex-shrink-0"}>
                   <img src={"/assets/images-original/nav/dashboard-light.png"} srcSet={"/assets/images-original/nav/dashboard-light.png 1x, /assets/images-original/nav/dashboard-light@2x.png 2x, /assets/images-original/nav/dashboard-light@3x.png 3x"} alt={""} aria-hidden={"true"} decoding={"async"} height={"36"} width={"36"} className={"h-36 w-36"} />
                 </div>
                 <div className={"min-w-0 flex-1"}>
                   <div className={"flex items-start justify-between"}>
                     <p className={"truncate text-14/22 font-600 text-[var(--body-light-loud)]"}>
-                      {"Browser dashboard"}
+                      {"Studio Canvas"}
                     </p>
                   </div>
                   <p className={"text-14/22 text-[var(--body-light-muted)]"}>
-                    {"Visual drag-and-drop studio. Orchestrate reactive cross-chain pipelines with zero off-chain keeper bots."}
+                    {"Visual drag-and-drop reactive studio with 10-node orthogonal catalog, instant DAG validation, and 1-click deployment."}
+                  </p>
+                </div>
+              </a>
+              <a href={"/workspace/templates"} className={"group/item flex items-start gap-12 rounded-12 px-12 py-10 hover:bg-[#00000005] hover:outline hover:outline-1 hover:outline-[#0000000A]"}>
+                <div className={"grid h-36 w-36 place-items-center flex-shrink-0"}>
+                  <img src={"/assets/images-original/nav/compare-light.png"} srcSet={"/assets/images-original/nav/compare-light.png 1x, /assets/images-original/nav/compare-light@2x.png 2x, /assets/images-original/nav/compare-light@3x.png 3x"} alt={""} aria-hidden={"true"} decoding={"async"} height={"36"} width={"36"} className={"h-36 w-36"} />
+                </div>
+                <div className={"min-w-0 flex-1"}>
+                  <div className={"flex items-start justify-between"}>
+                    <p className={"truncate text-14/22 font-600 text-[var(--body-light-loud)]"}>
+                      {"Recipe Store"}
+                    </p>
+                  </div>
+                  <p className={"text-14/22 text-[var(--body-light-muted)]"}>
+                    {"Pre-built 1-click recipes for Stop-Loss DEX, Anti-Drainer SafeSweep, Whale Alert, and Portfolio Rebalancing."}
                   </p>
                 </div>
               </a>
             </div>
             <div className={"mt-6 pt-6 border-t border-[var(--body-stroke-lighter)] text-[var(--body-light-muted)]"}>
-              <a href={"/dashboard#compare"} className={"group/item flex items-center gap-12 rounded-12 px-12 py-10 hover:bg-[#00000005] hover:outline hover:outline-1 hover:outline-[#0000000A]"}>
+              <a href={"/workspace/vault"} className={"group/item flex items-center gap-12 rounded-12 px-12 py-10 hover:bg-[#00000005] hover:outline hover:outline-1 hover:outline-[#0000000A]"}>
                 <div className={"grid h-36 w-36 place-items-center flex-shrink-0"}>
-                  <img src={"/assets/images-original/nav/compare-light.png"} srcSet={"/assets/images-original/nav/compare-light.png 1x, /assets/images-original/nav/compare-light@2x.png 2x, /assets/images-original/nav/compare-light@3x.png 3x"} alt={""} aria-hidden={"true"} decoding={"async"} height={"36"} width={"36"} className={"h-36 w-36"} />
+                  <img src={"/assets/images-original/nav/cli-light.png"} srcSet={"/assets/images-original/nav/cli-light.png 1x, /assets/images-original/nav/cli-light@2x.png 2x, /assets/images-original/nav/cli-light@3x.png 3x"} alt={""} aria-hidden={"true"} decoding={"async"} height={"36"} width={"36"} className={"h-36 w-36"} />
                 </div>
                 <div className={"min-w-0 flex-1"}>
                   <div className={"flex items-center"}>
                     <p className={"truncate text-14/22 font-600 text-[var(--body-light-loud)]"}>
-                      {"Live compare"}
+                      {"ActionVault Escrow & Panic Button"}
                     </p>
                   </div>
                 </div>
