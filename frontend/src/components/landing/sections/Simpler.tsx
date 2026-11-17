@@ -11,7 +11,7 @@ export default function Simpler() {
         {"Try it in the browser instead. \u2193"}
       </p>
       <div className={"mx-auto lg:max-w-[1128px]"}>
-        <div style={{"outline": "1px solid #3737370A", "outlineOffset": "-1px", "backgroundImage": "linear-gradient(114.58deg, #D1E9FF -1.34%, rgba(255, 222, 253, 0.56) 24.05%, rgba(247, 247, 247, 1) 74.82%)"} as React.CSSProperties} className={"relative overflow-hidden rounded-32"}>
+        <div style={{"outline": "1px solid #3737370A", "outlineOffset": "-1px", "backgroundImage": "linear-gradient(114.58deg, #EDE9FE -1.34%, rgba(243, 232, 255, 0.7) 24.05%, rgba(248, 250, 252, 1) 74.82%)"} as React.CSSProperties} className={"relative overflow-hidden rounded-32"}>
           <div className={"relative z-10 p-24 sm:p-40 lg:max-w-576 lg:pl-60 lg:pr-0 lg:py-60"}>
             <div className={"mb-12 flex w-max items-center gap-4 rounded-full bg-body-light-bg-ghost px-10 py-4 text-special-mono text-body-light-muted mx-auto lg:mx-0"}>
               {"No Code"}

@@ -123,7 +123,7 @@ export default function FeatureDashboardView({ b, k }: { b: Bind; k: Kids }) {
                   <div className={"mt-24 flex border-1 border-black/5 items-center gap-16 rounded-14 py-20 px-24"}>
                     <img alt={""} decoding={"async"} height={"28"} loading={"lazy"} src={"/assets/images/features/dashboard/validation/logo.png"} style={{} as React.CSSProperties} width={"28"} className={"lazy-image opacity-0 features-dashboard-content-validation-logo rounded-8"} />
                     <div className={"text-14/22 font-500 tracking-[-0.14px]"}>
-                      {"Portaldot"}
+                      {"OmniFlow"}
                     </div>
                   </div>
                   <div className={"gap-y-26 gap-x-24 md:gap-80 py-20 px-24 flex flex-wrap border-1 border-black/5 rounded-14 my-8"}>

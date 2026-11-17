@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 7 | 3 | 0 | **42.9%** |
-| **TỔNG CỘNG** | **21 Ngày** | **42** | **28** | **0** | **66.7%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 8 | 4 | 0 | **50.0%** |
+| **TỔNG CỘNG** | **21 Ngày** | **43** | **29** | **0** | **67.4%** |
 
 ---
 
@@ -509,4 +509,20 @@
   * Biên dịch Next.js thành công 9/9 trang, kiểm tra server `localhost:3000` trả về HTTP 200 OK với đầy đủ mã nguồn Canary chuẩn xác.
 * **Ngày tạo:** 17/11/2026 11:15
 * **Ngày hoàn thành:** 17/11/2026 11:28
+* **Trạng thái:** `DONE`
+
+#### `TASK-308` [DONE] — Chuyển Đổi Hoàn Toàn Nhận Diện Thương Hiệu: Tone Tím Obsidian (Obsidian Violet) & Tinh Chỉnh Bộ Widget Tương Tác
+* **Module / Màn hình:** Landing Page (`/`), Hero Stage Canvas Mockup, Section Features & Widgets, `landing.css`
+* **Mục đích:** Chuyển đổi toàn diện giao diện từ màu xanh dương điện tử của Canary sang màu tím Obsidian đặc trưng của OmniFlow (`#08090D`, `#7C3AED`, `#8B5CF6`, `#C084FC`, `#EDE9FE`), thay thế video Canary bằng Studio Canvas Mockup tương tác 3 Act chạy trực tiếp trong frame app, và đồng bộ toàn bộ nội dung widget (`BuildCards`, `MeasureChart`, `SmokeChecks`, `Features`) sang kiến trúc Reactive Omni / Base Sepolia.
+* **Chi tiết thực thi:**
+  * Cập nhật `landing.css`: Chuyển dải gradient `.page-background` và `.cta` từ xanh dương sang Obsidian Violet gradient. Cập nhật nút chính `.button-primary` sang violet specular highlight và photon violet glow.
+  * Cập nhật `Simpler.tsx`: Đổi gradient thẻ sang Amethyst Lilac pastel mềm mại (`#EDE9FE` -> `#F3E8FF` -> `#F8FAFC`).
+  * Xây dựng `HeroStudioCanvasMockup.tsx`: Tạo DAG canvas tương tác 3 node (Base Sepolia Trigger -> Lasna RSC State Machine -> Base Sepolia ActionVault Sweep) với xung quang tử photon pulse, thanh telemetry trực tiếp, và đồng bộ act với laser progress bar trong `HeroStage.tsx`.
+  * Tinh chỉnh `BuildCards.tsx`: Chuyển đổi các thẻ runtime sang 3 giai đoạn pipeline OmniFlow (`Trigger: Uniswap Swap`, `Reactive Omni RSC Core`, `ActionVault Callback Execution`).
+  * Tinh chỉnh `MeasureChart.tsx` và `MeasureChartView.tsx`: Đổi dải màu cột sang tím amethyst/violet và hiển thị độ trễ full loop end-to-end (~1.4s).
+  * Tinh chỉnh `SmokeChecks.tsx`: Cập nhật các bước kiểm tra tự động sang xác minh full-loop Reactive Omni.
+  * Tinh chỉnh copy toàn bộ `Features.tsx`: Thay thế toàn bộ từ khóa Substrate/Canary còn sót lại bằng các khái niệm chuẩn xác của OmniFlow và Reactive Buildathon.
+  * Xác minh `tsc --noEmit` và `pnpm --filter frontend build` đạt 100% không lỗi (9/9 trang tĩnh prerender thành công).
+* **Ngày tạo:** 17/11/2026 11:45
+* **Ngày hoàn thành:** 17/11/2026 12:05
 * **Trạng thái:** `DONE`

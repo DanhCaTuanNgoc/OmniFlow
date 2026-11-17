@@ -49,7 +49,7 @@ export default function HeaderView({ b, k }: { b: Bind; k: Kids }) {
                         {"Browser dashboard"}
                       </div>
                       <div className={"mt-4 text-12/18 text-white/60 truncate"}>
-                        {"The same engine compiled to WebAssembly. Diff two live Portaldot runtimes with nothing to install."}
+                        {"Visual drag-and-drop studio. Orchestrate reactive cross-chain pipelines with zero off-chain keeper bots."}
                       </div>
                     </div>
                     <svg fill={"none"} height={"24"} viewBox={"0 0 24 24"} width={"24"} className={"opacity-50 shrink-0 mt-6"} xmlns={"http://www.w3.org/2000/svg"}>

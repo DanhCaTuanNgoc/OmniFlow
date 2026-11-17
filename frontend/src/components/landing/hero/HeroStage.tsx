@@ -5,41 +5,49 @@ import type { Bind, Kids } from "@/components/landing/bind";
 import { swap } from "@/components/landing/bind";
 import HeroStageView from "./HeroStageView";
 
-// The hero tabs follow the hero video: each tab is one act of the recording. The
-// progress bar tracks playback; clicking a tab seeks the video to that act.
-const ACTS = [0, 12, 26, 40];
+const ACT_DURATION_MS = 5000;
+const TOTAL_ACTS = 3;
+
 const CAPTIONS: [string, React.ReactNode][] = [
   ["Listen to Events", <>Origin chain event triggers on <br /> Base Sepolia 200ms blocks.</>],
   ["Compute on Lasna", <>Autonomous Reactive Smart Contract <br /> state machine with zero keepers.</>],
   ["Execute Callback", <>Non-custodial ActionVault <br /> callback proxy execution.</>],
 ];
-const actAt = (t: number) => (t < ACTS[1] ? 0 : t < ACTS[2] ? 1 : 2);
 
 export default function HeroStage() {
   const [act, setAct] = useState(0);
-  const video = useRef<HTMLVideoElement | null>(null);
   const bar = useRef<HTMLDivElement | null>(null);
+  const startTime = useRef<number>(Date.now());
+  const activeActRef = useRef<number>(0);
 
   useEffect(() => {
-    const v = video.current;
-    if (!v) return;
-    v.muted = true; // React does not render `muted`; autoplay requires it
-    v.play().catch(() => {});
+    activeActRef.current = act;
+    startTime.current = Date.now();
+  }, [act]);
+
+  useEffect(() => {
     let raf = 0;
     const tick = () => {
-      const t = v.currentTime || 0;
-      const a = actAt(t);
-      setAct(a);
+      const now = Date.now();
+      const elapsed = now - startTime.current;
+      const progress = Math.min(elapsed / ACT_DURATION_MS, 1);
+
       if (bar.current) {
-        const f = (t - ACTS[a]) / (ACTS[a + 1] - ACTS[a]);
-        bar.current.style.width = `${((a + Math.max(0, Math.min(1, f))) / 3) * 100}%`;
+        bar.current.style.width = `${((activeActRef.current + progress) / TOTAL_ACTS) * 100}%`;
       }
+
+      if (elapsed >= ACT_DURATION_MS) {
+        const next = (activeActRef.current + 1) % TOTAL_ACTS;
+        activeActRef.current = next;
+        startTime.current = Date.now();
+        setAct(next);
+      }
+
       raf = requestAnimationFrame(tick);
     };
+
     raf = requestAnimationFrame(tick);
-    const onTime = () => setAct(actAt(v.currentTime));
-    v.addEventListener("timeupdate", onTime);
-    return () => { cancelAnimationFrame(raf); v.removeEventListener("timeupdate", onTime); };
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   const b: Bind = (key, i, base) => {
@@ -48,7 +56,11 @@ export default function HeroStage() {
       case "tab":
         return {
           className: swap(base, ["hero-tabs-item-active"], [on && "hero-tabs-item-active"]),
-          onClick: () => { const v = video.current; if (!v) return; v.currentTime = ACTS[i] + 0.05; v.play().catch(() => {}); },
+          onClick: () => {
+            activeActRef.current = i;
+            startTime.current = Date.now();
+            setAct(i);
+          },
         };
       case "tabIcon":
         return { className: swap(base, ["opacity-64", "group-hover:opacity-90"], [!on && "opacity-64 group-hover:opacity-90"]) };
@@ -56,15 +68,15 @@ export default function HeroStage() {
         return { className: swap(base, ["opacity-60", "group-hover:opacity-90"], [!on && "opacity-60 group-hover:opacity-90"]) };
       case "bar":
         return { ref: bar };
-      case "video":
-        return { ref: video };
     }
     return {};
   };
+
   const k: Kids = (key) => {
     if (key === "capTitle") return CAPTIONS[act][0];
     if (key === "capText") return CAPTIONS[act][1];
     return undefined;
   };
-  return <HeroStageView b={b} k={k} />;
+
+  return <HeroStageView b={b} k={k} act={act} />;
 }

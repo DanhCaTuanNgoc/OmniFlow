@@ -35,7 +35,7 @@ export default function HeaderPanelView({ b, k }: { b: Bind; k: Kids }) {
                     </p>
                   </div>
                   <p className={"text-14/22 text-white/64"}>
-                    {"The same engine compiled to WebAssembly. Diff two live Portaldot runtimes with nothing to install."}
+                    {"Visual drag-and-drop studio. Orchestrate reactive cross-chain pipelines with zero off-chain keeper bots."}
                   </p>
                 </div>
               </a>
@@ -88,7 +88,7 @@ export default function HeaderPanelView({ b, k }: { b: Bind; k: Kids }) {
                     </p>
                   </div>
                   <p className={"text-14/22 text-[var(--body-light-muted)]"}>
-                    {"The same engine compiled to WebAssembly. Diff two live Portaldot runtimes with nothing to install."}
+                    {"Visual drag-and-drop studio. Orchestrate reactive cross-chain pipelines with zero off-chain keeper bots."}
                   </p>
                 </div>
               </a>

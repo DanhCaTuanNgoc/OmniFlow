@@ -103,7 +103,7 @@ export default function Checks() {
                   <path clipRule={"evenodd"} d={"M2.6665 11.833H19.3332V15.1663C19.3332 16.5471 18.2139 17.6663 16.8332 17.6663H5.1665C3.78579 17.6663 2.6665 16.5471 2.6665 15.1663V11.833ZM6.4165 14.7497C6.4165 15.2099 6.04341 15.583 5.58317 15.583C5.12293 15.583 4.74984 15.2099 4.74984 14.7497C4.74984 14.2894 5.12293 13.9163 5.58317 13.9163C6.04341 13.9163 6.4165 14.2894 6.4165 14.7497Z"} fill={"currentColor"} fillRule={"evenodd"}></path>
                 </svg>
                 <div className={"text-body-normal [&_b]:text-label-normal text-body-light-muted [&_b]:text-body-light-loud"}>
-                  {"Substrate and EVM JSON-RPC"}
+                  {"Base Sepolia and Lasna JSON-RPC"}
                 </div>
               </div>
               <div className={"flex gap-12 text-body-light-ghost"}>
@@ -174,9 +174,9 @@ export default function Checks() {
               {"Compare"}
             </div>
             <p className={"text-body-normal text-body-light-ghost"}>
-              {"For two runtimes, "}
+              {"Cross-chain pipelines, "}
               <br />
-              {" diffed pallet by pallet."}
+              {" verified end-to-end on-chain."}
             </p>
           </div>
           <div className={"p-36 pt-0"}>
@@ -249,7 +249,7 @@ export default function Checks() {
                   <path clipRule={"evenodd"} d={"M3.5 6C3.5 4.61929 4.61929 3.5 6 3.5H16C17.3807 3.5 18.5 4.61929 18.5 6V16C18.5 17.3807 17.3807 18.5 16 18.5H6C4.61929 18.5 3.5 17.3807 3.5 16V6ZM8.5 15.1667C8.03976 15.1667 7.66667 14.7936 7.66667 14.3333C7.66667 13.8731 8.03976 13.5 8.5 13.5H13.5C13.9602 13.5 14.3333 13.8731 14.3333 14.3333C14.3333 14.7936 13.9602 15.1667 13.5 15.1667H8.5ZM13.2559 10.7559L11.5893 12.4226C11.2638 12.748 10.7362 12.748 10.4107 12.4226L8.74408 10.7559C8.41864 10.4305 8.41864 9.90285 8.74408 9.57741C9.06951 9.25197 9.59715 9.25197 9.92259 9.57741L10.1667 9.82149V7.66667C10.1667 7.20643 10.5398 6.83333 11 6.83333C11.4602 6.83333 11.8333 7.20643 11.8333 7.66667V9.82149L12.0774 9.57741C12.4028 9.25197 12.9305 9.25197 13.2559 9.57741C13.5814 9.90285 13.5814 10.4305 13.2559 10.7559Z"} fill={"currentColor"} fillRule={"evenodd"}></path>
                 </svg>
                 <div className={"text-body-normal [&_b]:text-label-normal text-[#999999] [&_b]:text-white/88"}>
-                  {"Pallet index moves"}
+                  {"Replay attack & storm prevention"}
                 </div>
               </div>
               <div className={"flex gap-12 text-[#707070]"}>
@@ -260,7 +260,7 @@ export default function Checks() {
                   <path d={"M13.1395 15.7094C14.0832 15.7094 14.8459 16.4727 14.8459 17.4172C14.8459 18.3617 14.0832 19.125 13.1395 19.125C12.1958 19.125 11.433 18.3617 11.433 17.4172V15.7094H13.1395ZM13.1395 14.8555C12.1958 14.8555 11.433 14.0922 11.433 13.1477C11.433 12.2032 12.1958 11.4399 13.1395 11.4399H17.4185C18.3623 11.4399 19.125 12.2032 19.125 13.1477C19.125 14.0922 18.3623 14.8555 17.4185 14.8555H13.1395Z"} fill={"currentColor"}></path>
                 </svg>
                 <div className={"text-body-normal [&_b]:text-label-normal text-[#999999] [&_b]:text-white/88"}>
-                  {"BABE slot and epoch hazards"}
+                  {"Re-entrancy & flash rebound hazards"}
                 </div>
               </div>
               <div className={"flex gap-12 text-[#707070]"}>

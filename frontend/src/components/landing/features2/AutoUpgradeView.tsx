@@ -17,7 +17,7 @@ export default function AutoUpgradeView({ b, k }: { b: Bind; k: Kids }) {
                 <path d={"M7.00098 12.708H5.00098M7.00098 9.99967H5.00098M7.00098 7.29134H5.00098M10.0013 3.95801H3.95964C3.03916 3.95801 2.29297 4.7042 2.29297 5.62467V14.3747C2.29297 15.2951 3.03916 16.0413 3.95964 16.0413H10.0013M10.0013 3.95801H16.043C16.9634 3.95801 17.7096 4.7042 17.7096 5.62467V14.3747C17.7096 15.2951 16.9634 16.0413 16.043 16.0413H10.0013M10.0013 3.95801V16.0413"} stroke={"currentColor"} strokeLinecap={"round"} strokeLinejoin={"round"} strokeWidth={"1.25"}></path>
               </svg>
               <span className={"block ml-12 mr-4 features-auto-app-header-text"}>
-                {"Portaldot"}
+                {"OmniFlow"}
               </span>
               <span className={"features-auto-app-header-version"}>
                 {k("ver", 0) ?? (<>

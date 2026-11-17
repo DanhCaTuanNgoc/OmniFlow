@@ -3,50 +3,74 @@
 import { useEffect, useRef, useState } from "react";
 import { cls, usePresence, useVisibleOnce } from "../fx";
 
-// "Speaks the chain you actually run": one card per target (V3, mainnet, dev node) is decoded
-// in turn. Each card's bar fills, "Decoding..." gives way to a letter-by-letter success line,
-// the next card stacks on top; after the third the stack drops away and the loop restarts.
-const TARGETS = ["v3", "mainnet", "dev"] as const;
+// OmniFlow Live Pipeline Execution: 3 stages (Trigger, Reactive Omni Core, ActionVault)
+// are verified in sequence. Each card's bar fills, "Verifying..." gives way to "Verified on-chain",
+// and stacks into the live execution proof.
+const TARGETS = ["trigger", "rsc", "vault"] as const;
 type Target = (typeof TARGETS)[number];
-const SUCCESS = "Build v1.0 successful";
+const SUCCESS = "Verified on-chain";
 
-const ICONS: Record<Target, React.ReactNode> = {
-  v3: (
-    <svg fill={"none"} height={"24"} viewBox={"0 0 24 24"} width={"24"} xmlns={"http://www.w3.org/2000/svg"}>
-      <path d={"M11.643 4.979 17.122 8.06 v6.163 L11.643 17.305 6.165 14.223 v-6.163 L11.643 4.979Zm0 1.575 L7.535 8.882 v4.52 l4.109 2.328 4.109 -2.328 V8.882 l-4.109 -2.328ZM9.315 9.019 h4.656 v1.096 H9.315 V9.019Zm0 1.986 h4.656 v1.096 H9.315 V11.005Zm0 1.986 h4.656 v1.096 H9.315 v-1.096Z"} fill={"black"} style={{"fill": "black", "fillOpacity": "1"} as React.CSSProperties}></path>
-    </svg>
-  ),
-  mainnet: (
-    <svg fill={"none"} height={"24"} viewBox={"0 0 24 24"} width={"24"} xmlns={"http://www.w3.org/2000/svg"}>
-      <path d={"M6.626 6.24 h10.752 a0.768 0.768 0 0 1 0.768 0.768 v2.688 a0.768 0.768 0 0 1 -0.768 0.768 H6.626 a0.768 0.768 0 0 1 -0.768 -0.768 V7.008 a0.768 0.768 0 0 1 0.768 -0.768Zm0 5.376 h10.752 a0.768 0.768 0 0 1 0.768 0.768 V15.072 a0.768 0.768 0 0 1 -0.768 0.768 H6.626 a0.768 0.768 0 0 1 -0.768 -0.768 v-2.688 a0.768 0.768 0 0 1 0.768 -0.768ZM8.162 7.7 a0.691 0.691 0 1 0 0 1.382 0.691 0.691 0 0 0 0 -1.382Zm0 5.376 a0.691 0.691 0 1 0 0 1.382 0.691 0.691 0 0 0 0 -1.382ZM5.858 16.992 h12.288 V18.144 H5.858 v-1.152Z"} fill={"white"} style={{"fill": "white", "fillOpacity": "1"} as React.CSSProperties}></path>
-    </svg>
-  ),
-  dev: (
-    <svg fill={"none"} height={"24"} viewBox={"0 0 24 24"} width={"24"} xmlns={"http://www.w3.org/2000/svg"}>
-      <path d={"M6.451 7.179 a0.693 0.693 0 0 1 0.693 -0.693 h9.695 a0.693 0.693 0 0 1 0.693 0.693 v6.925 a0.693 0.693 0 0 1 -0.693 0.693 h-3.636 v1.385 H14.761 a0.519 0.519 0 0 1 0 1.039 H9.221 A0.519 0.519 0 0 1 9.221 16.182 h1.558 v-1.385 H7.143 a0.693 0.693 0 0 1 -0.693 -0.693 V7.179Zm1.108 0.416 v6.094 h8.864 V7.595 H7.559Zm1.593 1.524 1.801 1.524 -1.801 1.524 -0.623 -0.762 0.9 -0.762 -0.9 -0.762 0.623 -0.762Zm2.493 2.424 h2.909 v0.97 H11.644 V11.542Z"} fill={"white"} style={{"fill": "white", "fillOpacity": "1"} as React.CSSProperties}></path>
-    </svg>
-  ),
+interface TargetMeta {
+  title: string;
+  chain: string;
+  bg: string;
+  icon: React.ReactNode;
+}
+
+const TARGET_META: Record<Target, TargetMeta> = {
+  trigger: {
+    title: "Uniswap V2 Pair",
+    chain: "Base Sepolia (84532)",
+    bg: "bg-gradient-to-br from-violet-500 to-purple-700 text-white shadow-sm shadow-violet-500/20",
+    icon: (
+      <svg fill="none" height="18" viewBox="0 0 24 24" width="18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+      </svg>
+    ),
+  },
+  rsc: {
+    title: "OmniFlow StopLoss RSC",
+    chain: "Reactive Lasna (5318007)",
+    bg: "bg-gradient-to-br from-purple-600 to-indigo-800 text-white shadow-sm shadow-purple-500/20",
+    icon: (
+      <svg fill="none" height="18" viewBox="0 0 24 24" width="18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+    ),
+  },
+  vault: {
+    title: "ActionVault.sol SafeSweep",
+    chain: "Base Sepolia Callback",
+    bg: "bg-gradient-to-br from-violet-700 to-fuchsia-800 text-white shadow-sm shadow-fuchsia-500/20",
+    icon: (
+      <svg fill="none" height="18" viewBox="0 0 24 24" width="18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      </svg>
+    ),
+  },
 };
+
 const Connector = () => (
   <svg fill={"none"} height={"32"} viewBox={"0 0 14 32"} width={"14"} xmlns={"http://www.w3.org/2000/svg"}>
-    <path d={"M10 13L7 16M7 16L4 19M7 16L4 13M7 16L10 19"} stroke={"#161616"} strokeLinecap={"round"} strokeOpacity={"0.12"} style={{"stroke": "color(display-p3 0.0863 0.0863 0.0863)", "strokeOpacity": "0.12"} as React.CSSProperties}></path>
+    <path d={"M10 13L7 16M7 16L4 19M7 16L4 13M7 16L10 19"} stroke={"#7c3aed"} strokeLinecap={"round"} strokeOpacity={"0.35"}></path>
   </svg>
 );
 const Tick = () => (
   <svg fill={"none"} height={"16"} viewBox={"0 0 16 16"} width={"16"} xmlns={"http://www.w3.org/2000/svg"}>
-    <path clipRule={"evenodd"} d={"M8.00016 1.33325C4.31826 1.33325 1.3335 4.31802 1.3335 7.99992C1.3335 11.6818 4.31826 14.6666 8.00016 14.6666C11.6821 14.6666 14.6668 11.6818 14.6668 7.99992C14.6668 4.31802 11.6821 1.33325 8.00016 1.33325ZM10.5161 6.75543C10.7493 6.47047 10.7073 6.05045 10.4223 5.8173C10.1374 5.58415 9.71734 5.62615 9.48419 5.91111L6.95067 9.00764L6.13823 8.1952C5.87788 7.93485 5.45577 7.93485 5.19543 8.1952C4.93508 8.45555 4.93508 8.87766 5.19543 9.13801L6.52876 10.4713C6.66194 10.6045 6.84525 10.6752 7.03337 10.6658C7.22149 10.6564 7.39686 10.5679 7.51613 10.4221L10.5161 6.75543Z"} fill={"#3ED18A"} fillRule={"evenodd"} style={{"fill": "color(display-p3 0.2428 0.8177 0.5417)", "fillOpacity": "1"} as React.CSSProperties}></path>
+    <path clipRule={"evenodd"} d={"M8.00016 1.33325C4.31826 1.33325 1.3335 4.31802 1.3335 7.99992C1.3335 11.6818 4.31826 14.6666 8.00016 14.6666C11.6821 14.6666 14.6668 11.6818 14.6668 7.99992C14.6668 4.31802 11.6821 1.33325 8.00016 1.33325ZM10.5161 6.75543C10.7493 6.47047 10.7073 6.05045 10.4223 5.8173C10.1374 5.58415 9.71734 5.62615 9.48419 5.91111L6.95067 9.00764L6.13823 8.1952C5.87788 7.93485 5.45577 7.93485 5.19543 8.1952C4.93508 8.45555 4.93508 8.87766 5.19543 9.13801L6.52876 10.4713C6.66194 10.6045 6.84525 10.6752 7.03337 10.6658C7.22149 10.6564 7.39686 10.5679 7.51613 10.4221L10.5161 6.75543Z"} fill={"#10B981"} fillRule={"evenodd"}></path>
   </svg>
 );
 
 function Decoding({ leaveTo }: { leaveTo: boolean }) {
   const [n, setN] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setN((v) => (v + 1) % 4), 500);
+    const t = setInterval(() => setN((v) => (v + 1) % 4), 450);
     return () => clearInterval(t);
   }, []);
   return (
-    <span className={cls("text-body-light-ghost w-50 absolute top-0 center-x text-center transition-all", leaveTo && "opacity-0 -translate-y-10 blur-[8px]")}>
-      {"Decoding"}{".".repeat(n)}
+    <span className={cls("text-body-light-ghost w-64 absolute top-0 center-x text-center transition-all text-12 font-500", leaveTo && "opacity-0 -translate-y-10 blur-[8px]")}>
+      {"Verifying state"}{".".repeat(n)}
     </span>
   );
 }
@@ -99,21 +123,22 @@ function Card({ index, active, leaveTo, onFinish }: { index: number; active: num
     <div className="w-full -top-40 pt-40 h-267 overflow-hidden absolute left-0">
       <div style={style} className="py-18 px-20 bg-white rounded-20 features-build-card w-340 mx-auto text-special-mono transition-all origin-top">
         <div className="transition-all" style={{ opacity: s > 0 ? "0" : "1", transitionDelay: leaveTo ? "0ms" : "" }}>
-          <div className="flex justify-between mb-20">
-            <span className="text-body-light-loud">portaldot 1004</span>
-            <span className="text-body-light-ghost">{os}</span>
+          <div className="flex justify-between mb-20 items-center">
+            <span className="text-body-light-loud text-13 font-600">{TARGET_META[os].title}</span>
+            <span className="text-body-light-ghost text-11 font-mono">{TARGET_META[os].chain}</span>
           </div>
           <div className="flex gap-8 items-center">
-            <div className={cls("w-52 h-32 rounded-full flex-center", `features-build-card-os-${os}`, os === "v3" && "border border-body-stroke-lighter")}>{ICONS[os]}</div>
+            <div className={cls("w-52 h-32 rounded-full flex-center", TARGET_META[os].bg)}>
+              {TARGET_META[os].icon}
+            </div>
             <Connector />
             <div className="rounded-full bg-[#37373714] flex-1 p-2">
               <div className="h-28 bg-white rounded-full features-build-card-progress w-28" onAnimationEnd={() => setComplete(true)}></div>
             </div>
             <Connector />
             <div className={cls(
-              "features-build-card-logo w-32 h-32 overflow-hidden relative transition before:transition before:mix-blend-color before:overlay before:bg-[#999999]",
+              "features-build-card-logo w-32 h-32 overflow-hidden relative transition before:transition before:mix-blend-color before:overlay before:bg-[#999999] rounded-full",
               complete ? "before:opacity-0 features-build-card-logo-completed" : "features-build-card-logo-disabled opacity-50",
-              os === "v3" ? "rounded-[7.25px]" : os === "mainnet" ? "rounded-2" : "rounded-full",
             )}>
               <img alt="check" decoding="async" height="32" loading="lazy" src="/assets/images/features/build/mark.png" width="32" className="lazy-image opacity-0 !transition-none" style={{}} />
             </div>

@@ -1,7 +1,8 @@
 // Generated from the landing markup by landing-port/gen.py (views.json). Do not edit by hand.
 import type { Bind, Kids } from "@/components/landing/bind";
+import HeroStudioCanvasMockup from "./HeroStudioCanvasMockup";
 
-export default function HeroStageView({ b, k }: { b: Bind; k: Kids }) {
+export default function HeroStageView({ b, k, act = 0 }: { b: Bind; k: Kids; act?: number }) {
   return (
     <div className={"hero-animation max-w-968 mx-auto"}>
       <div data-hero-tabs={""} className={"hero-tabs flex items-center px-4 sm-max:gap-6 sm-max:before:inside-border before:border-white/8 relative rounded-full sm-max:p-4 mb-24 sm:mb-20"}>
@@ -145,10 +146,7 @@ export default function HeroStageView({ b, k }: { b: Bind; k: Kids }) {
           <div className={"h-574 sm:h-580 -inset-x-5 sm:-inset-x-12 -bottom-6 sm:-bottom-12 absolute rounded-b-28 sm:rounded-b-32 border-b border-x border-white/10"}></div>
         </div>
         <div data-active-app={"0"} className={"hero-app h-620 md-max:rounded-b-24 relative rounded-20 overflow-hidden before:inside-border before:z-[11] before:border-white/8"}>
-          <video className={"hero-video overlay w-full h-full object-cover"} autoPlay loop playsInline preload={"auto"} poster={"/assets/media/canary-hero-poster.jpg"} aria-label={"Portal Canary: doctor, compare and test against live Portaldot nodes"} {...b("video", 0, "hero-video overlay w-full h-full object-cover")}>
-            <source src={"/assets/media/canary-hero.webm"} type={"video/webm"} />
-            <source src={"/assets/media/canary-hero.mp4"} type={"video/mp4"} />
-          </video>
+          <HeroStudioCanvasMockup act={act} />
         </div>
       </div>
     </div>

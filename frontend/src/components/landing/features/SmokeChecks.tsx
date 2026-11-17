@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { cls, frameLoop, setupCanvas, usePresence, useVisibleOnce } from "../fx";
 
-// "Catch regressions before users do": three checks run one after another once the card is
-// on screen. Each check's ring fills, turns into a tick, and the next one starts; the overall
-// ring fills a third per check. Smoke puffs drift behind the panel.
+// OmniFlow Automated Invariant Verification: three on-chain assertions run
+// once the card enters viewport. Each check's ring fills, turns into a tick,
+// verifying the cross-chain full loop without keeper bots.
 const CHECKS = [
-  { queue: "Waiting to dispatch workflows...", loading: "Dispatching workflows..", success: "Workflows dispatched on both sides" },
-  { queue: "Waiting for the setCode upgrade...", loading: "Applying setCode..", success: "Upgrade applied, liveness ok" },
-  { queue: "Waiting to read pinned state...", loading: "Reading pinned state...", success: "State read at pinned block hashes" },
+  { queue: "Waiting for Base Sepolia Swap...", loading: "Ingesting 200ms block...", success: "Swap event captured (Pair 0x47a9)" },
+  { queue: "Waiting for Lasna RSC react()...", loading: "Evaluating price & cooldown...", success: "RSC triggered, cooldown locked" },
+  { queue: "Waiting for Callback Proxy...", loading: "Authenticating authorized RSC...", success: "Proxy verified, SafeSweep executed" },
 ];
 const OVERALL_LEN = 10.5 * Math.PI * 2;
 const PIE_LEN = 8 * Math.PI * 2;
