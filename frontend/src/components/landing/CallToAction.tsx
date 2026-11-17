@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Zap, Presentation, BookOpen } from 'lucide-react';
+import { ArrowRight, Zap, BookOpen } from 'lucide-react';
 
 export function CallToAction() {
   return (
@@ -31,14 +31,6 @@ export function CallToAction() {
           >
             <span>Launch Pipeline Studio</span>
             <ArrowRight className="w-4 h-4" />
-          </Link>
-
-          <Link
-            href="/deck"
-            className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-xs sm:text-sm font-mono font-semibold uppercase tracking-wider text-slate-300 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <Presentation className="w-4 h-4 text-violet-400" />
-            <span>Interactive Pitch Deck</span>
           </Link>
 
           <Link

@@ -25,9 +25,6 @@ export function Footer() {
           <Link href="/workspace/templates" className="hover:text-white transition-colors">
             Recipes
           </Link>
-          <Link href="/deck" className="hover:text-white transition-colors">
-            Pitch Deck
-          </Link>
           <a
             href="https://sepolia.basescan.org"
             target="_blank"

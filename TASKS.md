@@ -453,11 +453,10 @@
 * **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
 
 #### `TASK-303` [DONE] — Xây dựng Landing Page Hero & Mini Interactive Canvas
-* **Module / Màn hình:** Landing Page (`/`) & Pitch Deck (`/deck`)
+* **Module / Màn hình:** Landing Page (`/`)
 * **Mục đích:** Tạo ấn tượng thị giác mạnh mẽ đầu tiên cho Ban Giám Khảo (theo phong cách Technical Minimalist cao cấp của Canary kết hợp màu sắc nhận diện Obsidian Violet của OmniFlow).
 * **Chi tiết thực thi:**
   * Xây dựng trang Landing Page `/` với đầy đủ 7 sections: `Navbar`, `Hero`, `HeroCanvasPreview` (3 acts: Stop-Loss, 200ms Denim Storm Guard, Non-Custodial Panic Sweep), `LiveTelemetry` (Base Sepolia + Lasna multi-chain telemetry), `ArchitecturePillars` (4 nguyên lý kiến trúc), `HonestyLedger` (Bảng trung thực on-chain & script xác minh 1 lệnh), `CallToAction` và `Footer`.
-  * Xây dựng trang Pitch Deck interactive 10 slide tại `/deck` mô phỏng phong cách slide presentation của Canary.
   * Tích hợp mượt mà với Dark Obsidian Theme & Tailwind CSS, build static 100% pass không lỗi TypeScript.
 * **Ngày tạo:** 14/11/2026 17:35
 * **Ngày hoàn thành:** 17/11/2026 09:55

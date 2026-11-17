@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Zap, ArrowRight, Presentation, ExternalLink, Github } from 'lucide-react';
+import { Zap, ArrowRight, ExternalLink, Github } from 'lucide-react';
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -54,13 +54,6 @@ export function Navbar() {
           </a>
           <Link href="/workspace/templates" className="hover:text-white transition-colors">
             Recipes
-          </Link>
-          <Link
-            href="/deck"
-            className="flex items-center gap-1.5 text-violet-300 hover:text-white transition-colors font-semibold"
-          >
-            <Presentation className="w-3.5 h-3.5 text-violet-400" />
-            Pitch Deck
           </Link>
         </nav>
 
