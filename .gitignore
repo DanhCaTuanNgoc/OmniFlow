@@ -27,6 +27,8 @@ portalcanary/
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
+.playwright-mcp/
+canary-landing.png
 
 # System Files
 .DS_Store

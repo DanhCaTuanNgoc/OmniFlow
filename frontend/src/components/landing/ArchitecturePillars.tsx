@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ShieldCheck, Cpu, Layers, Zap, Clock, Lock, Sparkles, AlertTriangle } from 'lucide-react';
+import { Cpu, Layers, Zap, Clock, Lock, Sparkles } from 'lucide-react';
 
 const PILLARS = [
   {
@@ -42,14 +42,14 @@ export function ArchitecturePillars() {
   return (
     <section id="architecture" className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="text-center mb-16">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-mono mb-3">
-          <Cpu className="w-3.5 h-3.5 text-violet-400" />
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-50 border border-violet-200 text-violet-700 text-xs font-mono mb-3 font-medium">
+          <Cpu className="w-3.5 h-3.5 text-violet-600" />
           Core Engineering Principles
         </div>
-        <h2 className="text-3xl sm:text-5xl font-light text-white tracking-tight mb-4 font-sans">
+        <h2 className="text-3xl sm:text-5xl font-light text-slate-900 tracking-tight mb-4 font-sans">
           Engineered for Security, Speed &amp; Non-Custodial Safety
         </h2>
-        <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
+        <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto">
           Built strictly according to the Reactive Omni specifications. Zero compromises on decentralization.
         </p>
       </div>
@@ -60,24 +60,24 @@ export function ArchitecturePillars() {
           return (
             <div
               key={idx}
-              className="bg-[#0C0D14] border border-white/[0.08] hover:border-violet-500/40 rounded-2xl p-8 transition-all shadow-xl group flex flex-col justify-between"
+              className="bg-white/95 border border-slate-200/90 hover:border-violet-300 rounded-2xl p-8 transition-all shadow-[0_4px_20px_rgba(15,23,42,0.03)] hover:shadow-[0_10px_35px_rgba(124,58,237,0.08)] group flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-5">
-                  <div className="w-10 h-10 rounded-xl bg-violet-600/15 border border-violet-500/30 flex items-center justify-center text-violet-300 group-hover:scale-110 transition-transform">
+                  <div className="w-10 h-10 rounded-xl bg-violet-50 border border-violet-200 flex items-center justify-center text-violet-700 group-hover:scale-110 transition-transform">
                     <Icon className="w-5 h-5" />
                   </div>
-                  <span className="text-xs font-mono text-violet-300 px-2.5 py-1 rounded-full bg-violet-500/10 border border-violet-500/20">
+                  <span className="text-xs font-mono text-violet-800 px-2.5 py-1 rounded-full bg-violet-50 border border-violet-200 font-medium">
                     {p.tagline}
                   </span>
                 </div>
 
-                <h3 className="text-xl font-medium text-white mb-3 tracking-tight">{p.title}</h3>
-                <p className="text-sm text-slate-400 leading-relaxed mb-6">{p.description}</p>
+                <h3 className="text-xl font-medium text-slate-900 mb-3 tracking-tight">{p.title}</h3>
+                <p className="text-sm text-slate-600 leading-relaxed mb-6">{p.description}</p>
               </div>
 
-              <div className="pt-4 border-t border-white/[0.06] text-xs font-mono text-slate-300 flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <div className="pt-4 border-t border-slate-100 text-xs font-mono text-slate-700 flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-violet-600 shrink-0" />
                 <span>{p.highlight}</span>
               </div>
             </div>

@@ -6,13 +6,7 @@ import {
   Network, 
   ArrowRight, 
   Zap, 
-  ShieldAlert, 
-  Radio, 
-  Cpu, 
-  Vault, 
   CheckCircle2, 
-  Clock, 
-  Copy, 
   ExternalLink 
 } from 'lucide-react';
 
@@ -156,14 +150,14 @@ export function HeroCanvasPreview() {
     <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       {/* Section Header */}
       <div className="text-center mb-12">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-mono mb-3">
-          <Network className="w-3.5 h-3.5 text-violet-400" />
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-50 border border-violet-200 text-violet-700 text-xs font-mono mb-3 font-medium">
+          <Network className="w-3.5 h-3.5 text-violet-600" />
           Interactive Canvas Simulation
         </div>
-        <h2 className="text-3xl sm:text-5xl font-light text-white tracking-tight mb-4 font-sans">
+        <h2 className="text-3xl sm:text-5xl font-light text-slate-900 tracking-tight mb-4 font-sans">
           How OmniFlow Executes Inversion of Control
         </h2>
-        <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
+        <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto">
           No polling bots. No centralized API keys. A 3-step reactive chain execution orchestrated by pure smart contracts.
         </p>
       </div>
@@ -178,13 +172,13 @@ export function HeroCanvasPreview() {
               onClick={() => setActiveScenario(sc)}
               className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-mono transition-all flex items-center gap-2 border ${
                 isActive
-                  ? 'bg-violet-600/20 text-white border-violet-500 shadow-[0_0_20px_rgba(139,92,246,0.3)] font-semibold'
-                  : 'bg-white/[0.02] text-slate-400 border-white/[0.08] hover:text-white hover:bg-white/[0.05]'
+                  ? 'bg-violet-50 text-violet-900 border-violet-300 shadow-sm font-semibold'
+                  : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               <span>{sc.name}</span>
               <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                isActive ? 'bg-violet-500/30 text-violet-200' : 'bg-white/[0.05] text-slate-500'
+                isActive ? 'bg-violet-200/60 text-violet-800' : 'bg-slate-100 text-slate-500'
               }`}>
                 {sc.badge}
               </span>
@@ -193,11 +187,11 @@ export function HeroCanvasPreview() {
         })}
       </div>
 
-      {/* Main Interactive Stage Card */}
-      <div className="bg-[#0C0D14] border border-white/[0.08] rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+      {/* Main Interactive Stage Card (Light Theme Obsidian Polish) */}
+      <div className="bg-white/95 border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-[0_12px_40px_rgba(15,23,42,0.06)] backdrop-blur-md relative overflow-hidden">
         {/* Scenario description bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-8 border-b border-white/[0.08]">
-          <p className="text-sm text-slate-300 font-medium">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-8 border-b border-slate-100">
+          <p className="text-sm text-slate-700 font-medium">
             {activeScenario.description}
           </p>
 
@@ -206,8 +200,8 @@ export function HeroCanvasPreview() {
               onClick={() => setShowPayload(!showPayload)}
               className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border ${
                 showPayload
-                  ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30'
-                  : 'bg-white/[0.04] text-slate-400 border-white/[0.08] hover:text-white'
+                  ? 'bg-violet-50 text-violet-800 border-violet-300'
+                  : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               {showPayload ? 'Hide Event JSON' : 'Inspect Event JSON'}
@@ -215,7 +209,7 @@ export function HeroCanvasPreview() {
 
             <Link
               href="/workspace/studio"
-              className="text-xs font-mono text-violet-400 hover:text-violet-300 flex items-center gap-1 font-medium"
+              className="text-xs font-mono text-violet-600 hover:text-violet-700 flex items-center gap-1 font-semibold"
             >
               <span>Open in Studio</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -227,47 +221,47 @@ export function HeroCanvasPreview() {
         {!showPayload ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative items-center py-4">
             {/* Step 1: Trigger Node */}
-            <div className="bg-[#11131C] border border-white/[0.08] rounded-xl p-5 hover:border-violet-500/40 transition-colors relative group">
+            <div className="bg-amber-50/40 border border-amber-200/90 rounded-xl p-5 hover:border-amber-300 transition-all shadow-sm group">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 font-semibold">
                   TRIGGER (ORIGIN)
                 </span>
-                <span className="text-[11px] font-mono text-slate-400">Step 01</span>
+                <span className="text-[11px] font-mono text-slate-500 font-medium">Step 01</span>
               </div>
-              <div className="text-xs font-mono text-slate-400 mb-1">{activeScenario.trigger.chain}</div>
-              <div className="text-sm font-semibold text-white mb-2">{activeScenario.trigger.label}</div>
-              <div className="p-2.5 rounded-lg bg-black/40 border border-white/[0.04] font-mono text-[11px] text-amber-200/90 break-words">
+              <div className="text-xs font-mono text-slate-500 mb-1">{activeScenario.trigger.chain}</div>
+              <div className="text-sm font-semibold text-slate-900 mb-2">{activeScenario.trigger.label}</div>
+              <div className="p-2.5 rounded-lg bg-white border border-amber-200/70 font-mono text-[11px] text-amber-900 break-words shadow-xs">
                 {activeScenario.trigger.detail}
               </div>
             </div>
 
             {/* Step 2: Reactive Condition Node */}
-            <div className="bg-[#11131C] border border-violet-500/30 rounded-xl p-5 hover:border-violet-400 transition-colors relative shadow-[0_0_25px_rgba(139,92,246,0.15)] group">
+            <div className="bg-violet-50/50 border border-violet-300 rounded-xl p-5 hover:border-violet-400 transition-all shadow-[0_4px_20px_rgba(124,58,237,0.08)] group">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30 font-semibold flex items-center gap-1">
-                  <Zap className="w-3 h-3 text-violet-400 fill-violet-400" />
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-100 text-violet-800 border border-violet-200 font-semibold flex items-center gap-1">
+                  <Zap className="w-3 h-3 text-violet-600 fill-violet-600" />
                   REACTIVE CORE (RSC)
                 </span>
-                <span className="text-[11px] font-mono text-violet-300">Step 02</span>
+                <span className="text-[11px] font-mono text-violet-700 font-medium">Step 02</span>
               </div>
-              <div className="text-xs font-mono text-slate-400 mb-1">{activeScenario.condition.chain}</div>
-              <div className="text-sm font-semibold text-white mb-2">{activeScenario.condition.label}</div>
-              <div className="p-2.5 rounded-lg bg-black/40 border border-white/[0.04] font-mono text-[11px] text-violet-200/90 break-words">
+              <div className="text-xs font-mono text-slate-500 mb-1">{activeScenario.condition.chain}</div>
+              <div className="text-sm font-semibold text-slate-900 mb-2">{activeScenario.condition.label}</div>
+              <div className="p-2.5 rounded-lg bg-white border border-violet-200/80 font-mono text-[11px] text-violet-950 break-words shadow-xs">
                 {activeScenario.condition.detail}
               </div>
             </div>
 
             {/* Step 3: Destination Action Node */}
-            <div className="bg-[#11131C] border border-white/[0.08] rounded-xl p-5 hover:border-cyan-500/40 transition-colors relative group">
+            <div className="bg-indigo-50/40 border border-indigo-200/90 rounded-xl p-5 hover:border-indigo-300 transition-all shadow-sm group">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-semibold">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200 font-semibold">
                   ACTION (DESTINATION)
                 </span>
-                <span className="text-[11px] font-mono text-slate-400">Step 03</span>
+                <span className="text-[11px] font-mono text-slate-500 font-medium">Step 03</span>
               </div>
-              <div className="text-xs font-mono text-slate-400 mb-1">{activeScenario.action.chain}</div>
-              <div className="text-sm font-semibold text-white mb-2">{activeScenario.action.label}</div>
-              <div className="p-2.5 rounded-lg bg-black/40 border border-white/[0.04] font-mono text-[11px] text-cyan-200/90 break-words">
+              <div className="text-xs font-mono text-slate-500 mb-1">{activeScenario.action.chain}</div>
+              <div className="text-sm font-semibold text-slate-900 mb-2">{activeScenario.action.label}</div>
+              <div className="p-2.5 rounded-lg bg-white border border-indigo-200/70 font-mono text-[11px] text-indigo-950 break-words shadow-xs">
                 {activeScenario.action.detail}
               </div>
             </div>
@@ -275,23 +269,23 @@ export function HeroCanvasPreview() {
         ) : (
           /* JSON Payload Inspection View */
           <div className="relative">
-            <pre className="p-4 rounded-xl bg-black/60 border border-white/[0.08] font-mono text-xs text-emerald-300 overflow-x-auto leading-relaxed">
+            <pre className="p-4 rounded-xl bg-slate-900 border border-slate-800 font-mono text-xs text-emerald-300 overflow-x-auto leading-relaxed shadow-inner">
               {activeScenario.samplePayload}
             </pre>
           </div>
         )}
 
         {/* Bottom verification footnote */}
-        <div className="mt-8 pt-4 border-t border-white/[0.06] flex flex-wrap items-center justify-between text-xs text-slate-400 font-mono gap-4">
+        <div className="mt-8 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 font-mono gap-4">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             <span>DAG Cyclic Validation Enforced</span>
-            <span className="text-slate-600">·</span>
+            <span className="text-slate-300">·</span>
             <span>Constrained Typed Ports (Out → In/Out → In)</span>
           </div>
 
-          <div className="text-slate-500">
-            Powered by <span className="text-violet-400">@reactive-network/reactive-lib</span>
+          <div className="text-slate-600">
+            Powered by <span className="text-violet-700 font-semibold">@reactive-network/reactive-lib</span>
           </div>
         </div>
       </div>

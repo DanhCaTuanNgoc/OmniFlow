@@ -457,7 +457,8 @@
 * **Mục đích:** Tạo ấn tượng thị giác mạnh mẽ đầu tiên cho Ban Giám Khảo (theo phong cách Technical Minimalist cao cấp của Canary kết hợp màu sắc nhận diện Obsidian Violet của OmniFlow).
 * **Chi tiết thực thi:**
   * Xây dựng trang Landing Page `/` với đầy đủ 7 sections: `Navbar`, `Hero`, `HeroCanvasPreview` (3 acts: Stop-Loss, 200ms Denim Storm Guard, Non-Custodial Panic Sweep), `LiveTelemetry` (Base Sepolia + Lasna multi-chain telemetry), `ArchitecturePillars` (4 nguyên lý kiến trúc), `HonestyLedger` (Bảng trung thực on-chain & script xác minh 1 lệnh), `CallToAction` và `Footer`.
-  * Tích hợp mượt mà với Dark Obsidian Theme & Tailwind CSS, build static 100% pass không lỗi TypeScript.
+  * Chuẩn hóa sang phong cách Light Theme tinh tế (nền trắng ngà `#FAFAFC`, lưới kỹ thuật 40px, dải ánh sáng ambient mesh đa tầng) kết hợp tông màu chủ đạo Tím Obsidian (`#7C3AED`, `#8B5CF6`) chuẩn phong cách FinTech cao cấp.
+  * Tích hợp mượt mà với Tailwind CSS, build static 100% pass 9/9 routes không lỗi TypeScript.
 * **Ngày tạo:** 14/11/2026 17:35
 * **Ngày hoàn thành:** 17/11/2026 09:55
 * **Trạng thái:** `DONE`

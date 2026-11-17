@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Metadata } from 'next';
+import { PageBackground } from '@/components/landing/PageBackground';
 import { Navbar } from '@/components/landing/Navbar';
 import { Hero } from '@/components/landing/Hero';
 import { HeroCanvasPreview } from '@/components/landing/HeroCanvasPreview';
@@ -17,7 +18,10 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#08090D] text-slate-100 selection:bg-violet-500/30 selection:text-white relative overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-[#FAFAFC] text-slate-900 selection:bg-violet-500/20 selection:text-violet-900 relative overflow-x-hidden font-sans">
+      {/* Luminous Ambient Background Layer */}
+      <PageBackground />
+
       {/* Fixed Navbar */}
       <Navbar />
 
