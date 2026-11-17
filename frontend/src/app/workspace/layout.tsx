@@ -8,7 +8,7 @@ export default function WorkspaceLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#08090D]">
+    <div className="dark flex h-screen w-screen overflow-hidden bg-[#08090D] text-slate-100">
       {/* Left Navigation Sidebar */}
       <Sidebar />
 

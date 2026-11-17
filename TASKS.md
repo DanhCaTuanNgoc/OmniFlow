@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 6 | 2 | 0 | **33.3%** |
-| **TỔNG CỘNG** | **21 Ngày** | **41** | **27** | **0** | **65.9%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 7 | 3 | 0 | **42.9%** |
+| **TỔNG CỘNG** | **21 Ngày** | **42** | **28** | **0** | **66.7%** |
 
 ---
 
@@ -494,4 +494,19 @@
   * Biên dịch `pnpm --filter frontend build` thành công 100%, render trọn vẹn 9/9 static routes với 0 lỗi TypeScript.
 * **Ngày tạo:** 17/11/2026 10:50
 * **Ngày hoàn thành:** 17/11/2026 11:04
+* **Trạng thái:** `DONE`
+
+#### `TASK-307` [DONE] — Tích hợp Trực tiếp Kiến trúc Gốc Canary: Khắc phục Triệt để Lỗi Nền Full Đen & Đồng bộ 100% Giao diện
+* **Module / Màn hình:** Landing Page (`/`), CSS Subsystem, Root Layout
+* **Mục đích:** Xóa bỏ hoàn toàn lỗi gán nhầm nền đen toàn trang (`bg-[#08090D]`) gây mất tương phản và sai khác với mẫu Canary; nhập khẩu và thích ứng trực tiếp toàn bộ 100% mã nguồn UI gốc từ `portalcanary/` kết hợp thương hiệu OmniFlow & Reactive Omni, đồng thời bảo tồn trọn vẹn font chữ đẹp (`Plus Jakarta Sans`, `Inter`, `JetBrains Mono`).
+* **Chi tiết thực thi:**
+  * Giải phóng `RootLayout` (`frontend/src/app/layout.tsx`) khỏi thuộc tính `bg-[#08090D]` và `className="dark"`. Cô lập chế độ tối hoàn toàn vào `/workspace/*` (`frontend/src/app/workspace/layout.tsx`).
+  * Nhập khẩu trọn vẹn bộ stylesheet gốc `landing.css` (144KB) với gradient đa tầng chân thực của Canary: dải màu từ tím chàm thiên hà `#0f071d` kết hợp `page-background-lights.png`, chuyển tiếp mượt mà qua xanh điện tử `#0087e1`, xanh băng dịu `#e6f4f7` và hòa vào nền sáng trắng tinh khôi `#fff` ở các section tính năng phía dưới.
+  * Tích hợp `LandingRuntime.tsx` tự động chạy Intersection Observer điều khiển các hiệu ứng CSS keyframe animation (`.is-visible`) và lazy loaders.
+  * Tích hợp toàn bộ hệ thống section chuẩn Canary: `HeaderBar` (thanh điều hướng floating pill với dropdown vector), `Hero` (quỹ đạo sao quay `hero-orbit`, huy hiệu tia sét SVG, 4 khung trang trí góc, video stage 3-act đồng bộ thanh tiến trình quang học), `Surfaces` (bức tường dock macOS phóng đại theo chuột tương tác), `AlsoAvailable` (thẻ recipe tắt), `Features` (bộ 3 widget tương tác `BuildCards`, `MeasureChart`, `SmokeChecks`, `SupplyGauge`), `GetStarted` (quy trình khởi tạo pipeline 3 bước), `Checks` (bảng đối soát 4 nguyên lý phòng vệ), `Faq` (accordion 2 cột giải đáp kiến trúc Reactive Omni), `Simpler` (thẻ CTA pastel gradient), và `Footer` (huy hiệu trạng thái mạng xanh lục nhấp nháy).
+  * Chuyển đổi và tinh chỉnh toàn bộ nội dung, copy, nhãn điều hướng sang OmniFlow: Base Sepolia 200ms blocks, Reactive Omni Lasna, Non-Custodial ActionVault, Zero-Keeper automation.
+  * Cấu hình ưu tiên font chữ `'Plus Jakarta Sans', Inter` và `JetBrains Mono` xuyên suốt `landing.css` và `globals.css`.
+  * Biên dịch Next.js thành công 9/9 trang, kiểm tra server `localhost:3000` trả về HTTP 200 OK với đầy đủ mã nguồn Canary chuẩn xác.
+* **Ngày tạo:** 17/11/2026 11:15
+* **Ngày hoàn thành:** 17/11/2026 11:28
 * **Trạng thái:** `DONE`

@@ -18,8 +18,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className="bg-[#08090D] text-slate-100 min-h-screen antialiased selection:bg-violet-500/30 selection:text-white">
+    <html lang="en">
+      <body className="min-h-screen antialiased selection:bg-violet-500/30 selection:text-white">
         <Web3Provider>{children}</Web3Provider>
       </body>
     </html>

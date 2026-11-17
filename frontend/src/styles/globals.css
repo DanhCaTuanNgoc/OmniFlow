@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --background: #08090D;
-  --foreground: #F8FAFC;
+  --background: transparent;
+  --foreground: #111110;
   --obsidian-deep: #08090D;
   --obsidian-surface: #0E1017;
   --obsidian-elevated: #161922;
@@ -21,9 +21,14 @@
   --body-light-ghost: #C2C2C2;
 }
 
+.dark {
+  --background: #08090D;
+  --foreground: #F8FAFC;
+  background-color: #08090D;
+  color: #F8FAFC;
+}
+
 body {
-  color: var(--foreground);
-  background: var(--background);
   font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
