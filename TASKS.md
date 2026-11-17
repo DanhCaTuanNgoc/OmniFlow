@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **40** | **25** | **0** | **62.5%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 5 | 1 | 0 | **20.0%** |
+| **TỔNG CỘNG** | **21 Ngày** | **40** | **26** | **0** | **65.0%** |
 
 ---
 
@@ -452,11 +452,16 @@
 * **Chi tiết thực thi:** Proof stream bảng log, filter chain, link Basescan và Reactscan.
 * **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
 
-#### `TASK-303` [TODO] — Xây dựng Landing Page Hero & Mini Interactive Canvas
-* **Module / Màn hình:** Landing Page (`/`)
-* **Mục đích:** Tạo ấn tượng thị giác mạnh mẽ đầu tiên cho Ban Giám Khảo.
-* **Chi tiết thực thi:** Hero section, Tech metrics counter, Mini interactive canvas trải nghiệm thử.
-* **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
+#### `TASK-303` [DONE] — Xây dựng Landing Page Hero & Mini Interactive Canvas
+* **Module / Màn hình:** Landing Page (`/`) & Pitch Deck (`/deck`)
+* **Mục đích:** Tạo ấn tượng thị giác mạnh mẽ đầu tiên cho Ban Giám Khảo (theo phong cách Technical Minimalist cao cấp của Canary kết hợp màu sắc nhận diện Obsidian Violet của OmniFlow).
+* **Chi tiết thực thi:**
+  * Xây dựng trang Landing Page `/` với đầy đủ 7 sections: `Navbar`, `Hero`, `HeroCanvasPreview` (3 acts: Stop-Loss, 200ms Denim Storm Guard, Non-Custodial Panic Sweep), `LiveTelemetry` (Base Sepolia + Lasna multi-chain telemetry), `ArchitecturePillars` (4 nguyên lý kiến trúc), `HonestyLedger` (Bảng trung thực on-chain & script xác minh 1 lệnh), `CallToAction` và `Footer`.
+  * Xây dựng trang Pitch Deck interactive 10 slide tại `/deck` mô phỏng phong cách slide presentation của Canary.
+  * Tích hợp mượt mà với Dark Obsidian Theme & Tailwind CSS, build static 100% pass không lỗi TypeScript.
+* **Ngày tạo:** 14/11/2026 17:35
+* **Ngày hoàn thành:** 17/11/2026 09:55
+* **Trạng thái:** `DONE`
 
 #### `TASK-304` [TODO] — Đóng gói Docker & Triển khai Cloud (Vercel & Railway)
 * **Module / Màn hình:** Hạ tầng Cloud Deploy
