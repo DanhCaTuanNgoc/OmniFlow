@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 11 | 7 | 0 | **63.6%** |
-| **TỔNG CỘNG** | **21 Ngày** | **46** | **32** | **0** | **69.6%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 12 | 7 | 1 | **58.3%** |
+| **TỔNG CỘNG** | **21 Ngày** | **47** | **32** | **1** | **68.1%** |
 
 ---
 
@@ -571,3 +571,20 @@
 * **Ngày tạo:** 18/11/2026 11:40
 * **Ngày hoàn thành:** 18/11/2026 11:47
 * **Trạng thái:** `DONE`
+
+#### `TASK-312` [IN_PROGRESS] — Lập Kế Hoạch & Mở Rộng Landing Page Toàn Diện kèm On-Chain Proof & Honesty Table (Lazy Loading)
+* **Module / Màn hình:** Landing Page (`frontend/src/app/page.tsx`, `frontend/src/components/landing/`, `motion-landing.css`)
+* **Mục đích:** Xây dựng kế hoạch và kiến trúc mở rộng cho trang Landing Page, nối tiếp mượt mà từ Hero Section Motion UI sang các section chức năng cốt lõi của OmniFlow. Bỏ Section 10-node catalog, tích hợp On-Chain Proof (trạng thái Pending Deployment chuẩn Zero-Mock) và Honesty Table (học tập kiến trúc minh bạch từ Canary), cùng cơ chế Lazy Loading (IntersectionObserver & Dynamic Import).
+* **Chi tiết thực thi:**
+  * Điều chỉnh kiến trúc 7 Sections mạch lạc:
+    1. Hero Section (đã hoàn thiện, video CloudFront + Bubbledot).
+    2. Visual Pipeline Studio Showcase (Interactive Canvas Mockup 3 Flagship Recipes).
+    3. 4 Defensive Security Pillars (Proxy Auth, 200ms Cooldown, Price Re-Validation, Panic Sweep).
+    4. On-Chain Proof & Honesty Table (What is Real vs What is Pending, Zero-Mock Policy, 3-Legged Execution Pipeline ở trạng thái PENDING_DEPLOYMENT, script tái xác thực `pnpm --filter backend test:full-loop`).
+    5. Multi-Chain Topology & Live RPC Telemetry (Base Sepolia 84532 ↔ Reactive Lasna 5318007).
+    6. Interactive Architecture FAQ & Invariants.
+    7. Final Conversion CTA & Obsidian Footer.
+  * Thiết kế cơ chế Lazy Loading: Sử dụng `IntersectionObserver` với `rootMargin: '250px'` và `next/dynamic` tách bundle, chỉ render component và nạp tài nguyên khi người dùng cuộn đến gần.
+* **Ngày tạo:** 18/11/2026 11:54
+* **Ngày hoàn thành:** Đang thực hiện
+* **Trạng thái:** `IN_PROGRESS`
