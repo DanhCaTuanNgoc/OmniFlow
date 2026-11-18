@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 17 | 0 | **94.4%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 16 | 12 | 0 | **75.0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **52** | **47** | **0** | **90.4%** |
+| **TỔNG CỘNG** | **21 Ngày** | **52** | **48** | **0** | **92.3%** |
 
 ---
 
@@ -392,11 +392,18 @@
 * **Ngày hoàn thành:** 18/11/2026 14:46
 * **Trạng thái:** `DONE`
 
-#### `TASK-211` [TODO] — Xây dựng Màn hình Active Automations & Gas Gauge
-* **Module / Màn hình:** Màn hình 2 — Active Automations
+#### `TASK-211` [DONE] — Xây dựng Màn hình Active Automations & Gas Gauge
+* **Module / Màn hình:** Màn hình 2 — Active Automations (`frontend/src/app/workspace/active/page.tsx`)
 * **Mục đích:** Giám sát trạng thái RSC đang chạy, đo lượng gas lREACT còn lại và nút Refuel.
-* **Chi tiết thực thi:** Pipeline status cards, Gas Gauge bar (Xanh/Vàng/Đỏ), Pause/Resume controls.
-* **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
+* **Chi tiết thực thi:**
+  * Giám sát hợp đồng phản ứng RSC `StopLoss_Pipeline.sol` (`0x8c2d098617102a64925cc683d9b444f938a96082`) chạy on-chain 24/7 trên Reactive Lasna Testnet (#5318007).
+  * Đọc số dư `lREACT` gas thực tế từ Lasna RPC qua Wagmi `useBalance` (Zero-Mock Policy).
+  * Thanh Gas Gauge trực quan hóa 3 mức năng lượng: Xanh (>0.5 lREACT), Vàng (0.1 - 0.5 lREACT), Đỏ (<0.1 lREACT) kèm tính toán số lượt callbacks còn lại (~5,000 calls / 1.0 lREACT).
+  * Tích hợp Modal Refuel cho phép nạp thêm lREACT trực tiếp cho RSC trên Lasna, kèm liên kết đến Reactive Faucet chính thức.
+  * Tích hợp liên kết ReactScan thời gian thực và điều hướng Pause Non-Custodial về Vault Manager.
+* **Ngày tạo:** 14/11/2026 17:35
+* **Ngày hoàn thành:** 18/11/2026 14:47
+* **Trạng thái:** `DONE`
 
 #### `TASK-212` [DONE] — Mở rộng Palette Studio với Node #11 (Custom Event), Node #14 (Price Velocity) & Chain Selector
 * **Module / Màn hình:** Pipeline Studio (`frontend/src/components/canvas/`)
