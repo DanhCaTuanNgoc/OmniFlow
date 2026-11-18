@@ -81,7 +81,7 @@ contract ActionVault is AbstractCallback {
      * @param rvmId Slot 1: Được Reactive Callback Proxy tự động ghi đè bằng RVM ID
      * @param rscContract Slot 2: Địa chỉ thực sự của hợp đồng StopLoss_Pipeline.sol
      * @param percentToSwap Tỷ lệ ETH trong vault cần bán (1 - 100)
-     * @param thresholdPriceUSD Ngưỡng giá đã kích hoạt lệnh tại thời điểm origin
+     * @param thresholdPriceUSD Ngưỡng giá đã kích hoạt lệnh tại thời điểm origin (nếu == type(uint256).max: bypass local price check)
      */
     function executeStopLoss(
         address rvmId,
@@ -89,6 +89,29 @@ contract ActionVault is AbstractCallback {
         uint256 percentToSwap,
         uint256 thresholdPriceUSD
     ) external authorizedSenderOnly {
+        _executeStopLossInternal(rvmId, rscContract, percentToSwap, thresholdPriceUSD, thresholdPriceUSD == type(uint256).max);
+    }
+
+    /**
+     * @notice Quá tải hỗ trợ cờ tường minh isCrossChainTrigger
+     */
+    function executeStopLoss(
+        address rvmId,
+        address rscContract,
+        uint256 percentToSwap,
+        uint256 thresholdPriceUSD,
+        bool isCrossChainTrigger
+    ) external authorizedSenderOnly {
+        _executeStopLossInternal(rvmId, rscContract, percentToSwap, thresholdPriceUSD, isCrossChainTrigger);
+    }
+
+    function _executeStopLossInternal(
+        address /* rvmId */,
+        address rscContract,
+        uint256 percentToSwap,
+        uint256 thresholdPriceUSD,
+        bool isCrossChainTrigger
+    ) internal {
         require(authorizedRSCs[rscContract], "Unauthorized RSC contract");
         require(percentToSwap > 0 && percentToSwap <= 100, "Invalid swap percent");
 
@@ -96,13 +119,16 @@ contract ActionVault is AbstractCallback {
         require(ethBalance > 0, "No ETH available in vault");
 
         // PATTERN 3: TÁI THẨM ĐỊNH GIÁ TỨC THỜI (LIVE PRICE RE-VALIDATION)
-        (uint112 reserve0, uint112 reserve1,) = IUniswapV2Pair(tokenPair).getReserves();
-        require(reserve0 > 0, "Empty pool reserve");
-        uint256 livePrice = (uint256(reserve1) * 1e18) / uint256(reserve0);
+        // DECOUPLED VALIDATION: Nếu là Cross-Chain hoặc Velocity trigger, bypass kiểm tra giá tĩnh pool nội bộ Base Sepolia
+        if (!isCrossChainTrigger && thresholdPriceUSD != type(uint256).max) {
+            (uint112 reserve0, uint112 reserve1,) = IUniswapV2Pair(tokenPair).getReserves();
+            require(reserve0 > 0, "Empty pool reserve");
+            uint256 livePrice = (uint256(reserve1) * 1e18) / uint256(reserve0);
 
-        if (livePrice > thresholdPriceUSD) {
-            emit OrderSkipped("Price bounced back above stop threshold", livePrice);
-            return;
+            if (livePrice > thresholdPriceUSD) {
+                emit OrderSkipped("Price bounced back above stop threshold", livePrice);
+                return;
+            }
         }
 
         uint256 swapAmount = (ethBalance * percentToSwap) / 100;
@@ -130,7 +156,7 @@ contract ActionVault is AbstractCallback {
     // EMERGENCY SAFE SWEEP: TẨU TÁN KHẨN CẤP VỀ VÍ LẠNH KHI VÍ OWNER BỊ HACK PHISHING
     // =========================================================================
     function executeSafeSweep(
-        address rvmId,
+        address /* rvmId */,
         address rscContract
     ) external authorizedSenderOnly {
         require(authorizedRSCs[rscContract], "Unauthorized RSC contract");

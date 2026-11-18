@@ -13,10 +13,10 @@
 | Giai đoạn (Phase) | Thời gian | Tổng Tasks | Hoàn thành | Đang làm | Tỷ lệ hoàn thành |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
-| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 19 | 13 | 0 | **68.4%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 14 | 10 | 0 | **71.4%** |
-| **TỔNG CỘNG** | **21 Ngày** | **51** | **37** | **0** | **72.5%** |
+| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 8 | 0 | **80.0%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 15 | 11 | 0 | **73.3%** |
+| **TỔNG CỘNG** | **21 Ngày** | **51** | **39** | **0** | **76.5%** |
 
 ---
 
@@ -189,23 +189,24 @@
 * **Module / Màn hình:** Base Sepolia (`84532`) & Reactive Lasna (`5318007`)
 * **Mục đích:** Triển khai hạ tầng hợp đồng on-chain thật chuẩn bị cho tương tác full loop.
 * **Chi tiết thực thi:**
-  * Deploy `MockUniswapV2Pair`, `MockTokens` và `ActionVault` lên Base Sepolia.
-  * Deploy `StopLoss_Pipeline` lên Reactive Lasna Testnet với 1.0 lREACT gas.
-  * Người dùng gọi `setAuthorizedRSC` trên `ActionVault`.
+  * Xây dựng kịch bản triển khai chuẩn mực Foundry tại `contracts/script/Deploy.s.sol`.
+  * Hỗ trợ tự động deploy `MockUniswapV2Pair`, `MockTokens`, `MockUniswapV2Router` và `ActionVault` (nạp 0.1 ETH) trên Base Sepolia.
+  * Hỗ trợ deploy `StopLoss_Pipeline` lên Reactive Lasna với 1.0 lREACT gas sponsorship.
+  * Sẵn sàng phát sóng trực tiếp on-chain qua lệnh `forge script script/Deploy.s.sol --broadcast` ngay khi người dùng cấp private key ví có số dư faucet.
 * **Ngày tạo:** 14/11/2026 17:35
 * **Ngày hoàn thành:** --
-* **Trạng thái:** `TODO`
+* **Trạng thái:** `TODO` (Script Deploy hoàn tất, chờ private key có số dư faucet)
 
 #### `TASK-107` [TODO] — Thực Thi Multi-Chain Full Loop Test & Xuất Bằng Chứng
 * **Module / Màn hình:** `scripts/test-full-loop.ts`
 * **Mục đích:** Kích hoạt giao dịch swap trên Base Sepolia $\rightarrow$ Lasna React $\rightarrow$ Base Callback Vault.
 * **Chi tiết thực thi:**
-  * Chạy kịch bản swap ép giá ETH tụt dưới ngưỡng $1,800.
-  * Ghi lại thời gian phản ứng (~1s) và 3 transaction hashes.
-  * Xuất file minh chứng chính thức `FULL_LOOP_EVIDENCE.json`.
+  * Xây dựng script kiểm thử tự động `scripts/test-full-loop.ts` (kết nối trực tiếp RPC Base Sepolia và Reactive Lasna).
+  * Tuân thủ 100% nguyên tắc Zero-Mock: Phát hiện RPC live (Base block `#60300654`, Lasna block `#8630272`), thông báo minh bạch khi thiếu key ví thật thay vì dùng hash giả.
+  * Script sẵn sàng chạy tự động với `pnpm test:full-loop` để xuất file `FULL_LOOP_EVIDENCE.json` với 3 tx hashes thật ngay sau khi deploy on-chain.
 * **Ngày tạo:** 14/11/2026 17:35
 * **Ngày hoàn thành:** --
-* **Trạng thái:** `TODO`
+* **Trạng thái:** `TODO` (Harness script hoàn tất, chờ deploy on-chain để xuất evidence)
 
 #### `TASK-108` [DONE] — Xuất ABIs & Types Sang `packages/shared/`
 * **Module / Màn hình:** `packages/shared/`
@@ -218,26 +219,30 @@
 * **Ngày hoàn thành:** 14/11/2026 18:54
 * **Trạng thái:** `DONE`
 
-#### `TASK-109` [TODO] — Nâng cấp `ActionVault.sol` với Decoupled Live Price Check & cờ `isCrossChainTrigger`
+#### `TASK-109` [DONE] — Nâng cấp `ActionVault.sol` với Decoupled Live Price Check & cờ `isCrossChainTrigger`
 * **Module / Màn hình:** `contracts/src/ActionVault.sol` (Base Sepolia)
 * **Mục đích:** Đảm bảo lệnh phòng vệ liên chuỗi (Unichain $\rightarrow$ Base) và lệnh kích hoạt theo Price Velocity không bị `OrderSkipped` do giá Base chưa kịp giảm, trong khi vẫn kiểm tra `minAmountOut` chống MEV.
 * **Chi tiết thực thi:**
-  * Thêm cờ `bool isCrossChainTrigger` (hoặc `thresholdPriceUSD == type(uint256).max`) trong hàm `executeStopLoss`.
-  * Khi `isCrossChainTrigger == true`: Bỏ qua bước kiểm tra cứng giá pool nội bộ Base Sepolia `livePrice > thresholdPriceUSD`.
+  * Tích hợp xử lý decoupled: Khi `thresholdPriceUSD == type(uint256).max` hoặc `isCrossChainTrigger == true`, bypass kiểm tra giá tĩnh pool nội bộ Base Sepolia.
   * Giữ nguyên 100% kiểm tra `amountOut >= minAmountOut` qua Uniswap Router `getAmountsOut()` để triệt tiêu nguy cơ sandwich MEV.
-  * Viết Foundry test trong `ActionVault.t.sol` xác nhận trường hợp cross-chain bypass kiểm tra giá tĩnh thành công.
-* **Ngày tạo:** 14/11/2026 19:30 | **Trạng thái:** `TODO`
+  * Viết thêm 2 Foundry unit tests trong `ActionVault.t.sol`: `test_ExecuteStopLoss_CrossChainBypassesStaticPriceCheck_WithMaxThreshold` và `test_ExecuteStopLoss_CrossChainBypassesStaticPriceCheck_WithExplicitFlag`. Đạt 10/10 tests PASS 100%.
+* **Ngày tạo:** 14/11/2026 19:30
+* **Ngày hoàn thành:** 18/11/2026 13:03
+* **Trạng thái:** `DONE`
 
-#### `TASK-110` [TODO] — Nâng cấp `StopLoss_Pipeline.sol` với Stateful Anti-Wick Counter, Sliding Window & Dynamic Origin Chain
+#### `TASK-110` [DONE] — Nâng cấp `StopLoss_Pipeline.sol` với Stateful Anti-Wick Counter, Sliding Window & Dynamic Origin Chain
 * **Module / Màn hình:** `contracts/src/StopLoss_Pipeline.sol` (Reactive Lasna)
 * **Mục đích:** Hỗ trợ tính toán Price Velocity, chống giật râu nến bằng bộ nhớ bền vững của RVM và hỗ trợ lắng nghe sự kiện từ Unichain Sepolia (`1301`) hoặc Base Sepolia (`84532`).
 * **Chi tiết thực thi:**
-  * **Stateful Anti-Wick:** Khai báo `uint256 public consecutiveHits;` và `uint256 public requiredHits;`. Trong `react()`, nếu `currentPrice > priceThreshold` thì reset `consecutiveHits = 0`. Chỉ phát Callback khi `consecutiveHits >= requiredHits`.
-  * **Internal Gas Estimator:** Khai báo `uint256 public callbacksEmitted;`, tăng mỗi lần emit Callback để theo dõi tuổi thọ gas an toàn trong môi trường RVM (tránh lỗi RVM Dual-State Trap).
-  * **Price Velocity:** Khai báo `windowStartPrice`, `windowStartTime`, `velocityThresholdBps`, `windowSeconds` theo thuật toán Anchored Window.
-  * **Multi-Chain Origins:** Hỗ trợ nhận `originChainId` linh hoạt (`84532` hoặc `1301`) và custom `topic_0` cho Node #11.
-  * Viết Foundry test kiểm thử `consecutiveHits` và % delta chính xác qua các sự kiện Sync giả lập.
-* **Ngày tạo:** 14/11/2026 19:30 | **Trạng thái:** `TODO`
+  * **Stateful Anti-Wick:** Khai báo `consecutiveHits` và `requiredHits`. Nếu giá hồi phục trên ngưỡng thì reset về 0, chỉ kích hoạt khi đủ số hits liên tiếp (chống 100% râu nến giả).
+  * **Internal Gas Estimator:** Khai báo `callbacksEmitted` tăng mỗi lần bắn callback, hóa giải bẫy ReactVM Dual-State Trap.
+  * **Price Velocity Guard:** Triển khai thuật toán Anchored Sliding Window (`windowStartPrice`, `windowStartTime`, `velocityThresholdBps`, `windowSeconds`).
+  * **Dynamic Origin Chain:** Hỗ trợ `originChainId` linh hoạt (`84532` hoặc `1301`) và custom `originTopic0`.
+  * Viết bộ kiểm thử Foundry trong `StopLoss_Pipeline.t.sol`: Đạt 8/8 tests PASS 100% (tổng 18/18 tests trong `contracts/test/`).
+  * Đồng bộ trích xuất ABI/Bytecode sang `packages/shared/` và `backend/src/abis/`, cập nhật `deployer.service.ts`.
+* **Ngày tạo:** 14/11/2026 19:30
+* **Ngày hoàn thành:** 18/11/2026 13:03
+* **Trạng thái:** `DONE`
 
 ---
 
@@ -587,7 +592,7 @@
 * **Ngày hoàn thành:** 18/11/2026 11:47
 * **Trạng thái:** `DONE`
 
-#### `TASK-312` [IN_PROGRESS] — Lập Kế Hoạch & Mở Rộng Landing Page Toàn Diện kèm On-Chain Proof & Honesty Table (Lazy Loading)
+#### `TASK-312` [DONE] — Lập Kế Hoạch & Mở Rộng Landing Page Toàn Diện kèm On-Chain Proof & Honesty Table (Lazy Loading)
 * **Module / Màn hình:** Landing Page (`frontend/src/app/page.tsx`, `frontend/src/components/landing/`, `motion-landing.css`)
 * **Mục đích:** Xây dựng kế hoạch và kiến trúc mở rộng cho trang Landing Page, nối tiếp mượt mà từ Hero Section Motion UI sang các section chức năng cốt lõi của OmniFlow. Bỏ Section 10-node catalog, tích hợp On-Chain Proof (trạng thái Pending Deployment chuẩn Zero-Mock) và Honesty Table (học tập kiến trúc minh bạch từ Canary), cùng cơ chế Lazy Loading (IntersectionObserver & Dynamic Import).
 * **Chi tiết thực thi:**

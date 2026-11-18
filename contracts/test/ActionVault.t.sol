@@ -142,4 +142,51 @@ contract ActionVaultTest is Test {
         vm.expectRevert();
         vault.executeStopLoss(address(0), rscContract, 50, 1800 ether);
     }
+
+    function test_ExecuteStopLoss_CrossChainBypassesStaticPriceCheck_WithMaxThreshold() public {
+        vm.prank(owner);
+        vault.setAuthorizedRSC(rscContract, true);
+
+        // Giá Base Sepolia hiện tại là $2,000 (vẫn cao hơn $1,800)
+        pair.setReserves(1 ether, 2000 ether);
+
+        uint256 ownerUsdcBefore = usdc.balanceOf(owner);
+
+        // Trigger đến từ Cross-chain hoặc Velocity với thresholdPriceUSD = type(uint256).max
+        vm.prank(callbackProxy);
+        vault.executeStopLoss(
+            address(0),
+            rscContract,
+            50, // Bán 50%
+            type(uint256).max // Decoupled trigger
+        );
+
+        // Vault đã swap 0.5 ETH thành công bất chấp giá Base vẫn $2,000!
+        assertEq(address(vault).balance, 0.5 ether);
+        assertTrue(usdc.balanceOf(owner) > ownerUsdcBefore);
+    }
+
+    function test_ExecuteStopLoss_CrossChainBypassesStaticPriceCheck_WithExplicitFlag() public {
+        vm.prank(owner);
+        vault.setAuthorizedRSC(rscContract, true);
+
+        // Giá Base Sepolia hiện tại là $2,000 (vẫn cao hơn $1,800)
+        pair.setReserves(1 ether, 2000 ether);
+
+        uint256 ownerUsdcBefore = usdc.balanceOf(owner);
+
+        // Gọi overload 5 tham số với isCrossChainTrigger = true
+        vm.prank(callbackProxy);
+        vault.executeStopLoss(
+            address(0),
+            rscContract,
+            50,
+            1800 ether,
+            true // isCrossChainTrigger
+        );
+
+        // Vault swap 50% thành công
+        assertEq(address(vault).balance, 0.5 ether);
+        assertTrue(usdc.balanceOf(owner) > ownerUsdcBefore);
+    }
 }

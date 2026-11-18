@@ -9,6 +9,11 @@ export interface ExtractedPipelineParams {
   cooldownSeconds: bigint;
   percentToSwap: bigint;
   actionVaultAddress: `0x${string}`;
+  requiredHits: bigint;
+  velocityThresholdBps: bigint;
+  windowSeconds: bigint;
+  originChainId: bigint;
+  originTopic0: `0x${string}`;
 }
 
 export interface DeploymentResult {
@@ -64,12 +69,32 @@ export class DeployerService {
       '0xABCDEF0123456789ABCDEF0123456789ABCDEF01') as `0x${string}`;
     const percentToSwap = BigInt(actionNode?.data.amountPercentage || 50);
 
+    // 5. Tìm Anti-Wick hits (Stateful Anti-Wick)
+    const requiredHits = BigInt(priceNode?.data.confirmationHits || 1);
+
+    // 6. Tìm Price Velocity Guard
+    const velocityNode = graph.nodes.find(
+      (n) => n.type === 'priceVelocityGuard' || n.data.velocityThresholdBps !== undefined
+    );
+    const velocityThresholdBps = BigInt(velocityNode?.data.velocityThresholdBps || 0);
+    const windowSeconds = BigInt(velocityNode?.data.windowSeconds || 0);
+
+    // 7. Multi-chain Origin & Topic
+    const originChainId = BigInt(triggerNode?.data.originChainId || 84532);
+    const originTopic0 = (triggerNode?.data.customTopic0 ||
+      '0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1') as `0x${string}`;
+
     return {
       pairAddress,
       priceThresholdWei,
       cooldownSeconds,
       percentToSwap,
       actionVaultAddress,
+      requiredHits,
+      velocityThresholdBps,
+      windowSeconds,
+      originChainId,
+      originTopic0,
     };
   }
 
@@ -97,6 +122,11 @@ export class DeployerService {
             params.cooldownSeconds,
             params.percentToSwap,
             params.actionVaultAddress,
+            params.requiredHits,
+            params.velocityThresholdBps,
+            params.windowSeconds,
+            params.originChainId,
+            params.originTopic0,
           ],
           value: parseEther('1.0'), // Tự động nạp 1.0 lREACT gas nuôi callback!
         });
