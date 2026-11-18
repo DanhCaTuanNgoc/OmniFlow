@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 16 | 0 | **88.9%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 17 | 0 | **94.4%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 16 | 12 | 0 | **75.0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **52** | **46** | **0** | **88.5%** |
+| **TỔNG CỘNG** | **21 Ngày** | **52** | **47** | **0** | **90.4%** |
 
 ---
 
@@ -378,11 +378,19 @@
 * **Ngày hoàn thành:** 18/11/2026 14:42
 * **Trạng thái:** `DONE`
 
-#### `TASK-210` [TODO] — Xây dựng Màn hình Vault Manager & Panic Button
-* **Module / Màn hình:** Màn hình 4 — Vault Manager
+#### `TASK-210` [DONE] — Xây dựng Màn hình Vault Manager & Panic Button
+* **Module / Màn hình:** Màn hình 4 — Vault Manager (`frontend/src/app/workspace/vault/page.tsx`)
 * **Mục đích:** Quản lý số dư két an toàn, nạp rút ETH và nút đỏ khẩn cấp `emergencyWithdraw()`.
-* **Chi tiết thực thi:** Deposit/Withdraw UI, Panic Button đỏ rực rỡ gọi on-chain trực tiếp.
-* **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
+* **Chi tiết thực thi:**
+  * Tích hợp Wagmi v2 + Viem kết nối trực tiếp contract `ActionVault.sol` (`0x005d4cb896c9e0B07Bbf961FDC26b098D84079d7`) trên Base Sepolia.
+  * Đọc số dư ETH on-chain thật qua `useBalance` (Zero-Mock Policy) và số dư ví MetaMask kết nối.
+  * Form nạp Native ETH vào ActionVault qua `useSendTransaction` kèm thông báo toast và link Basescan.
+  * Nút đỏ Emergency Panic Button với dialog xác nhận gọi hàm on-chain `emergencyWithdraw()` phi lưu ký 100%.
+  * Nút quản trị phân quyền Non-Custodial gọi `setAuthorizedRSC()` cho phép cấp hoặc thu hồi quyền truy cập của StopLoss RSC.
+  * Hiển thị địa chỉ ví lạnh dự phòng `backupSafeAddress` phục vụ cơ chế SafeSweep chống rút ruột ví.
+* **Ngày tạo:** 14/11/2026 17:35
+* **Ngày hoàn thành:** 18/11/2026 14:46
+* **Trạng thái:** `DONE`
 
 #### `TASK-211` [TODO] — Xây dựng Màn hình Active Automations & Gas Gauge
 * **Module / Màn hình:** Màn hình 2 — Active Automations
