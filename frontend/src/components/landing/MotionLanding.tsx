@@ -3,7 +3,29 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
+import LazySection from "./LazySection";
 import "@/styles/motion-landing.css";
+
+// Dynamic import with ssr: false for lazy loaded sections
+const StudioCanvasShowcase = dynamic(() => import("./StudioCanvasShowcase"), {
+  ssr: false,
+});
+const DefensivePillars = dynamic(() => import("./DefensivePillars"), {
+  ssr: false,
+});
+const OnChainProofLedger = dynamic(() => import("./OnChainProofLedger"), {
+  ssr: false,
+});
+const MultiChainTelemetry = dynamic(() => import("./MultiChainTelemetry"), {
+  ssr: false,
+});
+const ArchitectureFaq = dynamic(() => import("./ArchitectureFaq"), {
+  ssr: false,
+});
+const LandingFooter = dynamic(() => import("./LandingFooter"), {
+  ssr: false,
+});
 
 // Cubic easing: easeOutCubic
 function easeOutCubic(t: number): number {
@@ -160,7 +182,7 @@ export default function MotionLanding() {
 
   return (
     <main className="motion-landing-root">
-      {/* Exact Background Video */}
+      {/* Exact Background Video with Ambient Bottom Fade Mask */}
       <div className="motion-bg">
         <video
           className="motion-bg-video"
@@ -175,9 +197,10 @@ export default function MotionLanding() {
             type="video/mp4"
           />
         </video>
+        <div className="motion-bg-mask" aria-hidden="true" />
       </div>
 
-      {/* Page (Single-Viewport Layout: Header, Hero, Stats) */}
+      {/* Page (Viewport 1: Header, Hero, Stats) */}
       <div className="motion-page">
         {/* 1) Header */}
         <header className="motion-header">
@@ -185,7 +208,7 @@ export default function MotionLanding() {
           <Link
             href="/"
             className="motion-logo-btn"
-            aria-label="Intelligence Home"
+            aria-label="OmniFlow Home"
           >
             <Image
               src="/assets/logo.webp"
@@ -202,15 +225,15 @@ export default function MotionLanding() {
             <Link href="/" className="motion-nav-link active">
               Home
             </Link>
-            <Link href="/workspace/studio" className="motion-nav-link">
+            <a href="#studio" className="motion-nav-link">
               Product
-            </Link>
-            <Link href="/workspace/templates" className="motion-nav-link">
-              Case Studies
-            </Link>
-            <Link href="/workspace/vault" className="motion-nav-link">
-              Contact
-            </Link>
+            </a>
+            <a href="#proof" className="motion-nav-link">
+              Honesty
+            </a>
+            <a href="#faq" className="motion-nav-link">
+              FAQ
+            </a>
           </nav>
 
           {/* Sign in Button */}
@@ -251,27 +274,27 @@ export default function MotionLanding() {
               >
                 Home
               </Link>
-              <Link
-                href="/workspace/studio"
+              <a
+                href="#studio"
                 className="motion-mobile-link"
                 onClick={() => setMenuOpen(false)}
               >
                 Product
-              </Link>
-              <Link
-                href="/workspace/templates"
+              </a>
+              <a
+                href="#proof"
                 className="motion-mobile-link"
                 onClick={() => setMenuOpen(false)}
               >
-                Case Studies
-              </Link>
-              <Link
-                href="/workspace/vault"
+                Honesty
+              </a>
+              <a
+                href="#faq"
                 className="motion-mobile-link"
                 onClick={() => setMenuOpen(false)}
               >
-                Contact
-              </Link>
+                FAQ
+              </a>
               <Link
                 href="/workspace/studio"
                 className="motion-mobile-sign-in"
@@ -350,6 +373,51 @@ export default function MotionLanding() {
             <StatMetric key={idx} {...s} />
           ))}
         </footer>
+      </div>
+
+      {/* ====================================================================
+          Subsequent Sections Body (Lazy-Loaded on Scroll via IntersectionObserver)
+          ==================================================================== */}
+      <div className="motion-sections-body">
+        {/* Section 2: Visual Studio Canvas Showcase */}
+        <div id="studio">
+          <LazySection minHeight="560px">
+            <StudioCanvasShowcase />
+          </LazySection>
+        </div>
+
+        {/* Section 3: 4 Core Defensive Pillars */}
+        <div id="security">
+          <LazySection minHeight="520px">
+            <DefensivePillars />
+          </LazySection>
+        </div>
+
+        {/* Section 4: On-Chain Proof & Honesty Table (Canary Style) */}
+        <div id="proof">
+          <LazySection minHeight="640px">
+            <OnChainProofLedger />
+          </LazySection>
+        </div>
+
+        {/* Section 5: Multi-Chain Network Topology & Telemetry */}
+        <div id="telemetry">
+          <LazySection minHeight="460px">
+            <MultiChainTelemetry />
+          </LazySection>
+        </div>
+
+        {/* Section 6: Frequently Asked Questions */}
+        <div id="faq">
+          <LazySection minHeight="420px">
+            <ArchitectureFaq />
+          </LazySection>
+        </div>
+
+        {/* Section 7: Final Conversion CTA Banner & Footer */}
+        <LazySection minHeight="400px">
+          <LandingFooter />
+        </LazySection>
       </div>
     </main>
   );

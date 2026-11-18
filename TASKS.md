@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 12 | 7 | 1 | **58.3%** |
-| **TỔNG CỘNG** | **21 Ngày** | **47** | **32** | **1** | **68.1%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 12 | 8 | 0 | **66.7%** |
+| **TỔNG CỘNG** | **21 Ngày** | **47** | **33** | **0** | **70.2%** |
 
 ---
 
@@ -586,5 +586,5 @@
     7. Final Conversion CTA & Obsidian Footer.
   * Thiết kế cơ chế Lazy Loading: Sử dụng `IntersectionObserver` với `rootMargin: '250px'` và `next/dynamic` tách bundle, chỉ render component và nạp tài nguyên khi người dùng cuộn đến gần.
 * **Ngày tạo:** 18/11/2026 11:54
-* **Ngày hoàn thành:** Đang thực hiện
-* **Trạng thái:** `IN_PROGRESS`
+* **Ngày hoàn thành:** 18/11/2026 12:07
+* **Trạng thái:** `DONE`
