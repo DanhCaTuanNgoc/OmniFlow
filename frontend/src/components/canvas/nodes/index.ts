@@ -8,3 +8,5 @@ export * from './DEXSwapNode';
 export * from './EmergencySafeSweepNode';
 export * from './NotifyLogWebhookNode';
 export * from './LogicGateNode';
+export * from './CustomEventWatcherNode';
+export * from './PriceVelocityGuardNode';

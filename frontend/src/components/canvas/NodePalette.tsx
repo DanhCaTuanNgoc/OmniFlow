@@ -14,7 +14,9 @@ import {
   GitMerge,
   Search,
   GripVertical,
-  Plus
+  Plus,
+  Radio,
+  Activity
 } from 'lucide-react';
 import { NodeCategory } from '@/types/canvas';
 import { cn } from '@/lib/utils';
@@ -75,6 +77,22 @@ const PALETTE_ITEMS: PaletteItem[] = [
       intervalUnit: 'Hours',
     },
   },
+  {
+    type: 'customEventWatcher',
+    category: 'trigger',
+    name: 'Custom Event Watcher',
+    description: 'Listen to any smart contract topic_0 (Node #11)',
+    icon: <Radio className="w-4 h-4 text-cyan-400" />,
+    defaultData: {
+      label: 'Custom Event Watcher',
+      category: 'trigger',
+      state: 'LISTENING',
+      chainId: 84532,
+      contractAddress: '0x9a796b794999cabcd10d08f777b24ceb76e34b3e',
+      eventName: 'Sync(uint112,uint112)',
+      topic0: '0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1',
+    },
+  },
 
   // 2. Conditions
   {
@@ -118,6 +136,21 @@ const PALETTE_ITEMS: PaletteItem[] = [
       targetAccount: 'ActionVault',
       comparison: 'Above',
       thresholdAmount: 0.05,
+    },
+  },
+  {
+    type: 'priceVelocityGuard',
+    category: 'condition',
+    name: 'Price Velocity Guard',
+    description: 'Detect rapid flash crash drops within seconds (Node #14)',
+    icon: <Activity className="w-4 h-4 text-amber-400" />,
+    defaultData: {
+      label: 'Price Velocity Guard',
+      category: 'condition',
+      state: 'CONFIGURED',
+      velocityThresholdBps: 500,
+      windowSeconds: 10,
+      direction: 'DROP',
     },
   },
 

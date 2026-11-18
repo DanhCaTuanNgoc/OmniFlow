@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 13 | 0 | **72.2%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 16 | 12 | 0 | **75.0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **52** | **42** | **0** | **80.8%** |
+| **TỔNG CỘNG** | **21 Ngày** | **52** | **43** | **0** | **82.7%** |
 
 ---
 
@@ -385,16 +385,18 @@
 * **Chi tiết thực thi:** Pipeline status cards, Gas Gauge bar (Xanh/Vàng/Đỏ), Pause/Resume controls.
 * **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
 
-#### `TASK-212` [TODO] — Mở rộng Palette Studio với Node #11 (Custom Event), Node #14 (Price Velocity) & Chain Selector
+#### `TASK-212` [DONE] — Mở rộng Palette Studio với Node #11 (Custom Event), Node #14 (Price Velocity) & Chain Selector
 * **Module / Màn hình:** Pipeline Studio (`frontend/src/components/canvas/`)
 * **Mục đích:** Đưa 2 Node mới lên Canvas Palette, cấu hình Typed Port Matrix và bổ sung lựa chọn Origin/Destination Chain ID.
 * **Chi tiết thực thi:**
   * Xây dựng `CustomEventWatcherNode.tsx` hỗ trợ nhập địa chỉ hợp đồng, tên event và tự tính `topic_0` qua Viem `toEventSelector()`.
   * Xây dựng `PriceVelocityGuardNode.tsx` với slider `% drop` và cửa sổ thời gian `windowSeconds`.
   * Tích hợp `originChainId` (`84532` Base Sepolia hoặc `1301` Unichain Sepolia) vào Triggers và `destinationChainId` vào Actions.
-  * Hiển thị huy hiệu `[ 🌐 Cross-Chain: Unichain -> Base ]` trên dây nối khi khác Chain ID.
+  * Hiển thị huy hiệu `[ 🌐 Cross-Chain: Unichain -> Base ]` trên dây nối khi khác Chain ID qua `EdgeLabelRenderer`.
   * Ràng buộc Typed Port: Cấm nối Node #11 vào Condition #4 và #14; cho phép nối qua Cooldown #5 / Balance #6 tới Actions.
-* **Ngày tạo:** 14/11/2026 19:30 | **Trạng thái:** `TODO`
+* **Ngày tạo:** 14/11/2026 19:30
+* **Ngày hoàn thành:** 18/11/2026 14:38
+* **Trạng thái:** `DONE`
 
 #### `TASK-213` [TODO] — Triển khai Nút Simulate Flow (Dry-Run Sandbox) & Tab Live Solidity Preview
 * **Module / Màn hình:** Pipeline Studio Toolbar & Inspector (`frontend/src/components/canvas/`)

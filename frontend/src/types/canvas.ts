@@ -43,6 +43,14 @@ export interface PeriodicCronData extends BaseNodeData {
   intervalUnit: 'Minutes' | 'Hours' | 'Days';
 }
 
+export interface CustomEventWatcherData extends BaseNodeData {
+  category: 'trigger';
+  chainId: number;
+  contractAddress: string;
+  eventName: string;
+  topic0?: string;
+}
+
 // 2. Condition Data Types
 export interface PriceThresholdGuardData extends BaseNodeData {
   category: 'condition';
@@ -61,6 +69,13 @@ export interface BalanceThresholdData extends BaseNodeData {
   targetAccount: 'ActionVault' | 'ConnectedWallet';
   comparison: 'Above' | 'Below';
   thresholdAmount: number;
+}
+
+export interface PriceVelocityGuardData extends BaseNodeData {
+  category: 'condition';
+  velocityThresholdBps: number; // e.g. 500 = 5%
+  windowSeconds: number; // e.g. 10s
+  direction: 'DROP' | 'SURGE';
 }
 
 // 3. Action Data Types

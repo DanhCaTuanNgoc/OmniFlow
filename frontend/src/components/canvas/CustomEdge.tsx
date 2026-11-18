@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { EdgeProps, getBezierPath } from '@xyflow/react';
+import { EdgeProps, getBezierPath, EdgeLabelRenderer } from '@xyflow/react';
 
 export function CustomEdge({
   id,
@@ -14,7 +14,7 @@ export function CustomEdge({
   style = {},
   data,
 }: EdgeProps) {
-  const [edgePath] = getBezierPath({
+  const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
     sourcePosition,
@@ -25,52 +25,72 @@ export function CustomEdge({
 
   const isPulsing = (data?.isPulsing as boolean | undefined) ?? true;
   const strokeColor = (data?.color as string | undefined) || '#38bdf8';
+  const crossChainLabel = data?.crossChainLabel as string | undefined;
 
   return (
-    <g className="react-flow__edge-custom group">
-      {/* Layer 1: Soft Outer Neon Glow */}
-      <path
-        d={edgePath}
-        fill="none"
-        stroke={strokeColor}
-        strokeWidth={7}
-        opacity={isPulsing ? 0.2 : 0.08}
-        strokeLinecap="round"
-        className="transition-opacity duration-300 pointer-events-none"
-      />
+    <>
+      <g className="react-flow__edge-custom group">
+        {/* Layer 1: Soft Outer Neon Glow */}
+        <path
+          d={edgePath}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth={7}
+          opacity={isPulsing ? 0.2 : 0.08}
+          strokeLinecap="round"
+          className="transition-opacity duration-300 pointer-events-none"
+        />
 
-      {/* Layer 2: Core Wire */}
-      <path
-        id={id}
-        d={edgePath}
-        fill="none"
-        stroke={strokeColor}
-        strokeWidth={2}
-        strokeOpacity={isPulsing ? 0.85 : 0.4}
-        strokeLinecap="round"
-        style={style}
-      />
+        {/* Layer 2: Core Wire */}
+        <path
+          id={id}
+          d={edgePath}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth={2}
+          strokeOpacity={isPulsing ? 0.85 : 0.4}
+          strokeLinecap="round"
+          style={style}
+        />
 
-      {/* Layer 3: Animated Photon Particle gliding along the stream */}
-      {isPulsing && (
-        <circle r="3" fill="#ffffff" className="pointer-events-none">
-          <animateMotion
-            dur="2.4s"
-            repeatCount="indefinite"
-            path={edgePath}
-          />
-        </circle>
+        {/* Layer 3: Animated Photon Particle gliding along the stream */}
+        {isPulsing && (
+          <circle r="3" fill="#ffffff" className="pointer-events-none">
+            <animateMotion
+              dur="2.4s"
+              repeatCount="indefinite"
+              path={edgePath}
+            />
+          </circle>
+        )}
+
+        {isPulsing && (
+          <circle r="5" fill={strokeColor} opacity={0.6} className="pointer-events-none filter blur-[1px]">
+            <animateMotion
+              dur="2.4s"
+              repeatCount="indefinite"
+              path={edgePath}
+            />
+          </circle>
+        )}
+      </g>
+
+      {/* Cross-Chain Badge */}
+      {crossChainLabel && (
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+              pointerEvents: 'none',
+            }}
+            className="px-2.5 py-0.5 rounded-full bg-[#120824]/95 border border-purple-500/40 text-[10px] font-mono text-purple-300 shadow-xl backdrop-blur-md flex items-center gap-1 select-none"
+          >
+            <span>🌐</span>
+            <span>{crossChainLabel}</span>
+          </div>
+        </EdgeLabelRenderer>
       )}
-
-      {isPulsing && (
-        <circle r="5" fill={strokeColor} opacity={0.6} className="pointer-events-none filter blur-[1px]">
-          <animateMotion
-            dur="2.4s"
-            repeatCount="indefinite"
-            path={edgePath}
-          />
-        </circle>
-      )}
-    </g>
+    </>
   );
 }

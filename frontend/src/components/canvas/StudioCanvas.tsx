@@ -31,6 +31,8 @@ import {
   EmergencySafeSweepNode,
   NotifyLogWebhookNode,
   LogicGateNode,
+  CustomEventWatcherNode,
+  PriceVelocityGuardNode,
 } from './nodes';
 import { CustomEdge } from './CustomEdge';
 import { NodePalette } from './NodePalette';
@@ -55,6 +57,8 @@ const nodeTypes: NodeTypes = {
   emergencySafeSweep: EmergencySafeSweepNode,
   notifyLogWebhook: NotifyLogWebhookNode,
   logicGate: LogicGateNode,
+  customEventWatcher: CustomEventWatcherNode,
+  priceVelocityGuard: PriceVelocityGuardNode,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -172,6 +176,18 @@ function StudioCanvasInner() {
       if (sourceCategory === 'action') return false;
       if (targetCategory === 'trigger') return false;
 
+      // Typed Port Constraint: Custom Event Watcher (Node #11) cannot connect to DEX Price conditions (#4 / #14)
+      if (
+        sourceNode.type === 'customEventWatcher' &&
+        (targetNode.type === 'priceThresholdGuard' || targetNode.type === 'priceVelocityGuard')
+      ) {
+        setValidationWarning(
+          'Custom Event Watcher (Node #11) emits raw topic logs and cannot connect to DEX Price Guards. Use Cooldown Guard (#5) or connect directly to Actions.'
+        );
+        setTimeout(() => setValidationWarning(null), 4000);
+        return false;
+      }
+
       // Check cycles (DAG enforcement)
       const hasCycle = (nodeId: string, visited = new Set<string>()): boolean => {
         if (visited.has(nodeId)) return true;
@@ -198,19 +214,25 @@ function StudioCanvasInner() {
     (params: Connection) => {
       if (isValidConnection(params)) {
         const sourceNode = nodes.find((n) => n.id === params.source);
-        const color =
-          sourceNode?.data.category === 'trigger'
-            ? '#38bdf8'
-            : sourceNode?.data.category === 'condition'
-            ? '#fbbf24'
-            : '#34d399';
+        const targetNode = nodes.find((n) => n.id === params.target);
+
+        const isCrossChain = sourceNode?.data?.chainId === 1301;
+        const color = isCrossChain
+          ? '#c084fc'
+          : sourceNode?.data.category === 'trigger'
+          ? '#38bdf8'
+          : sourceNode?.data.category === 'condition'
+          ? '#fbbf24'
+          : '#34d399';
+
+        const crossChainLabel = isCrossChain ? 'Cross-Chain: Unichain -> Base' : undefined;
 
         setEdges((eds) =>
           addEdge(
             {
               ...params,
               type: 'custom',
-              data: { isPulsing: true, color },
+              data: { isPulsing: true, color, crossChainLabel },
             },
             eds
           )

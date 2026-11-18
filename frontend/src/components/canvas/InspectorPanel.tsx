@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { Node } from '@xyflow/react';
-import { X, Sliders, Trash2, Info } from 'lucide-react';
-import { SUPPORTED_PAIRS } from '@/lib/constants';
+import { X, Sliders, Trash2, Info, Radio, Activity } from 'lucide-react';
+import { SUPPORTED_PAIRS, SUPPORTED_CHAINS } from '@/lib/constants';
+import { toEventSelector } from 'viem';
 
 interface InspectorPanelProps {
   selectedNode: Node | null;
@@ -92,16 +93,71 @@ export function InspectorPanel({
             </div>
 
             <div>
-              <label className="block text-slate-400 mb-1 font-medium">Origin Chain ID</label>
-              <input
-                type="number"
-                disabled
-                value={84532}
-                className="w-full bg-[#07080D]/50 border border-white/[0.05] rounded-xl p-2.5 font-mono text-slate-500 cursor-not-allowed tabular-nums"
-              />
+              <label className="block text-slate-400 mb-1 font-medium">Origin Chain</label>
+              <select
+                value={Number(data.chainId || 84532)}
+                onChange={(e) => handleChange('chainId', parseInt(e.target.value))}
+                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 text-white font-mono text-xs focus:outline-none focus:border-violet-500"
+              >
+                <option value={84532}>Base Sepolia (84532)</option>
+                <option value={1301}>Unichain Sepolia (1301 - Cross-Chain)</option>
+              </select>
               <span className="text-[11px] text-slate-500 mt-1 block">
-                Base Sepolia (200ms Denim block execution)
+                {Number(data.chainId || 84532) === 1301
+                  ? '🌐 Cross-Chain Trigger: Listens to Unichain Sepolia'
+                  : '⚡ Base Sepolia: 200ms Denim block execution'}
               </span>
+            </div>
+          </div>
+        )}
+
+        {/* 1b. Custom Event Watcher (Node #11) */}
+        {type === 'customEventWatcher' && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-slate-400 mb-1 font-medium">Target Contract Address</label>
+              <input
+                type="text"
+                value={String(data.contractAddress || '')}
+                onChange={(e) => handleChange('contractAddress', e.target.value)}
+                placeholder="0xContractAddress..."
+                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 font-mono text-[11px] text-slate-200 focus:outline-none focus:border-violet-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-400 mb-1 font-medium">Event Signature</label>
+              <input
+                type="text"
+                value={String(data.eventName || '')}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  handleChange('eventName', val);
+                  try {
+                    const selector = toEventSelector(val);
+                    handleChange('topic0', selector);
+                  } catch {
+                    // typing incomplete signature
+                  }
+                }}
+                placeholder="Transfer(address,address,uint256)"
+                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 font-mono text-[11px] text-cyan-300 focus:outline-none focus:border-violet-500"
+              />
+              <span className="text-[11px] text-slate-500 mt-1 block font-mono">
+                Topic 0: {String(data.topic0 || 'Enter signature to compute')}
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-slate-400 mb-1 font-medium">Origin Network</label>
+              <select
+                value={Number(data.chainId || 84532)}
+                onChange={(e) => handleChange('chainId', parseInt(e.target.value))}
+                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 text-white font-mono text-xs focus:outline-none focus:border-violet-500"
+              >
+                <option value={84532}>Base Sepolia (84532)</option>
+                <option value={1301}>Unichain Sepolia (1301 - Cross-Chain)</option>
+              </select>
             </div>
           </div>
         )}
@@ -145,6 +201,65 @@ export function InspectorPanel({
                   ${val}
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* 2b. Price Velocity Guard (Node #14) */}
+        {type === 'priceVelocityGuard' && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-slate-400 mb-1 font-medium">Monitoring Mode</label>
+              <select
+                value={String(data.direction || 'DROP')}
+                onChange={(e) => handleChange('direction', e.target.value)}
+                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 text-white focus:outline-none focus:border-violet-500"
+              >
+                <option value="DROP">Rapid Flash Dump (Stop-Loss Protection)</option>
+                <option value="SURGE">Rapid Flash Surge (Take-Profit Spike)</option>
+              </select>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-slate-400 font-medium">Velocity Drop Threshold</label>
+                <span className="font-bold text-rose-400 tabular-nums font-mono">
+                  {(Number(data.velocityThresholdBps || 500) / 100).toFixed(1)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min="100"
+                max="3000"
+                step="50"
+                value={Number(data.velocityThresholdBps || 500)}
+                onChange={(e) => handleChange('velocityThresholdBps', parseInt(e.target.value))}
+                className="w-full accent-rose-400 cursor-pointer"
+              />
+              <span className="text-[11px] text-slate-500 mt-1 block">
+                {Number(data.velocityThresholdBps || 500)} basis points ({((Number(data.velocityThresholdBps || 500)) / 100).toFixed(1)}% drop in window)
+              </span>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-slate-400 font-medium">Anchored Sliding Window</label>
+                <span className="font-bold text-amber-300 tabular-nums font-mono">
+                  {Number(data.windowSeconds || 10)}s
+                </span>
+              </div>
+              <input
+                type="range"
+                min="3"
+                max="60"
+                step="1"
+                value={Number(data.windowSeconds || 10)}
+                onChange={(e) => handleChange('windowSeconds', parseInt(e.target.value))}
+                className="w-full accent-amber-400 cursor-pointer"
+              />
+              <span className="text-[11px] text-slate-500 mt-1 block">
+                Anchored sliding window: tracks ΔPrice / Δt across 1s ReactVM blocks
+              </span>
             </div>
           </div>
         )}
