@@ -721,9 +721,32 @@
 }
 
 /* ==========================================================================
-   Extended Sections & Lazy Loading Engine
+   Extended Sections & Scroll-Triggered Reveal Animation Engine
    (Obsidian Dark & MotionSize Typography Integration)
    ========================================================================== */
+
+/* Scroll-Driven Viewport Reveal Animation */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(36px) scale(0.98);
+  filter: blur(8px);
+  transition: opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+              filter 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform, filter;
+}
+
+.scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+}
+
+.scroll-stagger-1 { transition-delay: 0.08s; }
+.scroll-stagger-2 { transition-delay: 0.16s; }
+.scroll-stagger-3 { transition-delay: 0.24s; }
+.scroll-stagger-4 { transition-delay: 0.32s; }
+.scroll-stagger-5 { transition-delay: 0.40s; }
 
 /* Lazy Loading Wrapper & Ghost Skeleton */
 .motion-lazy-section {
@@ -733,17 +756,17 @@
 
 .motion-section-reveal {
   opacity: 0;
-  transform: translateY(44px);
-  filter: blur(10px);
-  animation: sectionScrollReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform: translateY(36px);
+  filter: blur(8px);
+  animation: sectionScrollReveal 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   will-change: transform, opacity, filter;
 }
 
 @keyframes sectionScrollReveal {
   0% {
     opacity: 0;
-    transform: translateY(44px);
-    filter: blur(10px);
+    transform: translateY(36px);
+    filter: blur(8px);
   }
   100% {
     opacity: 1;

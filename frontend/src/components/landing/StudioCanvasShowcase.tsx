@@ -138,7 +138,7 @@ export default function StudioCanvasShowcase() {
 
   return (
     <section className="motion-section studio-showcase-section" aria-label="Visual Studio Showcase">
-      <div className="motion-section-header">
+      <div className="motion-section-header scroll-reveal">
         <span className="motion-coord-tag">0x01 // STUDIO_ORCHESTRATION</span>
         <div className="motion-badge-pill">
           <span className="motion-badge-dot" />
@@ -152,7 +152,7 @@ export default function StudioCanvasShowcase() {
       </div>
 
       {/* Recipe Selector Dock */}
-      <div className="recipe-dock-container">
+      <div className="recipe-dock-container scroll-reveal scroll-stagger-1">
         <div className="recipe-dock" role="tablist" aria-label="Pipeline Preset Recipes">
           {RECIPES.map((r, i) => (
             <button
@@ -169,7 +169,7 @@ export default function StudioCanvasShowcase() {
       </div>
 
       {/* Interactive Mockup Canvas Surface */}
-      <div className="showcase-canvas-container">
+      <div className="showcase-canvas-container scroll-reveal scroll-stagger-2">
         <div className="showcase-canvas-header">
           <div className="showcase-window-controls">
             <span className="ctrl-dot red" />

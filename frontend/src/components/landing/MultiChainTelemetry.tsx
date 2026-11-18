@@ -17,7 +17,7 @@ export default function MultiChainTelemetry() {
 
   return (
     <section className="motion-section telemetry-section" aria-label="Multi-Chain Network Topology">
-      <div className="motion-section-header">
+      <div className="motion-section-header scroll-reveal">
         <span className="motion-coord-tag">0x04 // NETWORK_TELEMETRY</span>
         <div className="motion-badge-pill">
           <span className="motion-badge-dot" />
@@ -33,7 +33,7 @@ export default function MultiChainTelemetry() {
       {/* Network Cards Grid */}
       <div className="telemetry-networks-grid">
         {/* Base Sepolia Card */}
-        <div className="network-card">
+        <div className="network-card scroll-reveal scroll-stagger-1">
           <div className="network-card-header">
             <div className="network-title-group">
               <span className="network-icon base">
@@ -71,7 +71,7 @@ export default function MultiChainTelemetry() {
         </div>
 
         {/* Reactive Omni Lasna Card */}
-        <div className="network-card">
+        <div className="network-card scroll-reveal scroll-stagger-2">
           <div className="network-card-header">
             <div className="network-title-group">
               <span className="network-icon reactive">
@@ -110,7 +110,7 @@ export default function MultiChainTelemetry() {
       </div>
 
       {/* Synchronized Performance Metrics Bar */}
-      <div className="telemetry-bar-card">
+      <div className="telemetry-bar-card scroll-reveal scroll-stagger-3">
         <div className="telemetry-bar-item">
           <span className="telemetry-glyph">&lt;</span>
           <div className="telemetry-metric">

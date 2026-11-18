@@ -8,7 +8,7 @@ export default function LandingFooter() {
   return (
     <footer className="motion-footer-section" aria-label="Page Footer">
       {/* Final Conversion CTA Banner */}
-      <div className="motion-cta-banner">
+      <div className="motion-cta-banner scroll-reveal">
         <div className="cta-banner-content">
           <div className="motion-badge-pill">
             <span className="motion-badge-dot" />
@@ -34,7 +34,7 @@ export default function LandingFooter() {
       </div>
 
       {/* Main Footer Links & Copyright */}
-      <div className="motion-footer-main">
+      <div className="motion-footer-main scroll-reveal scroll-stagger-1">
         <div className="footer-top-row">
           {/* Brand Info */}
           <div className="footer-brand-col">

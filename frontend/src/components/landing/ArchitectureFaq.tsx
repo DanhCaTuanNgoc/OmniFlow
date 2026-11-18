@@ -50,7 +50,7 @@ export default function ArchitectureFaq() {
 
   return (
     <section className="motion-section faq-section" aria-label="Architecture FAQ">
-      <div className="motion-section-header">
+      <div className="motion-section-header scroll-reveal">
         <span className="motion-coord-tag">0x05 // TECHNICAL_FAQ</span>
         <div className="motion-badge-pill">
           <span className="motion-badge-dot" />
@@ -69,7 +69,7 @@ export default function ArchitectureFaq() {
           return (
             <div
               key={i}
-              className={`faq-card ${isOpen ? "open" : ""}`}
+              className={`faq-card scroll-reveal scroll-stagger-${Math.min(i + 1, 5)} ${isOpen ? "open" : ""}`}
               onClick={() => toggle(i)}
             >
               <div className="faq-question-row">

@@ -82,7 +82,7 @@ export default function OnChainProofLedger() {
 
   return (
     <section className="motion-section proof-ledger-section" aria-label="On-Chain Proof & Honesty Table">
-      <div className="motion-section-header">
+      <div className="motion-section-header scroll-reveal">
         <span className="motion-coord-tag">0x03 // ONCHAIN_PROOF_LEDGER</span>
         <div className="motion-badge-pill amber">
           <span className="motion-badge-dot amber" />
@@ -96,7 +96,7 @@ export default function OnChainProofLedger() {
       </div>
 
       {/* 1-Command Re-Verification Box */}
-      <div className="proof-terminal-card">
+      <div className="proof-terminal-card scroll-reveal scroll-stagger-1">
         <div className="terminal-card-header">
           <div className="terminal-header-info">
             <span className="terminal-tag">
@@ -165,7 +165,7 @@ export default function OnChainProofLedger() {
       </div>
 
       {/* Honesty Claims Table (Canary Style) */}
-      <div className="honesty-table-card">
+      <div className="honesty-table-card scroll-reveal scroll-stagger-2">
         <div className="honesty-header">
           <div>
             <h3 className="honesty-title">Honesty Table: What is Live vs What is Pending</h3>

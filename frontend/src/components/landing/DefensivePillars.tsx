@@ -53,7 +53,7 @@ const PILLARS: Pillar[] = [
 export default function DefensivePillars() {
   return (
     <section className="motion-section defensive-pillars-section" aria-label="Defensive Security Pillars">
-      <div className="motion-section-header">
+      <div className="motion-section-header scroll-reveal">
         <span className="motion-coord-tag">0x02 // DEFENSIVE_INVARIANTS</span>
         <div className="motion-badge-pill">
           <span className="motion-badge-dot" />
@@ -67,8 +67,8 @@ export default function DefensivePillars() {
       </div>
 
       <div className="pillars-grid">
-        {PILLARS.map((p) => (
-          <div key={p.number} className="pillar-card">
+        {PILLARS.map((p, idx) => (
+          <div key={p.number} className={`pillar-card scroll-reveal scroll-stagger-${idx + 1}`}>
             <div className="pillar-header">
               <div className="pillar-icon-ring">
                 <div className="pillar-icon-inner">
