@@ -152,7 +152,7 @@ export function NodeCard({
   return (
     <div
       className={cn(
-        'relative w-72 rounded-2xl bg-[#0E1017]/95 backdrop-blur-2xl border border-white/[0.08] select-none transition-all duration-200',
+        'relative w-72 rounded-2xl bg-[#0E1017]/98 border border-white/[0.08] select-none transition-[border-color,box-shadow,transform] duration-150 transform-gpu',
         cat.topBorder,
         cat.shadowGlow,
         selected

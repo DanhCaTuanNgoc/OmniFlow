@@ -37,7 +37,7 @@ function DEXSwapNodeComponent({ id, data, selected }: NodeProps) {
           </div>
           <div className="w-full bg-[#131620] rounded-full h-1.5 overflow-hidden border border-white/[0.08]">
             <div
-              className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-1.5 rounded-full transition-all duration-300 shadow-sm"
+              className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-1.5 rounded-full transition-[width] duration-300 shadow-sm"
               style={{ width: `${percent}%` }}
             />
           </div>

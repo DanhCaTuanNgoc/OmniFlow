@@ -207,7 +207,7 @@ export default function ActiveAutomationsPage() {
         </h3>
 
         {/* Live Active Pipeline Card */}
-        <div className="p-5 md:p-6 rounded-2xl bg-[#0b0c10]/90 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.18] transition-all space-y-5 shadow-2xl">
+        <div className="p-5 md:p-6 rounded-2xl bg-[#0b0c10]/90 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-colors duration-150 space-y-5 shadow-2xl">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-white/[0.06]">
             <div>
               <div className="flex items-center gap-2.5">
@@ -237,7 +237,7 @@ export default function ActiveAutomationsPage() {
                 href={`https://lasna.reactscan.net/address/${rscAddress}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-full bg-[#16171a] hover:bg-[#202126] text-white border border-white/20 transition-all cursor-pointer shadow-sm"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-full bg-[#16171a] hover:bg-[#202126] text-white border border-white/20 transition-colors duration-150 cursor-pointer shadow-sm"
               >
                 <span>ReactScan</span>
                 <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
@@ -296,7 +296,7 @@ export default function ActiveAutomationsPage() {
             </div>
             <div className="w-full bg-[#050608] h-2.5 rounded-full border border-white/[0.08] overflow-hidden p-0.5">
               <div
-                className={`bg-gradient-to-r ${gaugeColor} h-full rounded-full transition-all duration-500`}
+                className={`bg-gradient-to-r ${gaugeColor} h-full rounded-full transition-[width] duration-500`}
                 style={{ width: `${gasPercentage}%` }}
               />
             </div>
@@ -352,7 +352,7 @@ export default function ActiveAutomationsPage() {
                 <button
                   onClick={handleRefuel}
                   disabled={isRefuelPending || isRefuelConfirming || !isConnected}
-                  className="px-5 py-2 text-xs font-semibold rounded-full bg-violet-600 hover:bg-violet-500 text-white shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 text-xs font-semibold rounded-full bg-violet-600 hover:bg-violet-500 text-white shadow-sm transition-[background-color,transform] duration-150 cursor-pointer disabled:opacity-50"
                 >
                   {isRefuelPending || isRefuelConfirming ? (
                     <span className="flex items-center gap-1.5">

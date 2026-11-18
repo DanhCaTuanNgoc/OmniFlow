@@ -249,7 +249,7 @@ export default function ActivityLogsPage() {
           <button
             onClick={fetchLogs}
             disabled={isRefreshing}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#16171a] hover:bg-[#202126] border border-white/20 text-xs text-white transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#16171a] hover:bg-[#202126] border border-white/20 text-xs text-white transition-colors duration-150 cursor-pointer disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyan-400' : 'text-slate-400'}`} />
             <span>{isRefreshing ? 'Syncing...' : 'Refresh'}</span>
@@ -304,7 +304,7 @@ export default function ActivityLogsPage() {
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
-                className={`px-3.5 py-1 font-medium capitalize rounded-full transition-all cursor-pointer ${
+                className={`px-3.5 py-1 font-medium capitalize rounded-full transition-colors duration-150 cursor-pointer ${
                   filter === tab
                     ? 'bg-white text-black font-semibold shadow-sm'
                     : 'text-[#8e8e8e] hover:text-white'
@@ -319,7 +319,7 @@ export default function ActivityLogsPage() {
           <div className="flex items-center gap-1.5 p-1 bg-[#121318] rounded-full border border-white/20 text-xs">
             <button
               onClick={() => setChainFilter('ALL')}
-              className={`px-3 py-1 font-medium rounded-full transition-all cursor-pointer ${
+              className={`px-3 py-1 font-medium rounded-full transition-colors duration-150 cursor-pointer ${
                 chainFilter === 'ALL' ? 'bg-violet-600 text-white font-semibold' : 'text-[#8e8e8e] hover:text-white'
               }`}
             >
@@ -327,7 +327,7 @@ export default function ActivityLogsPage() {
             </button>
             <button
               onClick={() => setChainFilter(84532)}
-              className={`px-3 py-1 font-medium rounded-full transition-all cursor-pointer ${
+              className={`px-3 py-1 font-medium rounded-full transition-colors duration-150 cursor-pointer ${
                 chainFilter === 84532 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-[#8e8e8e] hover:text-white'
               }`}
             >
@@ -335,7 +335,7 @@ export default function ActivityLogsPage() {
             </button>
             <button
               onClick={() => setChainFilter(5318007)}
-              className={`px-3 py-1 font-medium rounded-full transition-all cursor-pointer ${
+              className={`px-3 py-1 font-medium rounded-full transition-colors duration-150 cursor-pointer ${
                 chainFilter === 5318007 ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' : 'text-[#8e8e8e] hover:text-white'
               }`}
             >

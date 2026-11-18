@@ -202,7 +202,7 @@ export default function VaultManagerPage() {
               refetchVaultBalance();
               refetchUserBalance();
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full bg-[#16171a] hover:bg-[#202126] text-[#c4c2c3] hover:text-white border border-white/20 transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full bg-[#16171a] hover:bg-[#202126] text-[#c4c2c3] hover:text-white border border-white/20 transition-colors duration-150 cursor-pointer shadow-sm"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isVaultBalanceLoading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -212,7 +212,7 @@ export default function VaultManagerPage() {
             href={`https://sepolia.basescan.org/address/${vaultAddress}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-full bg-[#16171a] hover:bg-[#202126] text-white border border-white/20 transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-full bg-[#16171a] hover:bg-[#202126] text-white border border-white/20 transition-colors duration-150 cursor-pointer shadow-sm"
           >
             <span>Basescan</span>
             <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
@@ -384,7 +384,7 @@ export default function VaultManagerPage() {
                 <button
                   onClick={handleDeposit}
                   disabled={isDepositPending || isDepositConfirming || !isConnected || !isCorrectChain}
-                  className="flex items-center gap-1.5 px-5 py-2 text-xs font-semibold rounded-full bg-white hover:bg-white/90 text-black shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-5 py-2 text-xs font-semibold rounded-full bg-white hover:bg-white/90 text-black shadow-sm transition-[background-color,transform] duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isDepositPending || isDepositConfirming ? (
                     <>
@@ -419,7 +419,7 @@ export default function VaultManagerPage() {
               <button
                 onClick={handleToggleAuthorizeRsc}
                 disabled={isWritePending || isWriteConfirming || !isConnected || !isCorrectChain}
-                className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-full border transition-all cursor-pointer disabled:opacity-50 ${
+                className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-full border transition-colors duration-150 cursor-pointer disabled:opacity-50 ${
                   isRscAuthorized !== false
                     ? 'bg-[#16171a] hover:bg-rose-500/10 text-slate-300 hover:text-rose-300 border-white/20 hover:border-rose-500/30'
                     : 'bg-emerald-600 hover:bg-emerald-500 text-white border-transparent'
@@ -439,7 +439,7 @@ export default function VaultManagerPage() {
         {/* Panic Button Card */}
         <div className="p-5 md:p-6 rounded-2xl bg-[#140a0e]/90 backdrop-blur-xl border border-rose-500/30 flex flex-col justify-between space-y-4 shadow-2xl">
           <div className="space-y-3">
-            <div className="flex items-center justify-between pb-3 border-b border-rose-500/20">
+            <div className="flex items-center justify-between pb-3 border-rose-500/20 border-b">
               <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
                 <AlertOctagon className="w-4 h-4 text-rose-400" />
                 <span>Emergency Panic Button</span>
@@ -462,7 +462,7 @@ export default function VaultManagerPage() {
               <button
                 onClick={() => setIsPanicConfirmOpen(true)}
                 disabled={isWritePending || isWriteConfirming || !isConnected || !isCorrectChain}
-                className="w-full flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold rounded-full bg-rose-600 hover:bg-rose-500 text-white shadow-[0_2px_14px_rgba(244,63,94,0.4)] transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold rounded-full bg-rose-600 hover:bg-rose-500 text-white shadow-[0_2px_14px_rgba(244,63,94,0.4)] transition-[transform,background-color] duration-150 cursor-pointer hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
               >
                 <AlertOctagon className="w-4 h-4" />
                 <span>Trigger Emergency Panic Withdraw (100% ETH)</span>

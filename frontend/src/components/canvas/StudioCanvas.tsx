@@ -525,7 +525,7 @@ function StudioCanvasInner() {
       {/* Main XYFlow Canvas Area */}
       <div className="flex-1 flex flex-col h-full relative" ref={reactFlowWrapper}>
         {/* Studio Top Control Bar */}
-        <div className="h-16 border-b border-white/[0.08] bg-[#000000]/80 backdrop-blur-xl px-5 flex items-center justify-between z-10 font-sans">
+        <div className="h-16 border-b border-white/[0.08] bg-[#000000]/85 backdrop-blur-md px-5 flex items-center justify-between z-10 font-sans transform-gpu">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />

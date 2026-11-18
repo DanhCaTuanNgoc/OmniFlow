@@ -149,9 +149,9 @@ export default function TemplateLibraryPage() {
                 <Link
                   href={`/workspace/studio?recipe=${recipe.id}`}
                   prefetch={true}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-[#16171a] hover:bg-white text-white hover:text-black border border-white/20 hover:border-transparent transition-all cursor-pointer shadow-sm"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-[#16171a] hover:bg-white text-white hover:text-black border border-white/20 hover:border-transparent transition-colors duration-150 cursor-pointer shadow-sm"
                 >
-                  <Zap className="w-3.5 h-3.5 fill-current transition-all" />
+                  <Zap className="w-3.5 h-3.5 fill-current" />
                   <span>Hydrate onto Studio Canvas</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                 </Link>
