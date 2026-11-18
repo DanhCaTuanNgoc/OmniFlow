@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 16 | 14 | 0 | **87.5%** |
-| **TỔNG CỘNG** | **21 Ngày** | **52** | **50** | **0** | **96.2%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 16 | 15 | 0 | **93.8%** |
+| **TỔNG CỘNG** | **21 Ngày** | **52** | **51** | **0** | **98.1%** |
 
 ---
 
@@ -531,11 +531,17 @@
 * **Ngày hoàn thành:** 17/11/2026 09:55
 * **Trạng thái:** `DONE`
 
-#### `TASK-304` [TODO] — Đóng gói Docker & Triển khai Cloud (Vercel & Railway)
-* **Module / Màn hình:** Hạ tầng Cloud Deploy
+#### `TASK-304` [DONE] — Đóng gói Docker & Triển khai Cloud (Vercel & Railway)
+* **Module / Màn hình:** Hạ tầng Cloud Deploy (`backend/Dockerfile`, `frontend/Dockerfile`, `backend/railway.json`, `frontend/vercel.json`, `docker-compose.yml`)
 * **Mục đích:** Đưa toàn bộ hệ thống lên môi trường production sẵn sàng cho BGK truy cập.
-* **Chi tiết thực thi:** Deploy Frontend lên Vercel Edge, Deploy Backend lên Railway container, cấu hình CORS/Proxy.
-* **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
+* **Chi tiết thực thi:**
+  * Xây dựng `backend/Dockerfile` multi-stage (Node 20 Alpine builder $\rightarrow$ runner tinh gọn) tích hợp healthcheck tự động vào `/health`.
+  * Cấu hình `backend/railway.json` chuẩn schema Railway với restart policy và timeout probe.
+  * Xây dựng `frontend/Dockerfile` tối ưu và `frontend/vercel.json` thiết lập tiêu chuẩn bảo mật (CSP, X-Frame-Options, X-Content-Type nosniff).
+  * Xây dựng `docker-compose.yml` monorepo cho phép khởi chạy đồng bộ toàn bộ backend và frontend chỉ với 1 lệnh `docker compose up`.
+* **Ngày tạo:** 14/11/2026 17:35
+* **Ngày hoàn thành:** 18/11/2026 14:56
+* **Trạng thái:** `DONE`
 
 #### `TASK-305` [TODO] — Kiểm thử Toàn diện & Rà soát Tiêu chuẩn WCAG 2.1 AA
 * **Module / Màn hình:** Toàn bộ Frontend & Smart Contracts
