@@ -22,7 +22,7 @@ export class WebSocketGateway {
       ws.isAlive = true;
       ws.subscribedPipelines = new Set();
 
-      console.log('🔌 New WebSocket client connected');
+      console.log(`🔌 New WebSocket client connected (active: ${this.wss.clients.size})`);
 
       // Gửi thông điệp chào mừng
       this.sendToClient(ws, {
@@ -60,8 +60,8 @@ export class WebSocketGateway {
         }
       });
 
-      ws.on('close', () => {
-        console.log('🔌 WebSocket client disconnected');
+      ws.on('close', (code: number, reason: Buffer) => {
+        console.log(`🔌 WebSocket client disconnected (code: ${code}, active: ${this.wss.clients.size})`);
       });
 
       ws.on('error', (err) => {

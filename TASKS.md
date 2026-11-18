@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 22 | 22 | 0 | **100%** |
-| **TỔNG CỘNG** | **21 Ngày** | **58** | **58** | **0** | **100% HOÀN TẤT** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 23 | 23 | 0 | **100%** |
+| **TỔNG CỘNG** | **21 Ngày** | **59** | **59** | **0** | **100% HOÀN TẤT** |
 
 ---
 
@@ -821,4 +821,15 @@
   6. Kiểm tra `pnpm --filter frontend exec tsc --noEmit` đạt 0 lỗi, toàn bộ 76 testcases đạt 100% PASS.
 * **Ngày tạo:** 18/11/2026 17:23
 * **Ngày hoàn thành:** 18/11/2026 17:28
+* **Trạng thái:** `DONE`
+
+#### `TASK-323` [DONE] — Khắc Phục Lỗi MetaMask SDK Missing Module & Vòng Lặp WebSocket Zombie Reconnection Flapping
+* **Module / Màn hình:** Frontend & Backend WebSocket Stream (`frontend/src/lib/wagmi.ts`, `frontend/next.config.mjs`, `StudioCanvas.tsx`, `logs/page.tsx`, `backend/src/websocket/gateway.ts`)
+* **Mục đích:** Khắc phục triệt để lỗi thiếu module `@react-native-async-storage/async-storage` của MetaMask SDK làm reload dev server, và loại bỏ lỗi rò rỉ kết nối WebSocket lặp vô tận (zombie reconnect loop) khi component unmount hoặc React StrictMode kích hoạt.
+* **Chi tiết thực thi:**
+  1. Thay thế import `injected` từ `'wagmi/connectors'` sang `'wagmi'` trực tiếp và bổ sung Webpack fallback `@react-native-async-storage/async-storage: false` vào `next.config.mjs`, dập tắt hoàn toàn warning module và trigger hot reload liên tục.
+  2. Bổ sung cờ `isCancelled` và giải phóng handler `ws.onclose = null` trước khi gọi `ws.close()` trong `StudioCanvas.tsx` và `logs/page.tsx`, triệt tiêu toàn bộ orphan reconnect timers khi StrictMode unmount.
+  3. Nâng cấp logging WebSocket server ở backend với mã đóng `close code` và số lượng active clients phục vụ chẩn đoán real-time.
+* **Ngày tạo:** 18/11/2026 18:02
+* **Ngày hoàn thành:** 18/11/2026 18:04
 * **Trạng thái:** `DONE`

@@ -150,16 +150,23 @@ export default function ActivityLogsPage() {
   // Real-time WebSocket connection to event stream
   useEffect(() => {
     let ws: WebSocket | null = null;
-    let reconnectTimer: NodeJS.Timeout;
+    let reconnectTimer: NodeJS.Timeout | null = null;
+    let isCancelled = false;
 
     const connectWs = () => {
+      if (isCancelled) return;
       try {
         ws = new WebSocket(APP_CONFIG.wsUrl);
         ws.onopen = () => {
+          if (isCancelled) {
+            ws?.close();
+            return;
+          }
           setWsStatus('CONNECTED');
           ws?.send(JSON.stringify({ type: 'SUBSCRIBE_PIPELINE', pipelineId: 'all' }));
         };
         ws.onmessage = (event) => {
+          if (isCancelled) return;
           try {
             const msg = JSON.parse(event.data);
             if (msg.type === 'REACTIVE_STEP_UPDATE' && msg.data) {
@@ -191,22 +198,34 @@ export default function ActivityLogsPage() {
           }
         };
         ws.onclose = () => {
+          if (isCancelled) return;
           setWsStatus('DISCONNECTED');
           reconnectTimer = setTimeout(connectWs, 5000);
         };
         ws.onerror = () => {
+          if (isCancelled) return;
           setWsStatus('DISCONNECTED');
         };
       } catch {
-        setWsStatus('DISCONNECTED');
+        if (!isCancelled) {
+          setWsStatus('DISCONNECTED');
+          reconnectTimer = setTimeout(connectWs, 5000);
+        }
       }
     };
 
     connectWs();
 
     return () => {
-      clearTimeout(reconnectTimer);
-      if (ws) ws.close();
+      isCancelled = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) {
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.close();
+      }
     };
   }, []);
 

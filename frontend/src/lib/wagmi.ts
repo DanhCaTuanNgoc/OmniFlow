@@ -1,5 +1,4 @@
-import { http, createConfig } from 'wagmi';
-import { injected } from 'wagmi/connectors';
+import { http, createConfig, injected } from 'wagmi';
 import { baseSepoliaChain, reactiveLasnaChain } from './chains';
 
 export const wagmiConfig = createConfig({
