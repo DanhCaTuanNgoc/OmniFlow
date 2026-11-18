@@ -1,21 +1,17 @@
 import type { Metadata } from "next";
-import Landing from "@/components/landing/Landing";
-import LandingRuntime from "@/components/landing/LandingRuntime";
-import "@/components/landing/landing.css";
+import MotionLanding from "@/components/landing/MotionLanding";
 
 export const metadata: Metadata = {
-  title: "OmniFlow · The Zapier of Web3",
+  title: "Intelligence Designed To Evolve",
   description:
-    "No-Code Cross-Chain Automation Powered by Reactive Omni. Build autonomous event-driven triggers on Base Sepolia, execute on Lasna, and trigger non-custodial ActionVault execution with zero off-chain keepers.",
+    "Build applications that reason, adapt and collaborate using a modular AI platform designed for production.",
 };
 
-export const viewport = { width: "device-width" };
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export default function Home() {
-  return (
-    <>
-      <Landing />
-      <LandingRuntime />
-    </>
-  );
+  return <MotionLanding />;
 }

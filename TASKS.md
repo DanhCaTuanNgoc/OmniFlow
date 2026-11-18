@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 10 | 6 | 0 | **60.0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **45** | **31** | **0** | **68.9%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 11 | 7 | 0 | **63.6%** |
+| **TỔNG CỘNG** | **21 Ngày** | **46** | **32** | **0** | **69.6%** |
 
 ---
 
@@ -554,4 +554,20 @@
   * Kiểm tra biên dịch TypeScript `pnpm --filter frontend exec tsc --noEmit` đạt 0 lỗi. Tốc độ chuyển màn hình giảm từ ~3-5s xuống <50ms.
 * **Ngày tạo:** 17/11/2026 20:45
 * **Ngày hoàn thành:** 17/11/2026 20:53
+* **Trạng thái:** `DONE`
+
+#### `TASK-311` [DONE] — Tái cấu trúc Toàn diện Landing Page theo Thiết kế MotionSize Single-Viewport Video Background
+* **Module / Màn hình:** Landing Page (`frontend/src/app/page.tsx`, `frontend/src/components/landing/`, `landing.css`, `motion-landing.css`)
+* **Mục đích:** Thay thế hoàn toàn trang Landing Page hiện tại bằng thiết kế mới từ `docs/MOTION_UI_PROMPT.md` (single-viewport, full-bleed video-background, Bubbledot retro dot-matrix display typography, Font Awesome brand icons, interactive entrance animations, responsive mobile slide-down menu sheet, và live count-up stats).
+* **Chi tiết thực thi:**
+  * Nhúng background video CloudFront chuẩn xác (`hf_20260809_012548_ef22562c-c0ae-4816-ad9d-f8922af4e6a7.mp4`) chế độ autoplay, muted, loop, playsinline, bao phủ 100vh/100dvh.
+  * Tích hợp font CDN chuẩn: `BubbledotICG-FinePos` (OnlineWebFonts), `Inter` (Google Fonts), fallback `Geist Pixel Circle`, và Font Awesome 6.5.2 (Microsoft, Amazon, Google brand icons).
+  * Xây dựng layout 3 vùng trên 1 viewport (Header, Hero, Stats footer) với CSS variables chuẩn xác.
+  * Header: Logo nút tròn 46px viền trắng với hiệu ứng hover scale 1.04; Nav pill trắng bo tròn với active dots indicator; Sign in pill tối kết nối chuyển trang mượt mà vào Workspace Studio (`/workspace/studio`).
+  * Hero: Trust badge ("Trusted by 2000+ Enterprises") với 3 avatar ring thương hiệu lồng nhau; Headline 2 dòng chuẩn xác (`Intelligence` / `Designed To Evolve`) phông Bubbledot dot-matrix; Subhead chuẩn; CTA "Get Started" hiệu ứng specular glow và `revealPulse`.
+  * Stats footer: 4 metric trực quan (`< 120 ms Inference Time`, `% 99.99 % Platform Uptime`, `* 24 /7 Autonomous Runtime`, `# 2.4 M Context Windows`) với count-up animation easeOutCubic.
+  * Responsive Mobile (<=720px): Burger toggle chuyển dấu X, full-screen dark overlay với backdrop-blur, white sheet navigation trượt từ trên xuống, đóng khi bấm link/escape/overlay.
+  * Kiểm tra biên dịch TypeScript `pnpm --filter frontend exec tsc --noEmit` và `pnpm --filter backend build` đạt 100% không lỗi.
+* **Ngày tạo:** 18/11/2026 11:40
+* **Ngày hoàn thành:** 18/11/2026 11:47
 * **Trạng thái:** `DONE`
