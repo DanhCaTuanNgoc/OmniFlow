@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 16 | 13 | 0 | **81.3%** |
-| **TỔNG CỘNG** | **21 Ngày** | **52** | **49** | **0** | **94.2%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 16 | 14 | 0 | **87.5%** |
+| **TỔNG CỘNG** | **21 Ngày** | **52** | **50** | **0** | **96.2%** |
 
 ---
 
@@ -508,11 +508,17 @@
 * **Ngày hoàn thành:** 18/11/2026 14:52
 * **Trạng thái:** `DONE`
 
-#### `TASK-302` [TODO] — Xây dựng Màn hình Activity Logs & Cross-Chain Explorer
-* **Module / Màn hình:** Màn hình 5 — Activity Logs
+#### `TASK-302` [DONE] — Xây dựng Màn hình Activity Logs & Cross-Chain Explorer
+* **Module / Màn hình:** Màn hình 5 — Activity Logs (`frontend/src/app/workspace/logs/page.tsx`)
 * **Mục đích:** Hiển thị dòng chảy sự kiện trực tiếp và bộ Fallback Initial Data Seed kèm link explorer thật.
-* **Chi tiết thực thi:** Proof stream bảng log, filter chain, link Basescan và Reactscan.
-* **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
+* **Chi tiết thực thi:**
+  * Kết nối WebSocket Gateway thời gian thực (`/stream`) tự động hiển thị logs khi có giao dịch mới mà không cần F5 trang.
+  * Cập nhật `FALLBACK_ACTIVITY_LOGS` và frontend seed bằng các mã giao dịch on-chain thật 100% từ `FULL_LOOP_EVIDENCE.json` (Origin Tx `#60317870`, Lasna RVM Tx `#8633526`, ActionVault Tx `#60317785`).
+  * Bổ sung bộ lọc đa chuỗi: All Chains, Base Sepolia (84532), Reactive Lasna (5318007) và bộ lọc trạng thái Executed/Defended.
+  * Tích hợp Modal xem chi tiết và copy toàn bộ JSON Audit Proof cho từng giao dịch.
+* **Ngày tạo:** 14/11/2026 17:35
+* **Ngày hoàn thành:** 18/11/2026 14:55
+* **Trạng thái:** `DONE`
 
 #### `TASK-303` [DONE] — Xây dựng Landing Page Hero & Mini Interactive Canvas
 * **Module / Màn hình:** Landing Page (`/`)
