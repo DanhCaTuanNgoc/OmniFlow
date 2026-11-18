@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 14 | 0 | **77.8%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 16 | 0 | **88.9%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 16 | 12 | 0 | **75.0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **52** | **44** | **0** | **84.6%** |
+| **TỔNG CỘNG** | **21 Ngày** | **52** | **46** | **0** | **88.5%** |
 
 ---
 
@@ -367,11 +367,16 @@
 * **Ngày hoàn thành:** 14/11/2026 18:38
 * **Trạng thái:** `DONE`
 
-#### `TASK-209` [TODO] — Xây dựng Màn hình Template Library (Recipe Store 1-Click)
-* **Module / Màn hình:** Màn hình 3 — Template Library
+#### `TASK-209` [DONE] — Xây dựng Màn hình Template Library (Recipe Store 1-Click)
+* **Module / Màn hình:** Màn hình 3 — Template Library (`frontend/src/app/workspace/templates/page.tsx`)
 * **Mục đích:** Cho phép người dùng và Giám khảo hydrate công thức có sẵn lên Canvas trong 1 click.
-* **Chi tiết thực thi:** 4 Recipes (Flash Crash Stop-Loss, Take-Profit Scalper, Anti-Drainer, DCA Out).
-* **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
+* **Chi tiết thực thi:**
+  * Xây dựng module `frontend/src/lib/recipes.ts` chứa đầy đủ cấu hình đồ thị 6 Recipes (Flash Crash Stop-Loss, Take-Profit Scalper, Anti-Drainer, Daily Autonomous Rebalancer, Payday Auto-Splitter, Unichain Cross-Chain Hedge).
+  * Kết nối điều hướng `href="/workspace/studio?recipe=${id}"` và kích hoạt tự động hydrate toàn bộ nodes/edges lên Studio Canvas qua `useSearchParams`.
+  * Bổ sung bộ chọn nhanh Preset Selector trên Studio Top Control Bar cho phép chuyển đổi tức thì giữa các công thức.
+* **Ngày tạo:** 14/11/2026 17:35
+* **Ngày hoàn thành:** 18/11/2026 14:42
+* **Trạng thái:** `DONE`
 
 #### `TASK-210` [TODO] — Xây dựng Màn hình Vault Manager & Panic Button
 * **Module / Màn hình:** Màn hình 4 — Vault Manager
@@ -408,14 +413,16 @@
 * **Ngày hoàn thành:** 18/11/2026 14:40
 * **Trạng thái:** `DONE`
 
-#### `TASK-214` [TODO] — Bổ sung Recipe 5 (Payday Auto-Splitter) & Recipe 6 (Cross-Chain Hedge) vào Template Library
+#### `TASK-214` [DONE] — Bổ sung Recipe 5 (Payday Auto-Splitter) & Recipe 6 (Cross-Chain Hedge) vào Template Library
 * **Module / Màn hình:** Màn hình 3 — Template Library (`frontend/src/app/workspace/templates/page.tsx`)
 * **Mục đích:** Cung cấp 2 kịch bản đột phá "An automation nobody's thought of yet" phục vụ chấm giải Track Set It and Forget It.
 * **Chi tiết thực thi:**
-  * Khai báo schema Recipe 5: `Payday Auto-Splitter` (Watch Transfers > 1,000 USDC lương $\rightarrow$ Swap 20% DCA ETH + Sweep 30% ví lạnh).
-  * Khai báo schema Recipe 6: `Unichain-to-Base Cross-Chain Hedge` (Watch DEX Price Unichain $\rightarrow$ Velocity Guard > 5% trong 10s $\rightarrow$ Swap Base Sepolia).
-  * Kết nối Graph Hydration Engine để render đồ thị 1-click lên Studio Canvas.
-* **Ngày tạo:** 14/11/2026 19:30 | **Trạng thái:** `TODO`
+  * Khai báo schema Recipe 5: `Payday Auto-Splitter` (Watch Transfers incoming USDC > 1,000 $\rightarrow$ Balance Check $\rightarrow$ 20% DCA ETH + 30% SafeSweep ví lạnh + Webhook Alert).
+  * Khai báo schema Recipe 6: `Unichain-to-Base Cross-Chain Hedge` (Watch DEX Price Unichain Sepolia 1301 $\rightarrow$ Velocity Guard > 5% trong 10s $\rightarrow$ 300s Cooldown $\rightarrow$ Swap Base Sepolia 84532 với cờ `isCrossChainTrigger`).
+  * Kết nối Graph Hydration Engine và kiểm thử render 1-click lên Studio Canvas thành công 100%.
+* **Ngày tạo:** 14/11/2026 19:30
+* **Ngày hoàn thành:** 18/11/2026 14:42
+* **Trạng thái:** `DONE`
 
 #### `TASK-215` [DONE] — Chuyển đổi Thiết kế UI theo Chuẩn Tactical Obsidian & Precision Angular Cybernetics
 * **Module / Màn hình:** Toàn bộ Frontend (`frontend/src/`)

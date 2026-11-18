@@ -147,7 +147,7 @@ export default function TemplateLibraryPage() {
 
               <div className="pt-3 border-t border-white/[0.06]">
                 <Link
-                  href="/workspace/studio"
+                  href={`/workspace/studio?recipe=${recipe.id}`}
                   prefetch={true}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-[#16171a] hover:bg-white text-white hover:text-black border border-white/20 hover:border-transparent transition-all cursor-pointer shadow-sm"
                 >

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   ReactFlow,
   Controls,
@@ -19,6 +20,7 @@ import {
   ReactFlowProvider,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { RECIPE_PRESETS } from '@/lib/recipes';
 
 import {
   WatchDEXPriceNode,
@@ -157,6 +159,8 @@ function StudioCanvasInner() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
+  const searchParams = useSearchParams();
+  const [activeRecipeId, setActiveRecipeId] = useState<string>('stop-loss');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isDeployOpen, setIsDeployOpen] = useState(false);
   const [isSolidityOpen, setIsSolidityOpen] = useState(false);
@@ -164,6 +168,17 @@ function StudioCanvasInner() {
   const [simulationStep, setSimulationStep] = useState<number>(0);
   const [simulationMessage, setSimulationMessage] = useState<string | null>(null);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
+
+  // Hydrate preset from query parameter ?recipe=...
+  useEffect(() => {
+    const rId = searchParams?.get('recipe');
+    if (rId && RECIPE_PRESETS[rId]) {
+      setActiveRecipeId(rId);
+      setNodes(RECIPE_PRESETS[rId].nodes);
+      setEdges(RECIPE_PRESETS[rId].edges);
+      setSelectedNodeId(null);
+    }
+  }, [searchParams, setNodes, setEdges]);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
 
@@ -393,9 +408,17 @@ function StudioCanvasInner() {
   };
 
   const handleResetGraph = () => {
-    setNodes(INITIAL_NODES);
-    setEdges(INITIAL_EDGES);
-    setSelectedNodeId(null);
+    handleSelectPreset(activeRecipeId || 'stop-loss');
+  };
+
+  const handleSelectPreset = (recipeKey: string) => {
+    if (RECIPE_PRESETS[recipeKey]) {
+      const preset = RECIPE_PRESETS[recipeKey];
+      setActiveRecipeId(recipeKey);
+      setNodes(preset.nodes);
+      setEdges(preset.edges);
+      setSelectedNodeId(null);
+    }
   };
 
   const handleOpenDeploy = () => {
@@ -429,6 +452,22 @@ function StudioCanvasInner() {
             <span className="text-xs px-3 py-1 rounded-full bg-white/[0.06] border border-white/10 text-[#c4c2c3] font-mono tabular-nums">
               DAG: {nodes.length} Nodes &bull; {edges.length} Edges
             </span>
+
+            {/* Recipe Preset Selector */}
+            <div className="hidden sm:flex items-center gap-1.5 ml-1">
+              <span className="text-[11px] text-[#8e8e8e] font-mono">Preset:</span>
+              <select
+                value={activeRecipeId}
+                onChange={(e) => handleSelectPreset(e.target.value)}
+                className="bg-[#16171a] hover:bg-[#202126] border border-white/20 rounded-full px-3 py-1 text-xs text-white font-medium focus:outline-none focus:border-white transition-colors cursor-pointer"
+              >
+                {Object.values(RECIPE_PRESETS).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -565,7 +604,9 @@ function StudioCanvasInner() {
 export function StudioCanvas() {
   return (
     <ReactFlowProvider>
-      <StudioCanvasInner />
+      <Suspense fallback={<div className="w-full h-full bg-[#07080d]" />}>
+        <StudioCanvasInner />
+      </Suspense>
     </ReactFlowProvider>
   );
 }
