@@ -37,6 +37,7 @@
    * 5.2 In-Flight Callback Protection Pattern (Cờ pending chống bắn lặp callback trên block 200ms)
    * 5.3 Live Price Re-Validation Pattern (Tái thẩm định giá tức thời chống Stale Trigger)
    * 5.4 Dual-Way Event State Synchronization (Đồng bộ trạng thái lệnh qua Event Stream)
+6. [Đề xuất mở rộng tự động hóa cá nhân](#đề-xuất-mở-rộng-tự-động-hóa-cá-nhân)
 
 ---
 
@@ -879,3 +880,54 @@ Thay vì dùng cơ chế gọi hàm chéo chuỗi phức tạp, hệ thống s�
 
 > 📌 **Kết Luận & Bàn Giao Kỹ Thuật:**  
 > Bản đặc tả FRS hoàn thiện này cung cấp đầy đủ: Bản đồ 10 Node Tinh Hoa, cơ sở loại trừ 3 điểm dư thừa, ma trận 12 kịch bản thực chiến sống còn, toàn bộ chuẩn kết nối API / WebSocket, và 4 Mẫu Thiết Kế Smart Contract chuẩn mực nhất trên Reactive Omni.
+
+## Đề xuất mở rộng tự động hóa cá nhân
+
+**Mục 6 · Trạng thái đề xuất · 18/11/2026.** Ba tính năng dưới đây phục vụ track *Set It and Forget It*. Thứ tự ưu tiên cho hackathon là xác định đúng trạng thái từng pipeline, xác nhận callback đích, rồi triển khai stop-loss một lần. Trích khoản thu USDC là bước mở rộng tiếp theo.
+
+| Chức năng | Thay đổi trên canvas | Rào cản chính | Mức thay đổi |
+|---|---|---|---|
+| Trạng thái sẵn sàng | Dùng các node và màn hình hiện có | Liên kết đúng pipeline, RSC và vault qua hai chain, kể cả sau khi đóng app | Trung bình |
+| Stop-loss một lần | Dùng WatchDEXPrice → PriceThresholdGuard → DEXSwap. Thêm chế độ chạy vào cấu hình pipeline | Vault chỉ cho phép một lần bán thành công cho mỗi lần bật | Trung bình–cao |
+| Trích một phần khoản thu USDC | Tái sử dụng WatchTransfers và thêm một action “Chuyển một phần khoản nhận” vào catalog | Đọc đúng từng khoản nhận, chi đúng tỷ lệ và hỗ trợ rút ERC-20 | Cao |
+
+### 6.1 Trạng thái sẵn sàng của từng pipeline
+
+Deploy cần lưu liên kết giữa pipelineId, chain, địa chỉ RSC và vault từ kết quả triển khai đã xác nhận. Active dùng liên kết này cho cả việc đọc số dư lẫn đích nạp phí. Tại thời điểm đánh giá, Active dùng DEFAULT_RSC_STOP_LOSS và thay số dư chưa đọc được bằng 0.9998. Cần bỏ giá trị thay thế và hiển thị trạng thái đang đọc hoặc mất kết nối.
+
+Chỉ hiển thị *Sẵn sàng* khi xác nhận được quy tắc đang bật, vault đã cấp quyền đúng RSC, có đủ vốn thực hiện hành động và đủ phí ước tính ở cả Lasna lẫn phía callback trên Base. Sau khi gửi callback, hiển thị *Chờ kết quả trên Base*. Receipt và event của vault xác định kết quả cuối. Activity Logs hiện có nhánh WebSocket gán SUCCESS cho các bước khác SKIPPED, nên cần ánh xạ riêng từng bước và loại dữ liệu mẫu khỏi lịch sử live.
+
+**Nghiệm thu.** Tạo hai pipeline có địa chỉ RSC khác nhau. Chọn từng pipeline và đối chiếu địa chỉ đọc, địa chỉ nạp phí và quyền trên vault. Ngắt RPC phải thấy trạng thái chưa xác định. Đóng trình duyệt trước callback rồi mở lại phải đọc được kết quả đã xác nhận cùng liên kết giao dịch của đúng pipeline.
+
+### 6.2 Stop-loss bán một lần
+
+Recipe đầu tiên dùng ngưỡng giá tĩnh của pool trên Base Sepolia. Ví dụ, khi giá xuống dưới ngưỡng, bán 25% số ETH đang có trong vault và chuyển USDC về ví chủ sở hữu. Vault đọc lại giá ngay trước swap. Phạm vi này phù hợp với nhánh kiểm tra reserve hiện có. Các nhánh velocity và cross-chain hiện có thể bỏ qua bước kiểm tra giá tĩnh.
+
+Chế độ *Một lần / Lặp lại* thuộc cấu hình pipeline trong Inspector. Graph cũ tiếp tục sử dụng chế độ lặp lại. Deployer cần phân biệt phiên bản graph, ABI, bytecode và khả năng của vault đã triển khai trước khi cho bật chế độ một lần.
+
+| Tình huống nghiệm thu | Kết quả cần quan sát |
+|---|---|
+| Giá hồi trước khi callback đến | Vault phát OrderSkipped. Lượt bán vẫn còn và pipeline tiếp tục theo dõi. |
+| Hai callback cùng đủ điều kiện hoặc một callback đến muộn | Vault ghi nhận lượt bán trong cùng giao dịch với swap. Tối đa một lần bán thành công trong lần bật quy tắc đó. Nếu swap revert, lượt bán vẫn còn. |
+| Swap đã xác nhận | Active hiển thị *Đã thực hiện* từ receipt và event trên Base. Để tự dừng phí theo dõi, RSC cần nhận được kết quả từ vault và dừng theo dõi quy tắc. |
+| Chủ sở hữu bật lại quy tắc | Callback tồn từ lần bật trước không được tiêu thụ lượt bán mới. |
+
+### 6.3 Trích một phần khoản thu USDC
+
+Phạm vi v1 là USDC chuyển vào vault trên Base Sepolia. Với mức trích 20%, khoản thu 100 USDC tạo một lần chuyển 20 USDC đến ví tiết kiệm đã duyệt và để lại 80 USDC trong vault. Theo dõi khoản thu vào ví cá nhân sẽ cần một cơ chế cấp quyền riêng.
+
+WatchTransfers đã có trường token, ví theo dõi và chiều chuyển. Deployer hiện triển khai bytecode stop-loss và RSC giải mã dữ liệu Sync thành hai reserve. Recipe mới cần chọn implementation giải mã ERC-20 Transfer, lọc đúng token cùng địa chỉ nhận và chuyển định danh khoản thu đến vault. Action mới nhận ví tiết kiệm và tỷ lệ do chủ vault phê duyệt. EmergencySafeSweep tiếp tục dành cho chuyển khẩn cấp.
+
+Vault cần hỗ trợ chủ sở hữu rút USDC và tính số tiền trích trên giá trị của từng event. Đường rút khẩn cấp hiện chuyển ETH. Cần bổ sung quyền rút ERC-20 trước khi cho phép nhận USDC theo recipe này.
+
+**Nghiệm thu.** Hai log Transfer trong cùng một giao dịch được nhận diện riêng bằng chain, hash giao dịch và chỉ số log. Callback lặp cho cùng khoản thu chỉ tạo một lần chuyển. Nếu chủ sở hữu rút USDC trước callback khiến số dư thiếu, Logs phải ghi kết quả cho đúng khoản thu. Người dùng xem được giao dịch nhận, giao dịch chuyển và số tiền thực tế.
+
+### 6.4 Tác động lên các màn hình
+
+| Màn hình | Thay đổi đề xuất |
+|---|---|
+| Templates / Studio | Bổ sung preset khi contract tương ứng đã hỗ trợ. Inspector và bản tóm tắt trước khi ký ghi rõ điều kiện, cơ sở tính tỷ lệ, ví nhận và chế độ chạy. |
+| Deploy | Phân biệt đã triển khai, chờ cấp quyền và sẵn sàng. Lưu địa chỉ và phiên bản để nhận diện đúng pipeline sau khi mở lại app. |
+| Active / Workspace | Active hiển thị vốn, phí hai phía và kết quả gần nhất của pipeline đã chọn. Workspace tóm tắt các quy tắc cần người dùng xử lý. |
+| Vault | Tái sử dụng thông tin owner và authorizedRSCs. Hiển thị vốn ETH và ví nhận USDC cho stop-loss. Khi bổ sung recipe khoản thu, hiển thị số dư, quyền rút USDC và ví tiết kiệm đã duyệt. |
+| Activity Logs | Liên kết sự kiện nguồn, quyết định trên Lasna và receipt trên Base. Phân biệt chờ callback, thực thi thành công, bỏ qua và thất bại. Khôi phục lịch sử xác nhận sau khi WebSocket kết nối lại. |

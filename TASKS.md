@@ -16,7 +16,8 @@
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 24 | 24 | 0 | **100%** |
-| **TỔNG CỘNG** | **21 Ngày** | **60** | **60** | **0** | **100% HOÀN TẤT** |
+| **Đánh giá cạnh tranh & bằng chứng dự thi** | 18/11/2026 | 6 | 3 | 0 | **50%** |
+| **TỔNG CỘNG** | **21 Ngày** | **66** | **63** | **0** | **95%** |
 
 ---
 
@@ -844,3 +845,52 @@
 * **Ngày tạo:** 18/11/2026 18:11
 * **Ngày hoàn thành:** 18/11/2026 18:13
 * **Trạng thái:** `DONE`
+
+### ĐÁNH GIÁ CẠNH TRANH & BẰNG CHỨNG DỰ THI
+
+#### `TASK-325` [DONE] — Đối chiếu OmniFlow và Rulebook theo tiêu chí Buildathon
+* **Module:** Đánh giá sản phẩm và hồ sơ kỹ thuật.
+* **Chi tiết:** Đối chiếu tiêu chí chính thức, mã nguồn và bằng chứng hiện có của OmniFlow với mô tả Rulebook do người dùng cung cấp. Kết quả nằm trong phản hồi phân tích.
+* **Ngày tạo / Ngày hoàn thành:** 18/11/2026.
+* **Người thực hiện:** Codex.
+* **Trạng thái:** `DONE`.
+
+#### `TASK-326` [TODO] — Bổ sung chứng cứ callback đích và đồng bộ nhãn proof
+* **Module:** Evidence JSON, landing proof ledger.
+* **Chi tiết:** Hai bản evidence ghi giao dịch cấu hình proxy ở bước 3. Bổ sung receipt callback Base Sepolia và event StopLossExecuted cho cùng một vòng lặp. Ghi rõ pool thử nghiệm được triển khai on-chain để phân biệt với pool DEX thật.
+* **Ngày tạo:** 18/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-327` [TODO] — Loại bỏ dữ liệu mẫu khỏi luồng Activity Logs mặc định
+* **Module:** Backend event listener, Workspace Activity Logs.
+* **Chi tiết:** Event listener khởi tạo logsBuffer từ FALLBACK_ACTIVITY_LOGS. Kiểm tra đường phân phối API và WebSocket, rồi chỉ hiển thị lịch sử từ chain hoặc trạng thái trống/mất kết nối tương ứng.
+* **Ngày tạo:** 18/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-328` [DONE] — Đánh giá tác động của ba tính năng tự động hóa cá nhân
+* **Module:** Contracts, deployer, node catalog và Workspace.
+* **Mục đích:** Xác định thay đổi cho stop-loss một lần, trích khoản thu USDC và trạng thái sẵn sàng.
+* **Ngày tạo:** 18/11/2026.
+* **Người thực hiện:** Codex.
+* **Ngày hoàn thành:** 18/11/2026. Kết quả trong phản hồi đánh giá kỹ thuật.
+* **Trạng thái:** `DONE`.
+
+#### `TASK-329` [TODO] — Hiển thị đúng nguồn gas của pipeline trong Active Automations
+* **Module:** Workspace Active và refuel.
+* **Chi tiết:** Trang sử dụng DEFAULT_RSC_STOP_LOSS và thay số dư chưa đọc được bằng 0.9998. Gắn thao tác đọc/nạp theo địa chỉ của pipeline được chọn và biểu diễn rõ trạng thái chưa có dữ liệu.
+* **Ngày tạo:** 18/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-330` [DONE] — Ghi nhận đánh giá ba tính năng vào FRS
+* **Module:** Đặc tả chức năng, mục 6.
+* **Mục đích:** Lưu phạm vi node, contract, màn hình và tiêu chí nghiệm thu cho ba đề xuất.
+* **Ngày tạo:** 18/11/2026.
+* **Người thực hiện:** Codex.
+* **Ngày hoàn thành:** 18/11/2026. Đã bổ sung mục 6.1–6.4 vào FRS.
+* **Trạng thái:** `DONE`.
