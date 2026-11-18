@@ -22,9 +22,10 @@ pipelineRouter.post('/compile-and-deploy', async (req: Request, res: Response) =
     return res.status(200).json(result);
   } catch (error: any) {
     console.error('Pipeline deploy error:', error);
-    return res.status(500).json({
+    const isClientError = error?.message?.includes('DAG Validation Failed');
+    return res.status(isClientError ? 400 : 500).json({
       success: false,
-      error: 'Failed to deploy reactive pipeline',
+      error: isClientError ? 'DAG Validation Error' : 'Failed to deploy reactive pipeline',
       message: error?.message || 'Unknown error',
     });
   }

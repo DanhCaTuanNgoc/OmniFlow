@@ -189,4 +189,86 @@ contract ActionVaultTest is Test {
         assertEq(address(vault).balance, 0.5 ether);
         assertTrue(usdc.balanceOf(owner) > ownerUsdcBefore);
     }
+
+    function test_Scenario_PanicButton_Overrides_PendingCallbacks() public {
+        vm.prank(owner);
+        vault.setAuthorizedRSC(rscContract, true);
+
+        // Chủ ví bấm nút Panic Button rút 100% ETH khẩn cấp về ví cá nhân
+        vm.prank(owner);
+        vault.emergencyWithdraw();
+        assertEq(address(vault).balance, 0);
+
+        // Sau đó có callback từ RSC bay tới
+        pair.setReserves(1 ether, 1700 ether);
+        vm.prank(callbackProxy);
+        vm.expectRevert("No ETH available in vault");
+        vault.executeStopLoss(
+            address(0),
+            rscContract,
+            50,
+            1800 ether
+        );
+
+        // Vault đã bảo vệ tài sản thành công, số dư an toàn = 0
+        assertEq(address(vault).balance, 0);
+    }
+
+    function test_Scenario_DeauthorizeRSC_ImmediatelyBlocksCallbacks() public {
+        // Cấp quyền ban đầu
+        vm.prank(owner);
+        vault.setAuthorizedRSC(rscContract, true);
+        assertTrue(vault.authorizedRSCs(rscContract));
+
+        // Chủ ví phát hiện bất thường và thu hồi quyền ngay lập tức
+        vm.prank(owner);
+        vault.setAuthorizedRSC(rscContract, false);
+        assertFalse(vault.authorizedRSCs(rscContract));
+
+        // Callback Proxy cố thực thi sẽ bị revert ngay lập tức!
+        pair.setReserves(1 ether, 1700 ether);
+        vm.prank(callbackProxy);
+        vm.expectRevert("Unauthorized RSC contract");
+        vault.executeStopLoss(
+            address(0),
+            rscContract,
+            50,
+            1800 ether
+        );
+    }
+
+    function test_Scenario_SafeSweep_ZeroCollateralRemaining() public {
+        vm.prank(owner);
+        vault.setAuthorizedRSC(rscContract, true);
+
+        uint256 coldWalletBefore = coldWallet.balance;
+
+        // Callback Proxy kích hoạt Safe Sweep chuyển toàn bộ tài sản về ví lạnh
+        vm.prank(callbackProxy);
+        vault.executeSafeSweep(address(0), rscContract);
+
+        // 100% tài sản chuyển đến ví lạnh
+        assertEq(coldWallet.balance, coldWalletBefore + 1 ether);
+        assertEq(address(vault).balance, 0);
+    }
+
+    function test_Scenario_MultipleSequentialSwaps() public {
+        vm.prank(owner);
+        vault.setAuthorizedRSC(rscContract, true);
+
+        pair.setReserves(1 ether, 1700 ether);
+
+        // Đợt 1: Bán 50% số ETH (1 ether * 50% = 0.5 ether swapped, còn 0.5 ether)
+        vm.prank(callbackProxy);
+        vault.executeStopLoss(address(0), rscContract, 50, 1800 ether);
+        assertEq(address(vault).balance, 0.5 ether);
+
+        // Giá sập tiếp xuống $1,500
+        pair.setReserves(1 ether, 1500 ether);
+
+        // Đợt 2: Bán tiếp 50% số còn lại (0.5 ether * 50% = 0.25 ether swapped, còn 0.25 ether)
+        vm.prank(callbackProxy);
+        vault.executeStopLoss(address(0), rscContract, 50, 1800 ether);
+        assertEq(address(vault).balance, 0.25 ether);
+    }
 }

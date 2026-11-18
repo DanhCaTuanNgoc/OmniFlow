@@ -81,6 +81,7 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
     // Tương thích cả Reactive Omni (CometBFT) lẫn Legacy ReactVM
     function react(LogRecord calldata log) external {
         if (log._contract != pairAddress) return;
+        if (log.topic_0 != 0 && log.topic_0 != originTopic0) return;
 
         // PATTERN 2: STATELESS TIMESTAMP COOLDOWN (CHỐNG DỘI BLOCK 200MS & ZERO-DEADLOCK)
         if (lastTriggeredTimestamp != 0 && block.timestamp - lastTriggeredTimestamp < cooldownSeconds) return;

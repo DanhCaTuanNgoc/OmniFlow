@@ -218,4 +218,123 @@ contract StopLoss_PipelineTest is Test {
         assertEq(crossChainPipeline.callbacksEmitted(), 1);
         assertEq(crossChainPipeline.lastTriggeredTimestamp(), 500);
     }
+
+    function test_React_Scenario_FlashWick_Rejection_And_Recovery() public {
+        // Thiết lập pipeline yêu cầu 2 block liên tiếp (Anti-Wick)
+        StopLoss_Pipeline antiWickPipeline = new StopLoss_Pipeline(
+            pairAddress,
+            priceThreshold,
+            cooldownSeconds,
+            percentToSwap,
+            actionVault,
+            2, // Cần 2 hits liên tiếp
+            0,
+            0,
+            84532,
+            0
+        );
+
+        // Block 101: Giá giảm đột ngột nến bấc xuống $1,750 (Hit 1)
+        IReactive.LogRecord memory wickLog = createLog(pairAddress, uint112(1 ether), uint112(1750 ether));
+        antiWickPipeline.react(wickLog);
+        assertEq(antiWickPipeline.consecutiveHits(), 1);
+        assertEq(antiWickPipeline.callbacksEmitted(), 0); // Chưa kích hoạt!
+
+        // Block 102: Giá hồi phục ngay lập tức lên $1,900 (Fake Wick)
+        IReactive.LogRecord memory recoveryLog = createLog(pairAddress, uint112(1 ether), uint112(1900 ether));
+        antiWickPipeline.react(recoveryLog);
+        assertEq(antiWickPipeline.consecutiveHits(), 0); // Đã reset về 0!
+        assertEq(antiWickPipeline.callbacksEmitted(), 0); // An toàn: không bị bán tháo đáy!
+    }
+
+    function test_React_Scenario_Storm_10SwapsIn2Seconds_Only1Callback() public {
+        vm.warp(1000);
+        // Giao dịch 1: Kích hoạt thành công
+        IReactive.LogRecord memory log1 = createLog(pairAddress, uint112(1 ether), uint112(1750 ether));
+        pipeline.react(log1);
+        assertEq(pipeline.callbacksEmitted(), 1);
+
+        // Bão 9 giao dịch dồn dập trong 200ms blocks (từ t=1000 đến t=1002)
+        for (uint256 i = 0; i < 9; i++) {
+            vm.warp(1000 + (i / 4)); // Giả lập rapid 200ms Denim blocks
+            IReactive.LogRecord memory spamLog = createLog(pairAddress, uint112(1 ether), uint112(1740 ether));
+            pipeline.react(spamLog);
+        }
+
+        // Toàn bộ 9 giao dịch sau bị chặn bởi Cooldown Guard!
+        assertEq(pipeline.callbacksEmitted(), 1);
+        assertEq(pipeline.lastTriggeredTimestamp(), 1000);
+    }
+
+    function test_React_Scenario_CrossChain_Topic0_Filter() public {
+        uint256 customTopic = uint256(keccak256("CustomSwapEvent(address,uint256)"));
+        StopLoss_Pipeline topicPipeline = new StopLoss_Pipeline(
+            pairAddress,
+            priceThreshold,
+            cooldownSeconds,
+            percentToSwap,
+            actionVault,
+            1,
+            0,
+            0,
+            1301,
+            customTopic
+        );
+
+        assertEq(topicPipeline.originTopic0(), customTopic);
+
+        // Phát log sai topic0
+        IReactive.LogRecord memory wrongTopicLog = IReactive.LogRecord({
+            chain_id: 1301,
+            _contract: pairAddress,
+            topic_0: uint256(keccak256("WrongEvent()")),
+            topic_1: 0,
+            topic_2: 0,
+            topic_3: 0,
+            data: abi.encode(uint112(1 ether), uint112(1700 ether)),
+            block_number: 100,
+            op_code: 0,
+            block_hash: 0,
+            tx_hash: 0,
+            log_index: 0
+        });
+        topicPipeline.react(wrongTopicLog);
+        assertEq(topicPipeline.callbacksEmitted(), 0); // Bị chặn do sai topic0
+
+        // Phát log đúng topic0
+        IReactive.LogRecord memory correctTopicLog = IReactive.LogRecord({
+            chain_id: 1301,
+            _contract: pairAddress,
+            topic_0: customTopic,
+            topic_1: 0,
+            topic_2: 0,
+            topic_3: 0,
+            data: abi.encode(uint112(1 ether), uint112(1700 ether)),
+            block_number: 101,
+            op_code: 0,
+            block_hash: 0,
+            tx_hash: 0,
+            log_index: 0
+        });
+        topicPipeline.react(correctTopicLog);
+        assertEq(topicPipeline.callbacksEmitted(), 1); // Kích hoạt thành công
+    }
+
+    function test_React_Scenario_MultipleCooldownCycles() public {
+        // Chu kỳ 1: t = 100
+        vm.warp(100);
+        pipeline.react(createLog(pairAddress, uint112(1 ether), uint112(1700 ether)));
+        assertEq(pipeline.callbacksEmitted(), 1);
+
+        // t = 200: Chưa đủ 300s cooldown -> Bị chặn
+        vm.warp(200);
+        pipeline.react(createLog(pairAddress, uint112(1 ether), uint112(1650 ether)));
+        assertEq(pipeline.callbacksEmitted(), 1);
+
+        // Chu kỳ 2: t = 450 (100 + 350s > 300s) -> Kích hoạt lần 2 thành công!
+        vm.warp(450);
+        pipeline.react(createLog(pairAddress, uint112(1 ether), uint112(1600 ether)));
+        assertEq(pipeline.callbacksEmitted(), 2);
+        assertEq(pipeline.lastTriggeredTimestamp(), 450);
+    }
 }

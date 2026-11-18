@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 16 | 16 | 0 | **100%** |
-| **TỔNG CỘNG** | **21 Ngày** | **52** | **52** | **0** | **100% HOÀN TẤT** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 20 | 20 | 0 | **100%** |
+| **TỔNG CỘNG** | **21 Ngày** | **56** | **56** | **0** | **100% HOÀN TẤT** |
 
 ---
 
@@ -731,4 +731,68 @@
   * Biên dịch TypeScript `pnpm --filter frontend exec tsc --noEmit` đạt 100% không lỗi.
 * **Ngày tạo:** 18/11/2026 14:10
 * **Ngày hoàn thành:** 18/11/2026 14:18
+* **Trạng thái:** `DONE`
+
+#### `TASK-317` [DONE] — Xây dựng Bộ Kiểm Thử Pipeline Deployer & DAG Compiler (10 Test Cases)
+* **Module / Màn hình:** Backend Deployer (`backend/src/services/deployer.service.ts`, `backend/test/deployer.test.ts`)
+* **Mục đích:** Kiểm thử toàn diện chức năng thẩm định đồ thị DAG, trích xuất tham số, đóng gói bytecode tham số hóa và deploy an toàn lên Reactive Lasna.
+* **Chi tiết thực thi:**
+  * Xây dựng 10 testcases:
+    1. `DEP-01`: Trích xuất đầy đủ tham số từ đồ thị DAG hợp lệ (`pairAddress`, `priceThresholdWei`, `cooldownSeconds`, `percentToSwap`, `actionVaultAddress`, `originChainId`).
+    2. `DEP-02`: Phát hiện và chặn đứng đồ thị chứa chu trình lặp (Cycle Detection qua Kahn's Algorithm).
+    3. `DEP-03`: Báo lỗi khi thiếu Node Trigger đầu vào.
+    4. `DEP-04`: Báo lỗi khi thiếu Node Action đầu ra.
+    5. `DEP-05`: Từ chối đồ thị có các node rời rạc, không liên kết.
+    6. `DEP-06`: Kiểm tra đóng gói tham số ABI vào Pre-compiled Bytecode dưới 2s.
+    7. `DEP-07`: Xác thực tính toán tài trợ gas lREACT (`1.0 lREACT` cho 20 callbacks).
+    8. `DEP-08`: Kiểm tra liên kết ActionVault RSC trên Base Sepolia (84532).
+    9. `DEP-09`: Xử lý ngoại lệ RPC timeout và lỗi kết nối.
+    10. `DEP-10`: Kiểm tra tính toàn vẹn của kết quả trả về `DeploymentResult`.
+  * Chạy `node --import tsx --test test/deployer.test.ts`: **10/10 tests PASS (100%)**.
+* **Ngày tạo:** 18/11/2026 15:13
+* **Ngày hoàn thành:** 18/11/2026 15:15
+* **Trạng thái:** `DONE`
+
+#### `TASK-318` [DONE] — Xây dựng Bộ Kiểm Thử Độc Lập 12 Canvas Nodes & Typed Port Matrices (24 Test Cases)
+* **Module / Màn hình:** Pipeline Studio Canvas Nodes (`backend/test/nodes.test.ts`, Zod Schemas & Node Port Logic)
+* **Mục đích:** Kiểm thử schema validation, kiểm tra ma trận cổng kết nối (Trigger out -> Condition in/out -> Action in), và logic đánh giá của từng node.
+* **Chi tiết thực thi:**
+  * 12 nodes $\times$ 2 tests = 24 testcases:
+    - Trigger Nodes (4 nodes - 8 tests): `WatchDEXPrice` (Sync topic0 & reserve pricing), `CustomEventWatcher` (Chain 1301/84532 & arbitrary topic0), `WatchTransfers` (Whale threshold & address filter), `PeriodicCron` (Heartbeat interval & double-run prevention).
+    - Condition Nodes (5 nodes - 10 tests): `PriceThresholdGuard` (Hit/Ignore price bounds), `PriceVelocityGuard` (Fast drop velocity bps within window), `CooldownGuard` (200ms Denim block storm absorption), `BalanceThreshold` (Under/Over minimum safety balance), `LogicGate` (Boolean AND/OR gate logic).
+    - Action Nodes (3 nodes - 6 tests): `DEXSwap` (Swap params & minAmountOut slippage protection), `EmergencySafeSweep` (Cold wallet address & 100% sweep balance), `NotifyLogWebhook` (WebSocket schema & circular JSON prevention).
+  * Chạy `node --import tsx --test test/nodes.test.ts`: **24/24 tests PASS (100%)**.
+* **Ngày tạo:** 18/11/2026 15:13
+* **Ngày hoàn thành:** 18/11/2026 15:16
+* **Trạng thái:** `DONE`
+
+#### `TASK-319` [DONE] — Bổ Sung 8 Kịch Bản Thực Thi Smart Contract Nâng Cao Trong Foundry (26 Tests Total)
+* **Module / Màn hình:** Smart Contracts (`contracts/test/StopLoss_Pipeline.t.sol`, `contracts/test/ActionVault.t.sol`, `contracts/src/StopLoss_Pipeline.sol`)
+* **Mục đích:** Mở rộng từ 18 lên 26 test cases Foundry, bổ sung các kịch bản liên chuỗi Unichain -> Base, hủy lệnh khi giá hồi phục (Live Re-validation), bảo vệ ví lạnh và nạp bù gas.
+* **Chi tiết thực thi:**
+  * Thêm 4 kịch bản vào `StopLoss_Pipeline.t.sol` (tổng 12 tests):
+    1. `test_React_Scenario_FlashWick_Rejection_And_Recovery`: Từ chối nến rút chân ảo (Anti-Wick reset consecutiveHits về 0 khi giá hồi phục).
+    2. `test_React_Scenario_Storm_10SwapsIn2Seconds_Only1Callback`: Hấp thụ bão 10 swaps dồn dập trong 2s, chỉ 1 callback được phát.
+    3. `test_React_Scenario_CrossChain_Topic0_Filter`: Lọc chính xác topic0 tùy biến từ Unichain Sepolia 1301.
+    4. `test_React_Scenario_MultipleCooldownCycles`: Hoạt động chuẩn xác qua nhiều chu kỳ cooldown liên tiếp (t=100 -> t=450).
+  * Thêm 4 kịch bản vào `ActionVault.t.sol` (tổng 14 tests):
+    1. `test_Scenario_PanicButton_Overrides_PendingCallbacks`: Rút sạch 100% ETH bằng Panic Button trước khi callback đến; callback sau đó revert an toàn `No ETH available in vault`.
+    2. `test_Scenario_DeauthorizeRSC_ImmediatelyBlocksCallbacks`: Thu hồi quyền RSC lập tức chặn đứng mọi callback trái phép.
+    3. `test_Scenario_SafeSweep_ZeroCollateralRemaining`: Quét 100% tài sản sang ví lạnh và đưa số dư kho về 0.
+    4. `test_Scenario_MultipleSequentialSwaps`: Thực thi 2 đợt stop-loss liên tiếp (bán 50% rồi bán tiếp 50%).
+  * Chạy `forge test`: **26/26 tests PASS (100%)**.
+* **Ngày tạo:** 18/11/2026 15:13
+* **Ngày hoàn thành:** 18/11/2026 15:18
+* **Trạng thái:** `DONE`
+
+#### `TASK-320` [DONE] — Đồng Bộ Runner Kiểm Thử Toàn Diện Xác Nhận 76/76 Test Cases PASS
+* **Module / Màn hình:** Verification Suite (`scripts/verify-all.ts`)
+* **Mục đích:** Mở rộng `scripts/verify-all.ts` để tự động chạy và tổng hợp kết quả của cả 3 tầng kiểm thử: Foundry (26 tests) + Backend Deployer (10 tests) + Node Logic (24 tests) + System Checks (16 checks) = 76 tests.
+* **Chi tiết thực thi:**
+  * Cập nhật `scripts/verify-all.ts` với Section 5 tích hợp kiểm đếm 4 bộ test suite.
+  * Chạy `pnpm --filter backend exec tsx ../scripts/verify-all.ts`: **19/19 System Checks PASS (100.0%)**, xác nhận **76/76 Test Cases** toàn hệ thống.
+  * Biên dịch backend `pnpm --filter backend build` đạt 0 lỗi.
+  * Biên dịch frontend `pnpm --filter frontend exec tsc --noEmit` đạt 0 lỗi.
+* **Ngày tạo:** 18/11/2026 15:13
+* **Ngày hoàn thành:** 18/11/2026 15:20
 * **Trạng thái:** `DONE`

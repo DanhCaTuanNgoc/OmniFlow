@@ -38,6 +38,84 @@ export interface DeploymentResult {
 
 export class DeployerService {
   /**
+   * Thẩm định tính hợp lệ của đồ thị DAG (DAG Cycle Detection, Typed Ports, Connectivity)
+   */
+  public validateDAG(graph: PipelineGraph): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    // 1. Kiểm tra tối thiểu 1 Trigger và 1 Action
+    const triggerTypes = ['watchDEXPrice', 'customEventWatcher', 'watchTransfers', 'periodicCron'];
+    const actionTypes = ['dexSwap', 'emergencySafeSweep', 'notifyLogWebhook'];
+
+    const hasTrigger = graph.nodes.some(
+      (n) => triggerTypes.includes(n.type) || n.data?.isTrigger || n.data?.pairAddress
+    );
+    const hasAction = graph.nodes.some(
+      (n) => actionTypes.includes(n.type) || n.data?.isAction || n.data?.actionVaultAddress
+    );
+
+    if (!hasTrigger) {
+      errors.push('Missing required Trigger node (e.g., watchDEXPrice, customEventWatcher)');
+    }
+    if (!hasAction) {
+      errors.push('Missing required Action node (e.g., dexSwap, emergencySafeSweep)');
+    }
+
+    // 2. Kiểm tra các node rời rạc (Disjoint components)
+    const connectedNodeIds = new Set<string>();
+    for (const edge of graph.edges) {
+      connectedNodeIds.add(edge.source);
+      connectedNodeIds.add(edge.target);
+    }
+    for (const node of graph.nodes) {
+      if (!connectedNodeIds.has(node.id)) {
+        errors.push(`Disconnected node detected: '${node.id}' (${node.type})`);
+      }
+    }
+
+    // 3. Kiểm tra chu trình lặp (Cycle Detection qua Kahn's Algorithm / Topological Sort)
+    const inDegree = new Map<string, number>();
+    const adj = new Map<string, string[]>();
+
+    for (const node of graph.nodes) {
+      inDegree.set(node.id, 0);
+      adj.set(node.id, []);
+    }
+
+    for (const edge of graph.edges) {
+      if (inDegree.has(edge.target)) {
+        inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+      }
+      adj.get(edge.source)?.push(edge.target);
+    }
+
+    const queue: string[] = [];
+    for (const [nodeId, deg] of inDegree.entries()) {
+      if (deg === 0) queue.push(nodeId);
+    }
+
+    let visitedCount = 0;
+    while (queue.length > 0) {
+      const u = queue.shift()!;
+      visitedCount++;
+      for (const v of adj.get(u) || []) {
+        const nextDeg = (inDegree.get(v) || 0) - 1;
+        inDegree.set(v, nextDeg);
+        if (nextDeg === 0) queue.push(v);
+      }
+    }
+
+    if (visitedCount < graph.nodes.length) {
+      errors.push('Cycle detected in pipeline graph. Pipelines must be Directed Acyclic Graphs (DAG)');
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+    };
+  }
+
+  /**
    * Thẩm định đồ thị DAG và trích xuất tham số cho Smart Contract
    */
   public extractParams(graph: PipelineGraph): ExtractedPipelineParams {
@@ -102,6 +180,11 @@ export class DeployerService {
    * Deploy RSC lên Reactive Lasna và tự động tài trợ 1.0 lREACT gas
    */
   public async deployPipeline(graph: PipelineGraph): Promise<DeploymentResult> {
+    const validation = this.validateDAG(graph);
+    if (!validation.valid) {
+      throw new Error(`DAG Validation Failed: ${validation.errors.join('; ')}`);
+    }
+
     const params = this.extractParams(graph);
     const pipelineId = `omniflow-pipe-${Date.now().toString(36)}`;
 
