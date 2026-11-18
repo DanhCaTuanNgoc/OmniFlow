@@ -384,9 +384,11 @@ export default function MotionLanding() {
       <div className="motion-sections-body">
         {/* Section 2: Visual Studio Canvas Showcase */}
         <div id="studio">
-          <LazySection minHeight="560px">
-            <StudioCanvasShowcase />
-          </LazySection>
+          <LazySection
+            minHeight="620px"
+            label="STUDIO_SHOWCASE"
+            render={() => <StudioCanvasShowcase />}
+          />
         </div>
 
         <div className="motion-divider" aria-hidden="true">
@@ -395,9 +397,11 @@ export default function MotionLanding() {
 
         {/* Section 3: 4 Core Defensive Pillars */}
         <div id="security">
-          <LazySection minHeight="520px">
-            <DefensivePillars />
-          </LazySection>
+          <LazySection
+            minHeight="540px"
+            label="DEFENSIVE_PILLARS"
+            render={() => <DefensivePillars />}
+          />
         </div>
 
         <div className="motion-divider" aria-hidden="true">
@@ -406,9 +410,11 @@ export default function MotionLanding() {
 
         {/* Section 4: On-Chain Proof & Honesty Table (Canary Style) */}
         <div id="proof">
-          <LazySection minHeight="640px">
-            <OnChainProofLedger />
-          </LazySection>
+          <LazySection
+            minHeight="680px"
+            label="ONCHAIN_PROOF"
+            render={() => <OnChainProofLedger />}
+          />
         </div>
 
         <div className="motion-divider" aria-hidden="true">
@@ -417,9 +423,11 @@ export default function MotionLanding() {
 
         {/* Section 5: Multi-Chain Network Topology & Telemetry */}
         <div id="telemetry">
-          <LazySection minHeight="460px">
-            <MultiChainTelemetry />
-          </LazySection>
+          <LazySection
+            minHeight="480px"
+            label="NETWORK_TELEMETRY"
+            render={() => <MultiChainTelemetry />}
+          />
         </div>
 
         <div className="motion-divider" aria-hidden="true">
@@ -428,9 +436,11 @@ export default function MotionLanding() {
 
         {/* Section 6: Frequently Asked Questions */}
         <div id="faq">
-          <LazySection minHeight="420px">
-            <ArchitectureFaq />
-          </LazySection>
+          <LazySection
+            minHeight="440px"
+            label="TECHNICAL_FAQ"
+            render={() => <ArchitectureFaq />}
+          />
         </div>
 
         <div className="motion-divider" aria-hidden="true">
@@ -438,9 +448,11 @@ export default function MotionLanding() {
         </div>
 
         {/* Section 7: Final Conversion CTA Banner & Footer */}
-        <LazySection minHeight="400px">
-          <LandingFooter />
-        </LazySection>
+        <LazySection
+          minHeight="400px"
+          label="FINAL_CTA_FOOTER"
+          render={() => <LandingFooter />}
+        />
       </div>
     </main>
   );

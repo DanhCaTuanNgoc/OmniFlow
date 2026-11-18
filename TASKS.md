@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 13 | 9 | 1 | **69.2%** |
-| **TỔNG CỘNG** | **21 Ngày** | **49** | **35** | **1** | **71.4%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 14 | 10 | 0 | **71.4%** |
+| **TỔNG CỘNG** | **21 Ngày** | **50** | **36** | **0** | **72.0%** |
 
 ---
 
@@ -604,7 +604,7 @@
 * **Ngày hoàn thành:** 18/11/2026 12:07
 * **Trạng thái:** `DONE`
 
-#### `TASK-313` [IN_PROGRESS] — Nâng Cấp Hệ Thống Nền Ambient Đa Tầng (Zero AI Slop) Đồng Bộ Motion UI
+#### `TASK-313` [DONE] — Nâng Cấp Hệ Thống Nền Ambient Đa Tầng (Zero AI Slop) Đồng Bộ Motion UI
 * **Module / Màn hình:** Landing Page (`MotionLanding.tsx`, `motion-landing.css`, Section Dividers)
 * **Mục đích:** Xóa bỏ sự đơn điệu của màu đen trơn ở các Section 2-7 mà không lạm dụng hiệu ứng AI-slop rực rỡ rẻ tiền. Thiết lập hệ thống nền đa tầng kỷ luật cao:
   1. Pin video CloudFront gốc cố định toàn trang (`position: fixed; inset: 0`), kết hợp lớp mặt nạ Obsidian Vignette chuyển sắc nhẹ cho phép dòng chảy của video tiếp tục thở mờ ảo dưới các khe hở của card khi cuộn trang.
@@ -613,4 +613,15 @@
   4. Coordinate Tech Badges tinh tế (`0x01 // STUDIO`, `0x02 // INVARIANTS`, `0x03 // PROOF`) tăng tính kỹ thuật chuẩn Web3 FinTech.
 * **Ngày tạo:** 18/11/2026 12:12
 * **Ngày hoàn thành:** 18/11/2026 12:15
+* **Trạng thái:** `DONE`
+
+#### `TASK-314` [IN_PROGRESS] — Tái Cấu Trúc Cơ Chế Scroll-Triggered Lazy Loading & Viewport Reveal
+* **Module / Màn hình:** Landing Page (`LazySection.tsx`, `MotionLanding.tsx`, `motion-landing.css`)
+* **Mục đích:** Khắc phục triệt để tình trạng các section bị kích hoạt đồng loạt ngay khi vừa tải trang. Chuyển sang cơ chế Scroll-Triggered chân thực:
+  1. Đảm bảo mỗi section unmounted chiếm chiều cao vật lý thật bằng skeleton spacer trong luồng DOM (tránh co cụm ở vị trí 0px/100vh làm observer kích hoạt sớm).
+  2. Cấu hình `rootMargin: "0px 0px -80px 0px"` và `threshold: 0.1` để chỉ kích hoạt khi người dùng thực sự cuộn màn hình đến gần section đó (vào trong viewport ít nhất 10%).
+  3. Chỉ tải và nạp component dynamic (`render` hoặc conditional `{inView && <Component />}`) khi `inView = true`.
+  4. Hiệu ứng xuất hiện thị giác sống động và rõ rệt: Khi cuộn tới, section chuyển động trượt lên `translateY(40px) -> 0`, độ mờ `blur(12px) -> 0`, và `opacity: 0 -> 1` với easing `cubic-bezier(0.16, 1, 0.3, 1)`.
+* **Ngày tạo:** 18/11/2026 12:22
+* **Ngày hoàn thành:** 18/11/2026 12:25
 * **Trạng thái:** `DONE`
