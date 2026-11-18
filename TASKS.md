@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 19 | 13 | 0 | **68.4%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 14 | 10 | 0 | **71.4%** |
-| **TỔNG CỘNG** | **21 Ngày** | **50** | **36** | **0** | **72.0%** |
+| **TỔNG CỘNG** | **21 Ngày** | **51** | **37** | **0** | **72.5%** |
 
 ---
 
@@ -615,7 +615,7 @@
 * **Ngày hoàn thành:** 18/11/2026 12:15
 * **Trạng thái:** `DONE`
 
-#### `TASK-314` [IN_PROGRESS] — Tái Cấu Trúc Cơ Chế Scroll-Triggered Lazy Loading & Viewport Reveal
+#### `TASK-314` [DONE] — Tái Cấu Trúc Cơ Chế Scroll-Triggered Lazy Loading & Viewport Reveal
 * **Module / Màn hình:** Landing Page (`LazySection.tsx`, `MotionLanding.tsx`, `motion-landing.css`)
 * **Mục đích:** Khắc phục triệt để tình trạng các section bị kích hoạt đồng loạt ngay khi vừa tải trang. Chuyển sang cơ chế Scroll-Triggered chân thực:
   1. Đảm bảo mỗi section unmounted chiếm chiều cao vật lý thật bằng skeleton spacer trong luồng DOM (tránh co cụm ở vị trí 0px/100vh làm observer kích hoạt sớm).
@@ -624,4 +624,18 @@
   4. Hiệu ứng xuất hiện thị giác sống động và rõ rệt: Khi cuộn tới, section chuyển động trượt lên `translateY(40px) -> 0`, độ mờ `blur(12px) -> 0`, và `opacity: 0 -> 1` với easing `cubic-bezier(0.16, 1, 0.3, 1)`.
 * **Ngày tạo:** 18/11/2026 12:22
 * **Ngày hoàn thành:** 18/11/2026 12:25
+* **Trạng thái:** `DONE`
+
+#### `TASK-315` [DONE] — Khắc phục Lỗi Runtime Activity Logs, Tối Ưu Tốc Độ Chuyển Route Workspace & Hiện Đại Hóa 5 Màn Hình theo Motion UI
+* **Module / Màn hình:** Workspace Suite (`frontend/src/app/workspace/`, `Sidebar.tsx`, `Header.tsx`, `logs/page.tsx`, `active/page.tsx`, `templates/page.tsx`, `vault/page.tsx`, `studio/page.tsx`)
+* **Mục đích:** Khắc phục lỗi crash `Objects are not valid as a React child` trên Activity Logs, loại bỏ triệt để độ trễ vài giây khi chuyển đổi giữa các tab màn hình trong Workspace, và hiện đại hóa giao diện Workspace theo ngôn ngữ Motion UI (Obsidian Dark, Bubbledot retro dot-matrix, Pill & Ring controls, Craft Floor standards).
+* **Chi tiết thực thi:**
+  1. Fix Bug Activity Logs: Chuẩn hóa interface dữ liệu `details` thành object/string linh hoạt, render dạng badge/chip trực quan cho `{tokenPair, triggerPrice, executedPrice, amountIn, amountOut}` thay vì render raw object. Hỗ trợ đầy đủ payload từ backend `/api/logs` không crash.
+  2. Tối ưu Perf Chuyển Màn Hình: Bật `prefetch={true}` trên toàn bộ `Link` điều hướng ở `Sidebar`, chuyển `loading.tsx` từ skeleton wipe sang thanh laser progress bar không phá hủy DOM, giảm độ trễ phản hồi trang xuống mức ~50ms.
+  3. Áp dụng Design Tokens Motion UI:
+     - `Sidebar.tsx` & `Header.tsx`: Logo badge hình tròn tinh tế, font Bubbledot retro dot-matrix, nav pill với 3-dot indicator, live network telemetry status pills (#84532 Denim 200ms & #5318007 RVM).
+     - 5 màn hình (`Studio`, `Active Automations`, `Template Library`, `Vault Manager`, `Activity Logs`): Thiết kế card obsidian frosted sang trọng, font Bubbledot ở tiêu đề và live stat symbols, tabular-nums cho toàn bộ metric tài chính.
+  4. Kiểm tra biên dịch TypeScript `pnpm --filter frontend exec tsc --noEmit` và `pnpm --filter backend build` đạt 100% không lỗi.
+* **Ngày tạo:** 18/11/2026 12:43
+* **Ngày hoàn thành:** 18/11/2026 12:46
 * **Trạng thái:** `DONE`

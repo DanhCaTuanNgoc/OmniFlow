@@ -8,10 +8,10 @@ const StudioCanvas = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-full flex items-center justify-center bg-[#08090D] select-none">
+      <div className="w-full h-full flex items-center justify-center bg-[#000000] select-none">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-violet-500/20 border-t-violet-500 animate-spin" />
-          <span className="text-xs font-mono text-slate-400">Loading Pipeline Studio...</span>
+          <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+          <span className="text-xs font-mono text-[#8e8e8e]">Loading Pipeline Studio...</span>
         </div>
       </div>
     ),
@@ -20,7 +20,7 @@ const StudioCanvas = dynamic(
 
 export default function StudioPage() {
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative bg-[#000000]">
       <StudioCanvas />
     </div>
   );

@@ -324,22 +324,22 @@ function StudioCanvasInner() {
       {/* Main XYFlow Canvas Area */}
       <div className="flex-1 flex flex-col h-full relative" ref={reactFlowWrapper}>
         {/* Studio Top Control Bar */}
-        <div className="h-16 border-b border-white/[0.06] bg-[#0E1017]/80 backdrop-blur-xl px-5 flex items-center justify-between z-10">
+        <div className="h-16 border-b border-white/[0.08] bg-[#000000]/80 backdrop-blur-xl px-5 flex items-center justify-between z-10 font-sans">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="status-dot status-dot-cyan" />
-              <span className="font-bold text-sm text-white">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+              <span className="font-display font-bold text-sm text-white tracking-tight">
                 Pipeline Studio
               </span>
             </div>
-            <span className="text-xs px-3 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-slate-300 font-medium tabular-nums">
-              DAG Flow: {nodes.length} Nodes &bull; {edges.length} Edges
+            <span className="text-xs px-3 py-1 rounded-full bg-white/[0.06] border border-white/10 text-[#c4c2c3] font-mono tabular-nums">
+              DAG: {nodes.length} Nodes &bull; {edges.length} Edges
             </span>
           </div>
 
           <div className="flex items-center gap-2.5">
             {validationWarning && (
-              <div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800/60 px-3 py-1.5 rounded-full flex items-center gap-1.5 animate-pulse">
+              <div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800/60 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 animate-pulse">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                 <span>{validationWarning}</span>
               </div>
@@ -347,18 +347,18 @@ function StudioCanvasInner() {
 
             <button
               onClick={handleResetGraph}
-              className="py-1.5 px-3.5 rounded-xl border border-white/[0.08] bg-[#161B26] hover:bg-[#1E2433] text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="py-1.5 px-3.5 rounded-full border border-white/20 bg-[#16171a] hover:bg-[#202126] text-[#c4c2c3] hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
               <span>Reset Demo</span>
             </button>
 
-            {/* Primary CTA: Gradient from Indigo via Purple to Cyan (DeFi Pro) */}
+            {/* Primary CTA: Motion UI White Pill Button */}
             <button
               onClick={handleOpenDeploy}
-              className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500 hover:from-indigo-400 hover:to-cyan-400 text-white shadow-lg shadow-indigo-500/25 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-white hover:bg-white/90 text-black shadow-[0_2px_12px_rgba(255,255,255,0.25)] transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             >
-              <Rocket className="w-3.5 h-3.5" />
+              <Rocket className="w-3.5 h-3.5 fill-black" />
               <span>Deploy Automation (1-Click)</span>
             </button>
           </div>

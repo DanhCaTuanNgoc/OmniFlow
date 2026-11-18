@@ -11,7 +11,8 @@ import {
   Flame, 
   Wallet,
   Globe,
-  Zap
+  Zap,
+  Layers
 } from 'lucide-react';
 
 const RECIPES = [
@@ -73,46 +74,49 @@ const RECIPES = [
 
 export default function TemplateLibraryPage() {
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-6 select-none">
+    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6 select-none font-sans">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 shadow-sm">
-              <Library className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white tracking-tight">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-white/[0.06] border border-white/20 flex items-center justify-center text-white shadow-sm shrink-0">
+            <Library className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold text-white tracking-tight font-display">
                 Template Recipe Store
               </h1>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Production-Tested Cross-Chain Automations &bull; 1-Click Hydration onto Canvas
-              </p>
+              <span className="px-2 py-0.5 rounded-full bg-white/[0.06] text-[#c4c2c3] border border-white/10 text-[10px] font-mono font-medium">
+                6 RECIPES
+              </span>
             </div>
+            <p className="text-xs text-[#8e8e8e] mt-0.5">
+              Production-Tested Cross-Chain Automations &bull; 1-Click Hydration onto Canvas
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 font-medium">
-            6 Production Recipes
+          <span className="text-xs px-3.5 py-1.5 rounded-full bg-[#16171a] border border-white/20 text-[#c4c2c3] font-mono">
+            Zero Backend Required
           </span>
         </div>
       </div>
 
       {/* Grid of 6 Recipes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {RECIPES.map((recipe) => {
           const Icon = recipe.icon;
           return (
             <div
               key={recipe.id}
-              className="p-6 rounded-2xl bg-[#0E1017]/90 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.14] transition-all space-y-4 flex flex-col justify-between shadow-xl"
+              className="p-5 md:p-6 rounded-2xl bg-[#0b0c10]/90 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.18] transition-all space-y-4 flex flex-col justify-between shadow-2xl group"
             >
               <div className="space-y-3.5">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2.5 rounded-xl border ${recipe.tagColor} shadow-sm`}>
-                      <Icon className="w-5 h-5" />
+                    <div className={`p-2.5 rounded-full border ${recipe.tagColor} shadow-sm`}>
+                      <Icon className="w-4 h-4" />
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-white tracking-tight">
@@ -122,7 +126,7 @@ export default function TemplateLibraryPage() {
                         {recipe.tags.map((t) => (
                           <span
                             key={t}
-                            className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#07080D] text-slate-300 border border-white/[0.06]"
+                            className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-[#16171a] text-[#c4c2c3] border border-white/10"
                           >
                             {t}
                           </span>
@@ -131,12 +135,12 @@ export default function TemplateLibraryPage() {
                     </div>
                   </div>
 
-                  <span className="text-xs font-mono text-slate-400 tabular-nums font-medium">
+                  <span className="text-xs font-mono text-[#8e8e8e] tabular-nums font-medium">
                     {recipe.nodesCount} Nodes
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-400 leading-relaxed">
+                <p className="text-xs text-[#8e8e8e] leading-relaxed">
                   {recipe.description}
                 </p>
               </div>
@@ -144,9 +148,10 @@ export default function TemplateLibraryPage() {
               <div className="pt-3 border-t border-white/[0.06]">
                 <Link
                   href="/workspace/studio"
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-xl bg-violet-600/10 hover:bg-violet-600 text-violet-300 hover:text-white border border-violet-500/20 hover:border-violet-500 transition-all cursor-pointer group shadow-sm"
+                  prefetch={true}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-[#16171a] hover:bg-white text-white hover:text-black border border-white/20 hover:border-transparent transition-all cursor-pointer shadow-sm"
                 >
-                  <Zap className="w-3.5 h-3.5 text-violet-400 group-hover:scale-110 group-hover:text-white transition-all" />
+                  <Zap className="w-3.5 h-3.5 fill-current transition-all" />
                   <span>Hydrate onto Studio Canvas</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                 </Link>
