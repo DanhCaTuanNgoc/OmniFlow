@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 16 | 12 | 0 | **75.0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **52** | **48** | **0** | **92.3%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 16 | 13 | 0 | **81.3%** |
+| **TỔNG CỘNG** | **21 Ngày** | **52** | **49** | **0** | **94.2%** |
 
 ---
 
@@ -496,11 +496,17 @@
 
 ### SPRINT 3: LIVE VISUALIZER, HARDENING & DEPLOYMENT (NGÀY 15 - 21: 29/11 - 5/12)
 
-#### `TASK-301` [TODO] — Hiệu ứng Chớp Xung Photon trên Canvas (Pulse Visualizer)
-* **Module / Màn hình:** Pipeline Studio Canvas & Activity Logs
+#### `TASK-301` [DONE] — Hiệu ứng Chớp Xung Photon trên Canvas (Pulse Visualizer)
+* **Module / Màn hình:** Pipeline Studio Canvas (`StudioCanvas.tsx`, `CustomEdge.tsx`)
 * **Mục đích:** Tạo hiệu ứng ánh sáng chạy dọc theo các dây nối khi nhận sự kiện WebSocket (Hiệu ứng WOW).
-* **Chi tiết thực thi:** CSS Keyframes photon pulse trên cạnh XYFlow, State node chuyển màu không remount.
-* **Ngày tạo:** 14/11/2026 17:35 | **Trạng thái:** `TODO`
+* **Chi tiết thực thi:**
+  * Tích hợp WebSocket Gateway listener (`/stream`) trong `StudioCanvas.tsx` lắng nghe sự kiện `REACTIVE_STEP_UPDATE`.
+  * Nâng cấp `CustomEdge.tsx` với chế độ tăng tốc Photon Burst (`animDur: 0.9s`, đa lớp hạt quang tử drop-shadow neon glow).
+  * Chuyển đổi trạng thái trực quan các node theo thời gian thực (IDLE $\rightarrow$ EVENT_CAPTURED $\rightarrow$ CONDITION_MET $\rightarrow$ SUCCESS) mà không gây re-render hay giật lag layout.
+  * Bổ sung huy hiệu trạng thái WebSocket thời gian thực `[ 🟢 WS Live Stream ]` trên thanh Studio Toolbar.
+* **Ngày tạo:** 14/11/2026 17:35
+* **Ngày hoàn thành:** 18/11/2026 14:52
+* **Trạng thái:** `DONE`
 
 #### `TASK-302` [TODO] — Xây dựng Màn hình Activity Logs & Cross-Chain Explorer
 * **Module / Màn hình:** Màn hình 5 — Activity Logs

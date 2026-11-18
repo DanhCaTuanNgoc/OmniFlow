@@ -21,6 +21,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { RECIPE_PRESETS } from '@/lib/recipes';
+import { APP_CONFIG } from '@/lib/constants';
 
 import {
   WatchDEXPriceNode,
@@ -168,6 +169,87 @@ function StudioCanvasInner() {
   const [simulationStep, setSimulationStep] = useState<number>(0);
   const [simulationMessage, setSimulationMessage] = useState<string | null>(null);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
+  const [wsStatus, setWsStatus] = useState<'CONNECTED' | 'CONNECTING' | 'DISCONNECTED'>('CONNECTING');
+
+  // Real-time WebSocket Gateway connection for Live Photon Pulses
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    let reconnectTimer: NodeJS.Timeout;
+
+    const connectWs = () => {
+      try {
+        setWsStatus('CONNECTING');
+        ws = new WebSocket(APP_CONFIG.wsUrl);
+
+        ws.onopen = () => {
+          setWsStatus('CONNECTED');
+          ws?.send(JSON.stringify({ type: 'SUBSCRIBE_PIPELINE', pipelineId: 'all' }));
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'REACTIVE_STEP_UPDATE' && msg.data) {
+              const step = msg.data.step;
+              if (step === 'TRIGGER_DETECTED') {
+                setNodes((nds) =>
+                  nds.map((n) =>
+                    n.data.category === 'trigger'
+                      ? { ...n, data: { ...n.data, state: 'EVENT_CAPTURED' as const } }
+                      : n
+                  )
+                );
+                setEdges((eds) =>
+                  eds.map((e) => ({ ...e, data: { ...e.data, isBurst: true } }))
+                );
+                setTimeout(() => {
+                  setEdges((eds) =>
+                    eds.map((e) => ({ ...e, data: { ...e.data, isBurst: false } }))
+                  );
+                }, 3000);
+              } else if (step === 'CONDITION_EVALUATED') {
+                setNodes((nds) =>
+                  nds.map((n) =>
+                    n.data.category === 'condition'
+                      ? { ...n, data: { ...n.data, state: 'CONDITION_MET' as const } }
+                      : n
+                  )
+                );
+              } else if (step === 'DESTINATION_EXECUTED') {
+                setNodes((nds) =>
+                  nds.map((n) =>
+                    n.data.category === 'action'
+                      ? { ...n, data: { ...n.data, state: 'SUCCESS' as const } }
+                      : n
+                  )
+                );
+              }
+            }
+          } catch {
+            // non-json payload
+          }
+        };
+
+        ws.onclose = () => {
+          setWsStatus('DISCONNECTED');
+          reconnectTimer = setTimeout(connectWs, 5000);
+        };
+
+        ws.onerror = () => {
+          setWsStatus('DISCONNECTED');
+        };
+      } catch {
+        setWsStatus('DISCONNECTED');
+      }
+    };
+
+    connectWs();
+
+    return () => {
+      clearTimeout(reconnectTimer);
+      if (ws) ws.close();
+    };
+  }, [setNodes, setEdges]);
 
   // Hydrate preset from query parameter ?recipe=...
   useEffect(() => {
@@ -189,7 +271,7 @@ function StudioCanvasInner() {
     setSimulationStep(1);
     setSimulationMessage('Step 1/3: Origin DEX Swap event captured on Base Sepolia (ETH Price <= $1,800)');
 
-    // Step 1: Trigger Captured
+    // Step 1: Trigger Captured + Fast Photon Burst
     setNodes((nds) =>
       nds.map((n) => {
         if (n.data.category === 'trigger') {
@@ -201,6 +283,7 @@ function StudioCanvasInner() {
         return n;
       })
     );
+    setEdges((eds) => eds.map((e) => ({ ...e, data: { ...e.data, isBurst: true } })));
 
     // Step 2: Reactive Omni ReactVM Condition Met
     setTimeout(() => {
@@ -240,12 +323,13 @@ function StudioCanvasInner() {
     setTimeout(() => {
       setIsSimulating(false);
       setSimulationMessage('✅ Simulation Complete (0-Gas Dry Run • 100% Invariants Verified)');
+      setEdges((eds) => eds.map((e) => ({ ...e, data: { ...e.data, isBurst: false } })));
       setTimeout(() => {
         setSimulationMessage(null);
         setSimulationStep(0);
       }, 4000);
     }, 4400);
-  }, [isSimulating, setNodes]);
+  }, [isSimulating, setNodes, setEdges]);
 
   // DAG & Port Constraint Enforcement
   const isValidConnection = useCallback(
@@ -471,6 +555,12 @@ function StudioCanvasInner() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            {/* Live WebSocket Stream Indicator */}
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[11px] font-mono">
+              <span className={`w-2 h-2 rounded-full ${wsStatus === 'CONNECTED' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+              <span className="text-[#c4c2c3]">{wsStatus === 'CONNECTED' ? 'WS Live Stream' : 'WS Standby'}</span>
+            </div>
+
             {validationWarning && (
               <div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800/60 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 animate-pulse">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />

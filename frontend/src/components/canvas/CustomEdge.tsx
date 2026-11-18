@@ -24,8 +24,10 @@ export function CustomEdge({
   });
 
   const isPulsing = (data?.isPulsing as boolean | undefined) ?? true;
+  const isBurst = Boolean(data?.isBurst);
   const strokeColor = (data?.color as string | undefined) || '#38bdf8';
   const crossChainLabel = data?.crossChainLabel as string | undefined;
+  const animDur = isBurst ? '0.9s' : '2.2s';
 
   return (
     <>
@@ -35,8 +37,8 @@ export function CustomEdge({
           d={edgePath}
           fill="none"
           stroke={strokeColor}
-          strokeWidth={7}
-          opacity={isPulsing ? 0.2 : 0.08}
+          strokeWidth={isBurst ? 10 : 7}
+          opacity={isBurst ? 0.4 : isPulsing ? 0.2 : 0.08}
           strokeLinecap="round"
           className="transition-opacity duration-300 pointer-events-none"
         />
@@ -47,17 +49,17 @@ export function CustomEdge({
           d={edgePath}
           fill="none"
           stroke={strokeColor}
-          strokeWidth={2}
-          strokeOpacity={isPulsing ? 0.85 : 0.4}
+          strokeWidth={isBurst ? 3 : 2}
+          strokeOpacity={isBurst ? 1 : isPulsing ? 0.85 : 0.4}
           strokeLinecap="round"
           style={style}
         />
 
         {/* Layer 3: Animated Photon Particle gliding along the stream */}
         {isPulsing && (
-          <circle r="3" fill="#ffffff" className="pointer-events-none">
+          <circle r={isBurst ? 4 : 3} fill="#ffffff" className="pointer-events-none filter drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]">
             <animateMotion
-              dur="2.4s"
+              dur={animDur}
               repeatCount="indefinite"
               path={edgePath}
             />
@@ -65,9 +67,9 @@ export function CustomEdge({
         )}
 
         {isPulsing && (
-          <circle r="5" fill={strokeColor} opacity={0.6} className="pointer-events-none filter blur-[1px]">
+          <circle r={isBurst ? 7 : 5} fill={strokeColor} opacity={isBurst ? 0.9 : 0.6} className="pointer-events-none filter blur-[2px]">
             <animateMotion
-              dur="2.4s"
+              dur={animDur}
               repeatCount="indefinite"
               path={edgePath}
             />
