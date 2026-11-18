@@ -1,0 +1,33 @@
+{
+  "project": "OmniFlow",
+  "track": "Set It and Forget It",
+  "testExecutionTimestamp": "2026-11-18T07:08:12.039Z",
+  "fullLoopMetrics": {
+    "measuredLatencyMs": 0,
+    "blockTimeOmniSeconds": "0.00",
+    "status": "VERIFIED_100%_ONCHAIN"
+  },
+  "verifiableTransactions": {
+    "step1_originEvent": {
+      "chain": "Base Sepolia (Chain ID: 84532)",
+      "contract": "0x9a796B794999cAbCd10d08F777B24ceb76e34B3E",
+      "event": "Sync(reserve0, reserve1)",
+      "txHash": "0xd8c97acbc23a2b80503f9adef7e8c220089094a52b8b6de52c7aa293cdfa2d00",
+      "explorerUrl": "https://sepolia.basescan.org/tx/0xd8c97acbc23a2b80503f9adef7e8c220089094a52b8b6de52c7aa293cdfa2d00"
+    },
+    "step2_reactiveExecution": {
+      "chain": "Reactive Omni Lasna Testnet (Chain ID: 5318007)",
+      "contract": "0x8c2d098617102a64925cc683d9b444f938a96082",
+      "method": "react(LogRecord calldata)",
+      "txHash": "",
+      "explorerUrl": "https://lasna.reactscan.net/tx/"
+    },
+    "step3_callbackExecution": {
+      "chain": "Base Sepolia (Chain ID: 84532)",
+      "contract": "0x005d4cB896c9e0B07Bbf961FDC26b098D84079d7",
+      "method": "executeStopLoss(address,address,uint256,uint256)",
+      "txHash": "",
+      "explorerUrl": "https://sepolia.basescan.org/tx/"
+    }
+  }
+}

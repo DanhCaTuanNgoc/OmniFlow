@@ -1,5 +1,12 @@
 import fs from 'fs';
 import path from 'path';
+import dotenv from 'dotenv';
+
+// Nạp biến môi trường từ backend/.env hoặc .env gốc
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), 'backend/.env') });
+dotenv.config({ path: path.resolve(__dirname, '../backend/.env') });
+
 import { createPublicClient, createWalletClient, http, parseEther, formatEther, parseAbiItem } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
@@ -112,7 +119,7 @@ async function main() {
       parseAbiItem('function setReserves(uint112 _reserve0, uint112 _reserve1) external'),
     ],
     functionName: 'setReserves',
-    args: [parseEther('1.0'), parseEther('1700.0')], // Ép giá xuống $1,700 < $1,800
+    args: [parseEther('1.0'), parseEther('1400.0')], // Ép giá rớt sâu xuống $1,400 < $1,800 trigger threshold
   });
 
   console.log(`✅ [1. ORIGIN TX HASH]: ${originTxHash}`);
@@ -121,46 +128,61 @@ async function main() {
   const originReceipt = await basePublicClient.waitForTransactionReceipt({ hash: originTxHash });
   console.log(`Block confirmed on Base Sepolia: #${originReceipt.blockNumber}`);
 
-  console.log('\n[4/5] Chờ Reactive Omni (Lasna) xử lý react() qua CometBFT consensus...');
-  // Theo dõi event ConditionTriggered trên RSC
+  console.log('\n[4/5] Chờ Reactive Omni (Lasna) xử lý react() & Destination Callback trên Base Sepolia...');
   let reactiveTxHash = '';
+  let callbackTxHash = '';
   let latencyMs = 0;
 
-  for (let i = 0; i < 30; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const logs = await lasnaPublicClient.getLogs({
-      address: rscAddress,
-      fromBlock: 'latest',
-    });
+  const lasnaStartBlock = await lasnaPublicClient.getBlockNumber();
 
-    if (logs.length > 0) {
-      reactiveTxHash = logs[0].transactionHash;
-      latencyMs = Date.now() - startTime;
-      break;
+  for (let i = 0; i < 45; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    // 1. Kiểm tra Lasna logs
+    if (!reactiveTxHash) {
+      try {
+        const lasnaHead = await lasnaPublicClient.getBlockNumber();
+        const logs = await lasnaPublicClient.getLogs({
+          address: rscAddress,
+          fromBlock: lasnaStartBlock,
+          toBlock: lasnaHead,
+        });
+        if (logs.length > 0) {
+          reactiveTxHash = logs[0].transactionHash;
+          latencyMs = Date.now() - startTime;
+          console.log(`\n✅ [2. REACTIVE TX DETECTED]: ${reactiveTxHash}`);
+        }
+      } catch (e: any) {
+        // RPC getLogs may be filtered
+      }
     }
-    process.stdout.write('.');
-  }
 
-  if (!reactiveTxHash) {
-    console.log('\n⚠️ Chưa bắt được event trong 30s. Kiểm tra log trên explorer Lasna.');
-    return;
-  }
+    // 2. Kiểm tra Base Sepolia ActionVault logs (chống lỗi 413 bằng window <= 150 blocks)
+    try {
+      const baseHead = await basePublicClient.getBlockNumber();
+      const from = baseHead - 150n > originReceipt.blockNumber ? baseHead - 150n : originReceipt.blockNumber;
+      const vaultLogs = await basePublicClient.getLogs({
+        address: vaultAddress,
+        fromBlock: from,
+        toBlock: baseHead,
+      });
 
-  console.log(`\n✅ [2. REACTIVE TX HASH]: ${reactiveTxHash} (Latency: ${latencyMs}ms)`);
-  console.log(`🔗 Reactscan Link: https://lasna.reactscan.net/tx/${reactiveTxHash}`);
+      if (vaultLogs.length > 0) {
+        // Tìm StopLossExecuted hoặc OrderSkipped
+        for (const log of vaultLogs) {
+          if (log.transactionHash !== originTxHash) {
+            callbackTxHash = log.transactionHash;
+            if (latencyMs === 0) latencyMs = Date.now() - startTime;
+            console.log(`\n✅ [3. DESTINATION CALLBACK EXECUTED]: ${callbackTxHash}`);
+            break;
+          }
+        }
+      }
+    } catch (e: any) {
+      // transient RPC error
+    }
 
-  console.log('\n[5/5] Chờ ActionVault trên Base Sepolia nhận callback từ Reactive Callback Proxy...');
-  let callbackTxHash = '';
-  for (let i = 0; i < 30; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const logs = await basePublicClient.getLogs({
-      address: vaultAddress,
-      event: parseAbiItem('event StopLossExecuted(uint256 ethAmountIn, uint256 minUsdcOut, uint256 timestamp)'),
-      fromBlock: originReceipt.blockNumber,
-    });
-
-    if (logs.length > 0) {
-      callbackTxHash = logs[0].transactionHash;
+    if (callbackTxHash) {
       break;
     }
     process.stdout.write('.');

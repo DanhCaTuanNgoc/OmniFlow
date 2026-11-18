@@ -56,7 +56,9 @@ contract DeployScript is Script {
             // Ví lạnh dự phòng mặc định là deployer
             address coldWallet = deployer;
 
-            ActionVault vault = new ActionVault{value: 0.1 ether}(
+            uint256 vaultFunding = vm.envOr("VAULT_FUNDING", uint256(0.002 ether));
+
+            ActionVault vault = new ActionVault{value: vaultFunding}(
                 CALLBACK_PROXY_BASE_SEPOLIA,
                 coldWallet,
                 address(router),
@@ -64,7 +66,7 @@ contract DeployScript is Script {
                 address(pair)
             );
             console.log("ActionVault deployed at:", address(vault));
-            console.log("ActionVault funded with 0.1 ETH");
+            console.log("ActionVault funded with ETH:", vaultFunding);
         } else if (block.chainid == 5318007) {
             // ==========================================
             // DEPLOYMENT TRÊN REACTIVE LASNA (CHAIN ID 5318007)
@@ -80,13 +82,15 @@ contract DeployScript is Script {
             uint256 priceThreshold = 1800 ether; // Cắt lỗ dưới $1,800
             uint256 cooldownSeconds = 300; // 5 phút cooldown
             uint256 percentToSwap = 50; // Bán 50%
-            uint256 requiredHits = 2; // Anti-wick: 2 hits
+            uint256 requiredHits = 1; // Stateless ReactVM: 1 hit trigger
             uint256 velocityBps = 0;
             uint256 windowSec = 0;
             uint256 originChain = 84532; // Base Sepolia
             uint256 originTopic = 0;
 
-            StopLoss_Pipeline rsc = new StopLoss_Pipeline{value: 1 ether}(
+            uint256 rscFunding = vm.envOr("RSC_FUNDING", uint256(0.05 ether));
+
+            StopLoss_Pipeline rsc = new StopLoss_Pipeline{value: rscFunding}(
                 pairAddress,
                 priceThreshold,
                 cooldownSeconds,
@@ -99,7 +103,7 @@ contract DeployScript is Script {
                 originTopic
             );
             console.log("StopLoss_Pipeline deployed at:", address(rsc));
-            console.log("StopLoss_Pipeline funded with 1.0 lREACT gas sponsorship");
+            console.log("StopLoss_Pipeline funded with lREACT:", rscFunding);
         }
 
         vm.stopBroadcast();

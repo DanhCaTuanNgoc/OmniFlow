@@ -65,8 +65,8 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
         originChainId = _originChainId > 0 ? _originChainId : DEFAULT_ORIGIN_CHAIN_ID;
         originTopic0 = _originTopic0 != 0 ? _originTopic0 : SYNC_TOPIC;
 
-        // BẢO VỆ MÔI TRƯỜNG REACTVM: Chỉ đăng ký subscription khi ở Top-level deployer (!vm)
-        if (!vm) {
+        // Đăng ký event subscription với Reactive System Contract khi deploy on-chain (!vm)
+        if (!vm && address(service) != address(0)) {
             service.subscribe(
                 originChainId,
                 _pairAddress,
@@ -78,7 +78,8 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
         }
     }
 
-    function react(LogRecord calldata log) external vmOnly {
+    // Tương thích cả Reactive Omni (CometBFT) lẫn Legacy ReactVM
+    function react(LogRecord calldata log) external {
         if (log._contract != pairAddress) return;
 
         // PATTERN 2: STATELESS TIMESTAMP COOLDOWN (CHỐNG DỘI BLOCK 200MS & ZERO-DEADLOCK)
@@ -147,11 +148,34 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
         );
 
         // Phát ra Callback hướng tới Base Sepolia (Chain ID 84532)
+        // 1. Chuẩn Event (Legacy & Hybrid Relayer)
         emit Callback(
             DEFAULT_ORIGIN_CHAIN_ID, // Callback đích luôn thực thi trên ActionVault ở Base Sepolia
             actionVault,
             350000, // Gas limit đủ cho Uniswap swap
             payload
         );
+
+        // 2. Chuẩn System Contract Call (Reactive Omni Direct System Request)
+        (bool s1, ) = address(0x8888888888888888888888888888888888888888).call(
+            abi.encodeWithSignature(
+                "requestCallbackV_1_0((uint256,address,uint64,bytes))",
+                DEFAULT_ORIGIN_CHAIN_ID,
+                actionVault,
+                uint64(350000),
+                payload
+            )
+        );
+        if (!s1 && address(service) != address(0)) {
+            address(service).call(
+                abi.encodeWithSignature(
+                    "requestCallbackV_1_0((uint256,address,uint64,bytes))",
+                    DEFAULT_ORIGIN_CHAIN_ID,
+                    actionVault,
+                    uint64(350000),
+                    payload
+                )
+            );
+        }
     }
 }

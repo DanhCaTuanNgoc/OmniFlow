@@ -13,10 +13,10 @@
 | Giai đoạn (Phase) | Thời gian | Tổng Tasks | Hoàn thành | Đang làm | Tỷ lệ hoàn thành |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
-| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 8 | 0 | **80.0%** |
+| **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 15 | 11 | 0 | **73.3%** |
-| **TỔNG CỘNG** | **21 Ngày** | **51** | **39** | **0** | **76.5%** |
+| **TỔNG CỘNG** | **21 Ngày** | **51** | **41** | **0** | **80.4%** |
 
 ---
 
@@ -185,28 +185,38 @@
 * **Ngày hoàn thành:** 14/11/2026 18:53
 * **Trạng thái:** `DONE`
 
-#### `TASK-106` [TODO] — Deploy Hợp Đồng Lên Mạng Thử Nghiệm Thật (Live Testnet)
+#### `TASK-106` [DONE] — Deploy Hợp Đồng Lên Mạng Thử Nghiệm Thật (Live Testnet)
 * **Module / Màn hình:** Base Sepolia (`84532`) & Reactive Lasna (`5318007`)
-* **Mục đích:** Triển khai hạ tầng hợp đồng on-chain thật chuẩn bị cho tương tác full loop.
+* **Mục đích:** Triển khai hạ tầng hợp đồng on-chain thật chuẩn bị cho tương tác full loop theo luật Reactive Buildathon.
 * **Chi tiết thực thi:**
   * Xây dựng kịch bản triển khai chuẩn mực Foundry tại `contracts/script/Deploy.s.sol`.
-  * Hỗ trợ tự động deploy `MockUniswapV2Pair`, `MockTokens`, `MockUniswapV2Router` và `ActionVault` (nạp 0.1 ETH) trên Base Sepolia.
-  * Hỗ trợ deploy `StopLoss_Pipeline` lên Reactive Lasna với 1.0 lREACT gas sponsorship.
-  * Sẵn sàng phát sóng trực tiếp on-chain qua lệnh `forge script script/Deploy.s.sol --broadcast` ngay khi người dùng cấp private key ví có số dư faucet.
+  * **Base Sepolia (Chain ID: 84532):**
+    * `MockWETH`: `0x6ecfc31ef5199d82bad83a469f7434785858d7dd` (Tx: `0x35125b90e3a53adbb250ee163abb6316312932b9d4885b4ba2d6701cd4968f62`)
+    * `MockUSDC`: `0x8c2d098617102a64925cc683d9b444f938a96082` (Tx: `0xb700140bade246a6e07489cf8cf3a677333d93767e33783a5ad4a0557649e3d6`)
+    * `MockUniswapV2Pair`: `0x9a796b794999cabcd10d08f777b24ceb76e34b3e` (Tx: `0xc176df9c0cdc71ad14085908840229a8567cebdd04ae0ed79308a37443b1174d`)
+    * `MockUniswapV2Router`: `0x826abc5bdd70882d445aedee0888412f39c05c29` (Tx: `0x9c4b20c29cc16965ad3d478309036b40eae78dcdf1b7314b06c0c5c29dc3fe47`)
+    * `ActionVault`: `0x005d4cb896c9e0B07Bbf961FDC26b098D84079d7` (Tx: `0xf5632a0c0dd1762a073754de2ac078d5db12032b23977032810fad4ac9e4232d`), nạp 0.002 ETH.
+  * **Reactive Lasna Testnet (Chain ID: 5318007):**
+    * `StopLoss_Pipeline` (RSC): `0x8c2d098617102a64925cc683d9b444f938a96082` (Tx: `0xafb6bf9c969f26e42d2ffe97b6d990113a4b8fc1f5445cc1f99dfcb0b7f34bc0`).
+    * Tự động đăng ký subscription vào Pair `0x9a796b79...` trên Base Sepolia với topic `Sync(uint112,uint112)`.
+  * **Phân quyền & Ký quỹ:**
+    * Cấp quyền RSC trên Vault: Tx `0xdaddfcadfbe4d2afb563ae57aa5f65cce67a281b4d733eb88d9b457ab1df1cc8` (Block `#60317785`).
+    * Ký quỹ dự phòng `CallbackProxy.depositTo`: Tx `0x419d8dd4acb00f471f4e40282c473abc4b591e44e695a299281640a5f96b0955` (0.0005 ETH).
 * **Ngày tạo:** 14/11/2026 17:35
-* **Ngày hoàn thành:** --
-* **Trạng thái:** `TODO` (Script Deploy hoàn tất, chờ private key có số dư faucet)
+* **Ngày hoàn thành:** 18/11/2026 14:05
+* **Trạng thái:** `DONE`
 
-#### `TASK-107` [TODO] — Thực Thi Multi-Chain Full Loop Test & Xuất Bằng Chứng
-* **Module / Màn hình:** `scripts/test-full-loop.ts`
+#### `TASK-107` [DONE] — Thực Thi Multi-Chain Full Loop Test & Xuất Bằng Chứng
+* **Module / Màn hình:** `scripts/test-full-loop.ts` & `FULL_LOOP_EVIDENCE.json`
 * **Mục đích:** Kích hoạt giao dịch swap trên Base Sepolia $\rightarrow$ Lasna React $\rightarrow$ Base Callback Vault.
 * **Chi tiết thực thi:**
-  * Xây dựng script kiểm thử tự động `scripts/test-full-loop.ts` (kết nối trực tiếp RPC Base Sepolia và Reactive Lasna).
-  * Tuân thủ 100% nguyên tắc Zero-Mock: Phát hiện RPC live (Base block `#60300654`, Lasna block `#8630272`), thông báo minh bạch khi thiếu key ví thật thay vì dùng hash giả.
-  * Script sẵn sàng chạy tự động với `pnpm test:full-loop` để xuất file `FULL_LOOP_EVIDENCE.json` với 3 tx hashes thật ngay sau khi deploy on-chain.
+  * Xây dựng script kiểm thử tự động `scripts/test-full-loop.ts` kết nối trực tiếp RPC Base Sepolia và Reactive Lasna.
+  * Kích hoạt Origin Event: Giao dịch `0x29b31cc9e38050c6051d07b76bc27634031159c7523e7706f2ddabddf5e8d457` trên Base Sepolia (Block `#60317870`), ép giá rớt xuống $1,500 < $1,800.
+  * Lắng nghe và xác minh Reactive execution trên Lasna: Giao dịch `0xec28373c12498a272027da2b40ade8fa72af3eba8d7569c4b98de2792a2b7ea5` (Block `#8633526`), phát ra 4 logs gồm `ConditionTriggered`, `Callback` và gọi hệ thống `requestCallbackV_1_0` trên `0x8888888888888888888888888888888888888888`.
+  * Xuất file bằng chứng chuẩn `FULL_LOOP_EVIDENCE.json` với đầy đủ liên kết Basescan và Reactscan.
 * **Ngày tạo:** 14/11/2026 17:35
-* **Ngày hoàn thành:** --
-* **Trạng thái:** `TODO` (Harness script hoàn tất, chờ deploy on-chain để xuất evidence)
+* **Ngày hoàn thành:** 18/11/2026 14:08
+* **Trạng thái:** `DONE`
 
 #### `TASK-108` [DONE] — Xuất ABIs & Types Sang `packages/shared/`
 * **Module / Màn hình:** `packages/shared/`

@@ -17,6 +17,7 @@ cache/
 # Foundry
 contracts/out/
 contracts/cache/
+contracts/broadcast/
 
 # Old hackathon repo reference
 portaldot-hackathon-2026-PortalModeler-Tuanngoc/
