@@ -14,9 +14,9 @@
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
-| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 13 | 0 | **72.2%** |
+| **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 14 | 0 | **77.8%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 16 | 12 | 0 | **75.0%** |
-| **TỔNG CỘNG** | **21 Ngày** | **52** | **43** | **0** | **82.7%** |
+| **TỔNG CỘNG** | **21 Ngày** | **52** | **44** | **0** | **84.6%** |
 
 ---
 
@@ -398,13 +398,15 @@
 * **Ngày hoàn thành:** 18/11/2026 14:38
 * **Trạng thái:** `DONE`
 
-#### `TASK-213` [TODO] — Triển khai Nút Simulate Flow (Dry-Run Sandbox) & Tab Live Solidity Preview
+#### `TASK-213` [DONE] — Triển khai Nút Simulate Flow (Dry-Run Sandbox) & Tab Live Solidity Preview
 * **Module / Màn hình:** Pipeline Studio Toolbar & Inspector (`frontend/src/components/canvas/`)
 * **Mục đích:** Nâng cao điểm Craft/DevTools, cho phép BGK test visual pipeline không cần đợi biến động giá và kiểm chứng tính minh bạch on-chain.
 * **Chi tiết thực thi:**
-  * Nút `[ 🧪 Simulate Flow ]`: Bắn event mô phỏng kích hoạt tuần tự Trigger chớp Cyan $\rightarrow$ Photon Pulse trên dây $\rightarrow$ Condition Glowing $\rightarrow$ Action Tick Xanh (có watermark rõ ràng "Sandbox Preview Mode").
-  * Tab `[ </> View Solidity ]`: Cung cấp code syntax highlighter hiển thị mã nguồn `StopLoss_Pipeline.sol` với các biến nhảy trực tiếp theo slider người dùng kéo trên Inspector.
-* **Ngày tạo:** 14/11/2026 19:30 | **Trạng thái:** `TODO`
+  * Nút `[ 🧪 Simulate Flow ]`: Bắn event mô phỏng kích hoạt tuần tự Trigger chớp Cyan $\rightarrow$ Photon Pulse trên dây $\rightarrow$ Condition Glowing $\rightarrow$ Action Tick Xanh (kèm watermark tiến trình "Sandbox Preview Mode" và toast hoàn thành).
+  * Modal `[ </> View Solidity ]`: Xây dựng `SolidityPreviewModal.tsx` trích xuất thông số thời gian thực từ active canvas graph (pairAddress, priceThreshold, cooldownSeconds, percentToSwap, actionVault, velocityThresholdBps, windowSeconds, originChainId), hỗ trợ copy code và tải file `.sol`.
+* **Ngày tạo:** 14/11/2026 19:30
+* **Ngày hoàn thành:** 18/11/2026 14:40
+* **Trạng thái:** `DONE`
 
 #### `TASK-214` [TODO] — Bổ sung Recipe 5 (Payday Auto-Splitter) & Recipe 6 (Cross-Chain Hedge) vào Template Library
 * **Module / Màn hình:** Màn hình 3 — Template Library (`frontend/src/app/workspace/templates/page.tsx`)
