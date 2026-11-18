@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 15 | 11 | 0 | **73.3%** |
-| **TỔNG CỘNG** | **21 Ngày** | **51** | **41** | **0** | **80.4%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 16 | 12 | 0 | **75.0%** |
+| **TỔNG CỘNG** | **21 Ngày** | **52** | **42** | **0** | **80.8%** |
 
 ---
 
@@ -653,4 +653,20 @@
   4. Kiểm tra biên dịch TypeScript `pnpm --filter frontend exec tsc --noEmit` và `pnpm --filter backend build` đạt 100% không lỗi.
 * **Ngày tạo:** 18/11/2026 12:43
 * **Ngày hoàn thành:** 18/11/2026 12:46
+* **Trạng thái:** `DONE`
+
+#### `TASK-316` [DONE] — Cập Nhật Bằng Chứng On-Chain Thật (Live Proof & Verifiable Explorer Hashes) Lên Landing Page
+* **Module / Màn hình:** Landing Page (`OnChainProofLedger.tsx`, `MultiChainTelemetry.tsx`, `motion-landing.css`)
+* **Mục đích:** Cập nhật toàn bộ bảng bằng chứng on-chain từ trạng thái Pending sang 100% Live & Verified với liên kết thật tới Basescan và Reactscan, tích hợp bộ chuyển tab (3-Leg Matrix, Raw FULL_LOOP_EVIDENCE.json, Honesty Table) và nút copy tiện lợi.
+* **Chi tiết thực thi:**
+  * **Cập nhật `OnChainProofLedger.tsx`:** Ghi nhận 3 leg execution thật:
+    1. *Origin DEX Pair:* `0x9a796b...` trên Base Sepolia, Tx: `0x29b31cc9...` (Block #60317870).
+    2. *Reactive RSC:* `0x8c2d09...` trên Reactive Lasna, Tx: `0xec28373c...` (Block #8633526).
+    3. *Destination ActionVault:* `0x005d4c...` trên Base Sepolia, RSC Auth Tx: `0xdaddfcad...`, Proxy Deposit Tx: `0x419d8dd4...`.
+  * **Thêm 3 tabs tương tác:** Bảng 3-Leg Pipeline Proof, Trình xem JSON trực tiếp `FULL_LOOP_EVIDENCE.json`, Bảng cam kết trung thực Honesty Table.
+  * **Cập nhật `MultiChainTelemetry.tsx`:** Gắn link Basescan và Reactscan trực tiếp cho `ActionVault.sol` và `StopLoss_Pipeline.sol`.
+  * **Cập nhật CSS trong `motion-landing.css`:** Thêm các styles cho tab controls, block-confirmed, tx-link, và JSON code viewer.
+  * Biên dịch TypeScript `pnpm --filter frontend exec tsc --noEmit` đạt 100% không lỗi.
+* **Ngày tạo:** 18/11/2026 14:10
+* **Ngày hoàn thành:** 18/11/2026 14:18
 * **Trạng thái:** `DONE`
