@@ -22,6 +22,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { APP_CONFIG } from '@/lib/constants';
+import { useWebSocket } from '@/components/providers/WebSocketProvider';
 
 import {
   WatchDEXPriceNode,
@@ -169,106 +170,53 @@ function StudioCanvasInner() {
   const [simulationStep, setSimulationStep] = useState<number>(0);
   const [simulationMessage, setSimulationMessage] = useState<string | null>(null);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
-  const [wsStatus, setWsStatus] = useState<'CONNECTED' | 'CONNECTING' | 'DISCONNECTED'>('CONNECTING');
 
-  // Real-time WebSocket Gateway connection for Live Photon Pulses
+  // Global WebSocket Gateway connection from Workspace Layout
+  const { status: wsStatus, addListener } = useWebSocket();
+
+  // Listen for Live Photon Pulses from real-time events
   useEffect(() => {
-    let ws: WebSocket | null = null;
-    let reconnectTimer: NodeJS.Timeout | null = null;
-    let isCancelled = false;
-
-    const connectWs = () => {
-      if (isCancelled) return;
-      try {
-        setWsStatus('CONNECTING');
-        ws = new WebSocket(APP_CONFIG.wsUrl);
-
-        ws.onopen = () => {
-          if (isCancelled) {
-            ws?.close();
-            return;
-          }
-          setWsStatus('CONNECTED');
-          ws?.send(JSON.stringify({ type: 'SUBSCRIBE_PIPELINE', pipelineId: 'all' }));
-        };
-
-        ws.onmessage = (event) => {
-          if (isCancelled) return;
-          try {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'REACTIVE_STEP_UPDATE' && msg.data) {
-              const step = msg.data.step;
-              if (step === 'TRIGGER_DETECTED') {
-                setNodes((nds) =>
-                  nds.map((n) =>
-                    n.data.category === 'trigger'
-                      ? { ...n, data: { ...n.data, state: 'EVENT_CAPTURED' as const } }
-                      : n
-                  )
-                );
-                setEdges((eds) =>
-                  eds.map((e) => ({ ...e, data: { ...e.data, isBurst: true } }))
-                );
-                setTimeout(() => {
-                  setEdges((eds) =>
-                    eds.map((e) => ({ ...e, data: { ...e.data, isBurst: false } }))
-                  );
-                }, 3000);
-              } else if (step === 'CONDITION_EVALUATED') {
-                setNodes((nds) =>
-                  nds.map((n) =>
-                    n.data.category === 'condition'
-                      ? { ...n, data: { ...n.data, state: 'CONDITION_MET' as const } }
-                      : n
-                  )
-                );
-              } else if (step === 'DESTINATION_EXECUTED') {
-                setNodes((nds) =>
-                  nds.map((n) =>
-                    n.data.category === 'action'
-                      ? { ...n, data: { ...n.data, state: 'SUCCESS' as const } }
-                      : n
-                  )
-                );
-              }
-            }
-          } catch {
-            // non-json payload
-          }
-        };
-
-        ws.onclose = () => {
-          if (isCancelled) return;
-          setWsStatus('DISCONNECTED');
-          reconnectTimer = setTimeout(connectWs, 5000);
-        };
-
-        ws.onerror = () => {
-          if (isCancelled) return;
-          setWsStatus('DISCONNECTED');
-        };
-      } catch {
-        if (!isCancelled) {
-          setWsStatus('DISCONNECTED');
-          reconnectTimer = setTimeout(connectWs, 5000);
+    const unsubscribe = addListener((msg) => {
+      if (msg.type === 'REACTIVE_STEP_UPDATE' && msg.data) {
+        const step = msg.data.step;
+        if (step === 'TRIGGER_DETECTED') {
+          setNodes((nds) =>
+            nds.map((n) =>
+              n.data.category === 'trigger'
+                ? { ...n, data: { ...n.data, state: 'EVENT_CAPTURED' as const } }
+                : n
+            )
+          );
+          setEdges((eds) =>
+            eds.map((e) => ({ ...e, data: { ...e.data, isBurst: true } }))
+          );
+          setTimeout(() => {
+            setEdges((eds) =>
+              eds.map((e) => ({ ...e, data: { ...e.data, isBurst: false } }))
+            );
+          }, 3000);
+        } else if (step === 'CONDITION_EVALUATED') {
+          setNodes((nds) =>
+            nds.map((n) =>
+              n.data.category === 'condition'
+                ? { ...n, data: { ...n.data, state: 'CONDITION_MET' as const } }
+                : n
+            )
+          );
+        } else if (step === 'DESTINATION_EXECUTED') {
+          setNodes((nds) =>
+            nds.map((n) =>
+              n.data.category === 'action'
+                ? { ...n, data: { ...n.data, state: 'SUCCESS' as const } }
+                : n
+            )
+          );
         }
       }
-    };
+    });
 
-    connectWs();
-
-    return () => {
-      isCancelled = true;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (ws) {
-        ws.onopen = null;
-        ws.onmessage = null;
-        ws.onclose = null;
-        ws.onerror = null;
-        ws.close();
-      }
-    };
-  }, [setNodes, setEdges]);
+    return unsubscribe;
+  }, [addListener, setNodes, setEdges]);
 
   // Hydrate preset from query parameter ?recipe=...
   useEffect(() => {

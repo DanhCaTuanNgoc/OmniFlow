@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { truncateAddress } from '@/lib/utils';
 import { APP_CONFIG } from '@/lib/constants';
+import { useWebSocket } from '@/components/providers/WebSocketProvider';
 
 interface LogDetails {
   tokenPair?: string;
@@ -123,8 +124,10 @@ export default function ActivityLogsPage() {
   const [filter, setFilter] = useState<'ALL' | 'SUCCESS' | 'SKIPPED'>('ALL');
   const [chainFilter, setChainFilter] = useState<'ALL' | 84532 | 5318007>('ALL');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [wsStatus, setWsStatus] = useState<'CONNECTED' | 'DISCONNECTED'>('DISCONNECTED');
   const [selectedJsonLog, setSelectedJsonLog] = useState<LogEntry | null>(null);
+
+  // Global WebSocket Gateway connection from Workspace Layout
+  const { status: wsStatus, addListener } = useWebSocket();
 
   const fetchLogs = () => {
     setIsRefreshing(true);
@@ -147,87 +150,37 @@ export default function ActivityLogsPage() {
     fetchLogs();
   }, []);
 
-  // Real-time WebSocket connection to event stream
+  // Listen to Real-time WebSocket Gateway for Live Event Streaming
   useEffect(() => {
-    let ws: WebSocket | null = null;
-    let reconnectTimer: NodeJS.Timeout | null = null;
-    let isCancelled = false;
-
-    const connectWs = () => {
-      if (isCancelled) return;
-      try {
-        ws = new WebSocket(APP_CONFIG.wsUrl);
-        ws.onopen = () => {
-          if (isCancelled) {
-            ws?.close();
-            return;
-          }
-          setWsStatus('CONNECTED');
-          ws?.send(JSON.stringify({ type: 'SUBSCRIBE_PIPELINE', pipelineId: 'all' }));
+    const unsubscribe = addListener((msg) => {
+      if (msg.type === 'REACTIVE_STEP_UPDATE' && msg.data) {
+        const stepData = msg.data;
+        const newEntry: LogEntry = {
+          id: `log-live-${Date.now()}`,
+          pipelineId: msg.pipelineId || 'rf-pipe-84532-001',
+          pipelineName: 'Live Reactive Automation',
+          status: stepData.step === 'SKIPPED' ? 'SKIPPED' : 'SUCCESS',
+          step: stepData.step,
+          originTxHash: stepData.originTxHash,
+          reactiveTxHash: stepData.rscTxHash,
+          destinationTxHash: stepData.destTxHash,
+          destinationAction: stepData.reason || 'Callback Executed',
+          originChainId: 84532,
+          destinationChainId: 84532,
+          latencyMs: stepData.latencyMs || 1140,
+          timestamp: Date.now(),
+          details: {
+            triggerPrice: stepData.currentPrice,
+            executedPrice: stepData.thresholdPrice,
+            reason: stepData.reason,
+          },
         };
-        ws.onmessage = (event) => {
-          if (isCancelled) return;
-          try {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'REACTIVE_STEP_UPDATE' && msg.data) {
-              const stepData = msg.data;
-              const newEntry: LogEntry = {
-                id: `log-live-${Date.now()}`,
-                pipelineId: msg.pipelineId || 'rf-pipe-84532-001',
-                pipelineName: 'Live Reactive Automation',
-                status: stepData.step === 'SKIPPED' ? 'SKIPPED' : 'SUCCESS',
-                step: stepData.step,
-                originTxHash: stepData.originTxHash,
-                reactiveTxHash: stepData.rscTxHash,
-                destinationTxHash: stepData.destTxHash,
-                destinationAction: stepData.reason || 'Callback Executed',
-                originChainId: 84532,
-                destinationChainId: 84532,
-                latencyMs: stepData.latencyMs || 1140,
-                timestamp: Date.now(),
-                details: {
-                  triggerPrice: stepData.currentPrice,
-                  executedPrice: stepData.thresholdPrice,
-                  reason: stepData.reason,
-                },
-              };
-              setLogs((prev) => [newEntry, ...prev.slice(0, 49)]);
-            }
-          } catch {
-            // non-json
-          }
-        };
-        ws.onclose = () => {
-          if (isCancelled) return;
-          setWsStatus('DISCONNECTED');
-          reconnectTimer = setTimeout(connectWs, 5000);
-        };
-        ws.onerror = () => {
-          if (isCancelled) return;
-          setWsStatus('DISCONNECTED');
-        };
-      } catch {
-        if (!isCancelled) {
-          setWsStatus('DISCONNECTED');
-          reconnectTimer = setTimeout(connectWs, 5000);
-        }
+        setLogs((prev) => [newEntry, ...prev.slice(0, 49)]);
       }
-    };
+    });
 
-    connectWs();
-
-    return () => {
-      isCancelled = true;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (ws) {
-        ws.onopen = null;
-        ws.onmessage = null;
-        ws.onclose = null;
-        ws.onerror = null;
-        ws.close();
-      }
-    };
-  }, []);
+    return unsubscribe;
+  }, [addListener]);
 
   const filteredLogs = logs.filter((l) => {
     const isSuccess = l.status === 'SUCCESS' || l.step === 'EXECUTION_SUCCESS';

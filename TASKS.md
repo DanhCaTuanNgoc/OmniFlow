@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 23 | 23 | 0 | **100%** |
-| **TỔNG CỘNG** | **21 Ngày** | **59** | **59** | **0** | **100% HOÀN TẤT** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 24 | 24 | 0 | **100%** |
+| **TỔNG CỘNG** | **21 Ngày** | **60** | **60** | **0** | **100% HOÀN TẤT** |
 
 ---
 
@@ -832,4 +832,15 @@
   3. Nâng cấp logging WebSocket server ở backend với mã đóng `close code` và số lượng active clients phục vụ chẩn đoán real-time.
 * **Ngày tạo:** 18/11/2026 18:02
 * **Ngày hoàn thành:** 18/11/2026 18:04
+* **Trạng thái:** `DONE`
+
+#### `TASK-324` [DONE] — Chuẩn Hóa Kiến Trúc Global Workspace WebSocketProvider Triệt Tiêu Ngắt Kết Nối Khi Chuyển Trang
+* **Module / Màn hình:** Workspace Suite (`frontend/src/components/providers/WebSocketProvider.tsx`, `layout.tsx`, `StudioCanvas.tsx`, `logs/page.tsx`)
+* **Mục đích:** Nâng cấp từ kết nối WebSocket cục bộ từng trang sang Global WebSocket Provider bọc tại Workspace Layout. Duy trì duy nhất 1 kết nối bền vững xuyên suốt toàn bộ các màn hình Workspace (Studio, Logs, Vault, Active, Templates), xóa bỏ hoàn toàn hiện tượng socket connect/disconnect mỗi khi đổi route hoặc render StrictMode.
+* **Chi tiết thực thi:**
+  1. Tạo `WebSocketProvider` và hook `useWebSocket()` quản lý vòng đời kết nối duy nhất ở cấp layout Workspace, hỗ trợ Pub/Sub event listener an toàn.
+  2. Bọc `WebSocketProvider` trong `app/workspace/layout.tsx`.
+  3. Refactor `StudioCanvas.tsx` và `app/workspace/logs/page.tsx` sử dụng `useWebSocket()` thay vì tự khởi tạo `new WebSocket()`.
+* **Ngày tạo:** 18/11/2026 18:11
+* **Ngày hoàn thành:** 18/11/2026 18:13
 * **Trạng thái:** `DONE`
