@@ -12,11 +12,11 @@
 
 | Giai đoạn (Phase) | Thời gian | Tổng Tasks | Hoàn thành | Đang làm | Tỷ lệ hoàn thành |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
+| **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 13 | 9 | 0 | **69.2%** |
-| **TỔNG CỘNG** | **21 Ngày** | **48** | **34** | **0** | **70.8%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 13 | 9 | 1 | **69.2%** |
+| **TỔNG CỘNG** | **21 Ngày** | **49** | **35** | **1** | **71.4%** |
 
 ---
 
@@ -102,6 +102,19 @@
   * Thêm Recipe 5 (`Payday Auto-Splitter`) và Recipe 6 (`Unichain-to-Base Cross-Chain Hedge`) vào Template Library.
 * **Ngày tạo:** 14/11/2026 19:25
 * **Ngày hoàn thành:** 14/11/2026 19:35
+* **Trạng thái:** `DONE`
+
+#### `TASK-008` [DONE] — Chuẩn Hóa 2 Siêu Năng Lực Cốt Lõi & Hóa Giải 2 Bẫy Kỹ Thuật ReactVM (Anti-Wick, Cross-Chain, Safe Fan-Out, Dual-State Trap)
+* **Module / Màn hình:** Architectural Specification (`PROJECT_BLUEPRINT.md`, `docs/REACTIVEFLOW_DETAILED_FRS.md`)
+* **Mục đích:** Khai phóng tối đa sức mạnh bản địa của Reactive Omni phục vụ bài toán thắng giải Hackathon, đồng thời vô hiệu hóa 2 bẫy kỹ thuật RVM (ReactVM Dual-State Trap & Vault Race Condition Trap).
+* **Chi tiết thực thi:**
+  * **Siêu năng lực 1: Stateful Anti-Wick Confirmation (`consecutiveHits` 1-5 blocks):** Tận dụng bộ nhớ bền vững của RVM trong `StopLoss_Pipeline.sol`, chống 100% các cú giật râu nến hoặc Flash Loan trong 1 block đơn lẻ. Tích hợp thanh trượt `confirmationHits` vào Inspector của Node `PriceThresholdGuardNode`.
+  * **Siêu năng lực 2: Cross-Chain Asymmetric Orchestration (`Unichain Sepolia 1301` ➔ `Lasna 5318007` ➔ `Base Sepolia 84532`):** Chứng minh tính "Omni" bản địa, kích hoạt cứu vốn liên chuỗi. Cập nhật `ActionVault.sol` với cờ `isCrossChainTrigger` để bypass kiểm tra giá tĩnh chuỗi đích nhưng vẫn bảo lưu 100% `minAmountOut` qua router `getAmountsOut`.
+  * **Hóa giải Bẫy 1: ReactVM Dual-State Trap:** Nhận diện việc `address(this).balance` không giảm theo ledger Lasna bên trong hàm `react()`. Cấm query balance trực tiếp trong `react()`, thay thế bằng ước lượng nội bộ `callbacksEmitted` trong RVM kết hợp đọc `lasnaProvider.getBalance(rsc)` trên thanh Gas Gauge UI.
+  * **Hóa giải Bẫy 2: Race Condition trên ActionVault:** Cấm nối 1 Condition vào 2 Action cùng rút tiền từ 1 Vault gây revert. Ban hành quy tắc Canvas: 1 Condition nối tối đa 1 Financial Action (DEX Swap / SafeSweep) + 1 Informational Action (Notify Webhook).
+  * **Bổ sung Recipe #13:** "Unichain-to-Base Flight-to-Safety" vào Ma trận kịch bản thực chiến.
+* **Ngày tạo:** 18/11/2026 12:15
+* **Ngày hoàn thành:** 18/11/2026 12:18
 * **Trạng thái:** `DONE`
 
 ---
@@ -205,23 +218,25 @@
 * **Ngày hoàn thành:** 14/11/2026 18:54
 * **Trạng thái:** `DONE`
 
-#### `TASK-109` [TODO] — Nâng cấp `ActionVault.sol` với Decoupled Live Price Check cho Cross-Chain & Velocity
+#### `TASK-109` [TODO] — Nâng cấp `ActionVault.sol` với Decoupled Live Price Check & cờ `isCrossChainTrigger`
 * **Module / Màn hình:** `contracts/src/ActionVault.sol` (Base Sepolia)
 * **Mục đích:** Đảm bảo lệnh phòng vệ liên chuỗi (Unichain $\rightarrow$ Base) và lệnh kích hoạt theo Price Velocity không bị `OrderSkipped` do giá Base chưa kịp giảm, trong khi vẫn kiểm tra `minAmountOut` chống MEV.
 * **Chi tiết thực thi:**
-  * Thêm điều kiện `thresholdPriceUSD < type(uint256).max` hoặc flag `checkLocalLivePrice` trong `executeStopLoss`.
+  * Thêm cờ `bool isCrossChainTrigger` (hoặc `thresholdPriceUSD == type(uint256).max`) trong hàm `executeStopLoss`.
+  * Khi `isCrossChainTrigger == true`: Bỏ qua bước kiểm tra cứng giá pool nội bộ Base Sepolia `livePrice > thresholdPriceUSD`.
   * Giữ nguyên 100% kiểm tra `amountOut >= minAmountOut` qua Uniswap Router `getAmountsOut()` để triệt tiêu nguy cơ sandwich MEV.
   * Viết Foundry test trong `ActionVault.t.sol` xác nhận trường hợp cross-chain bypass kiểm tra giá tĩnh thành công.
 * **Ngày tạo:** 14/11/2026 19:30 | **Trạng thái:** `TODO`
 
-#### `TASK-110` [TODO] — Nâng cấp `StopLoss_Pipeline.sol` với Anchored Sliding Window & Dynamic Origin Chain / Topic0
+#### `TASK-110` [TODO] — Nâng cấp `StopLoss_Pipeline.sol` với Stateful Anti-Wick Counter, Sliding Window & Dynamic Origin Chain
 * **Module / Màn hình:** `contracts/src/StopLoss_Pipeline.sol` (Reactive Lasna)
-* **Mục đích:** Hỗ trợ tính toán Price Velocity không bị trượt cửa sổ thời gian trên block 200ms/1s và hỗ trợ lắng nghe sự kiện từ Unichain Sepolia hoặc Custom Topic0.
+* **Mục đích:** Hỗ trợ tính toán Price Velocity, chống giật râu nến bằng bộ nhớ bền vững của RVM và hỗ trợ lắng nghe sự kiện từ Unichain Sepolia (`1301`) hoặc Base Sepolia (`84532`).
 * **Chi tiết thực thi:**
-  * Khai báo state: `windowStartPrice`, `windowStartTime`, `velocityThresholdBps`, `windowSeconds`.
-  * Cài đặt logic so sánh giá tức thời với mốc neo đầu chu kỳ `windowStartPrice` và reset mốc neo khi hết `windowSeconds`.
-  * Hỗ trợ nhận `originChainId` linh hoạt (`84532` hoặc `1301`) và custom `topic_0` cho Node #11.
-  * Viết Foundry test kiểm thử tính toán % delta chính xác qua các sự kiện Sync giả lập.
+  * **Stateful Anti-Wick:** Khai báo `uint256 public consecutiveHits;` và `uint256 public requiredHits;`. Trong `react()`, nếu `currentPrice > priceThreshold` thì reset `consecutiveHits = 0`. Chỉ phát Callback khi `consecutiveHits >= requiredHits`.
+  * **Internal Gas Estimator:** Khai báo `uint256 public callbacksEmitted;`, tăng mỗi lần emit Callback để theo dõi tuổi thọ gas an toàn trong môi trường RVM (tránh lỗi RVM Dual-State Trap).
+  * **Price Velocity:** Khai báo `windowStartPrice`, `windowStartTime`, `velocityThresholdBps`, `windowSeconds` theo thuật toán Anchored Window.
+  * **Multi-Chain Origins:** Hỗ trợ nhận `originChainId` linh hoạt (`84532` hoặc `1301`) và custom `topic_0` cho Node #11.
+  * Viết Foundry test kiểm thử `consecutiveHits` và % delta chính xác qua các sự kiện Sync giả lập.
 * **Ngày tạo:** 14/11/2026 19:30 | **Trạng thái:** `TODO`
 
 ---

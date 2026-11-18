@@ -260,13 +260,24 @@ Hệ thống được thiết kế theo nguyên tắc **Direct Orthogonal Archit
 ---
 
 #### 4. 🟡 Node: `PriceThresholdGuardNode` (Condition)
-* **Chức năng:** So sánh tỷ giá tức thời được tính toán từ reserves với ngưỡng mục tiêu (Hỗ trợ cả Cắt lỗ và Chốt lời).
-* **Cơ chế kỹ thuật ngầm:** $\text{currentPrice} = \frac{\text{reserve1} \times 10^{18}}{\text{reserve0}}$. So khớp với operator `<=`, `>=`.
+* **Chức năng:** So sánh tỷ giá tức thời được tính toán từ reserves với ngưỡng mục tiêu (Hỗ trợ cả Cắt lỗ, Chốt lời và Chống giật râu nến).
+* **Cơ chế kỹ thuật ngầm (Stateful Anti-Wick Confirmation Pattern):**
+  * Tận dụng bộ nhớ trạng thái bền vững (Stateful Memory) của máy ảo ReactVM (RVM) trên Lasna để loại bỏ 100% rủi ro bị Flash Loan hoặc bot MEV giật râu nến (price wick) trong 1 block duy nhất:
+    ```solidity
+    if (currentPrice > priceThreshold) {
+        consecutiveHits = 0; // Giá an toàn -> Reset ngay bộ đếm
+        return;
+    }
+    consecutiveHits++;
+    if (consecutiveHits < requiredHits) return; // Chưa đủ số block xác nhận liên tiếp -> Tiếp tục quan sát
+    consecutiveHits = 0; // Đạt đủ xác nhận -> Reset và kích hoạt Callback!
+    ```
 * **Cổng kết nối:** 1 Input (Type: `PriceData`) | 1 Output (Type: `ConditionSignal`).
 * **Đặc tả Inputs (Inspector):**
   * `operator` *(Dropdown, Bắt buộc)*: `LESS_THAN_OR_EQUAL (<=)` [Cắt lỗ] hoặc `GREATER_THAN_OR_EQUAL (>=)` [Chốt lời].
   * `targetPriceUSD` *(Number Float, Bắt buộc)*: Ngưỡng giá USD (ví dụ: `1800.00`).
-* **Output Data Package:** `{ conditionMet: boolean, currentPrice: uint256 }`.
+  * `confirmationHits` *(Slider, 1 - 5 blocks, Mặc định: 1)*: Số lượng sự kiện `Sync` liên tiếp giá phải nằm dưới ngưỡng trước khi kích hoạt lệnh (Anti-Wick / Flash Loan filter).
+* **Output Data Package:** `{ conditionMet: boolean, currentPrice: uint256, consecutiveHits: uint256 }`.
 
 ---
 
@@ -355,6 +366,14 @@ Hệ thống được thiết kế theo nguyên tắc **Direct Orthogonal Archit
 * **Đặc tả Inputs (Inspector):**
   * `alertTitle` *(Text)*: Tiêu đề cảnh báo (ví dụ: *"Whale Alert: High Volatility Detected"*).
   * `severity` *(Dropdown)*: `INFO` | `WARNING` | `CRITICAL`.
+
+---
+
+#### 🔒 QUY TẮC RÀNG BUỘC CỔNG FAN-OUT ĐA ĐÍCH AN TOÀN (MULTI-DESTINATION SAFE FAN-OUT MATRIX):
+* **Bối cảnh nguy hiểm (Race Condition Trap):** Reactive Omni cho phép 1 lần chạy `react()` phát ra nhiều `emit Callback(...)`. Tuy nhiên, nếu người dùng nối 1 Condition ra **2 Action cùng rút tiền trên cùng 1 `ActionVault`** (ví dụ: vừa Swap 100% ETH vừa SafeSweep 100% ETH sang ví lạnh), hai callback sẽ được Relayer gửi về Base Sepolia trong 2 transactions đồng thời. Giao dịch đến sau chắc chắn bị **Revert (`"Zero vault balance"`)**, gây ra vết lỗi đỏ trên Basescan và mất điểm tiêu chí *Execution*.
+* **Quy chuẩn Canvas Enforcement:**
+  * Cho phép 1 Condition nối song song tối đa: **1 Financial Action (`DEXSwap` HOẶC `EmergencySafeSweep`) KÈM THEO 1 Informational Action (`NotifyLogWebhook`)**.
+  * Cấu trúc này tạo thành sơ đồ Fan-out 2 nhánh trực quan rực rỡ, hạt photon chạy song song trên Canvas, vừa thực hiện cứu vốn vừa bắn alert on-chain, và đảm bảo **100% giao dịch trên chuỗi đích đều thành công (Zero Revert)**!
 
 ---
 
@@ -448,16 +467,47 @@ mindmap
 | **10** | **Rút Tiền Lãi Hàng Tuần (DCA Out)** | `Periodic Cron (Mỗi 7 ngày)` $\rightarrow$ `Price Threshold (Giá >= $2200)` $\rightarrow$ `DEX Swap (Bán 10%)` | Muốn rút tiền sinh hoạt hàng tuần nhưng chỉ bán khi giá cao. | Tự động rút tiền mặt khi thị trường xanh, thị trường đỏ thì giữ. |
 | **11** | **Cắt Lỗ Chống Bị "Cắn Đuôi"** | `Watch DEX Price` $\rightarrow$ `Price <= $1800` $\rightarrow$ `Cooldown (1 Giờ)` $\rightarrow$ `DEX Swap (50%)` | Giá giằng co quanh cản làm hợp đồng swap liên tục. | Bắt buộc chờ 1 tiếng thị trường ổn định mới xét lệnh tiếp theo. |
 | **12** | **Cảnh Báo Két Sắp Hết Tiền** | `Periodic Cron (Mỗi 12h)` $\rightarrow$ `Balance Threshold (Vault < 0.02 ETH)` $\rightarrow$ `Notify Log Webhook` | Két hết tiền mà không biết khiến tự động hóa bị ngừng. | Không bao giờ bị đứt quãng tự động hóa, nhắc nhở nạp thêm vốn. |
+| **13** | **Tháo Chạy Liên Chuỗi (Unichain ➔ Base)** | `Watch DEX Price (Unichain 1301)` $\rightarrow$ `Price Threshold (<= $1800)` $\rightarrow$ `DEX Swap (Base Sepolia 84532)` | Thanh khoản hoặc giá trên Unichain sụp đổ trước. | **Minh chứng sức mạnh Cross-Chain bản địa**: Cứu vốn trên Base trước khi cú sốc lan rộng toàn thị trường! |
 
 ---
 
-## 2.6 Đánh Giá Năng Lực Node: Đã Phát Huy Hết Sức Mạnh Reactive Omni Chưa?
+## 2.6 Đánh Giá Năng Lực Node & Khai Phóng 4 Siêu Năng Lực Reactive Omni
 
-| Tiêu Chí Đánh Giá | Hiện Trạng Của 10 Node Tinh Hoa | Nhận Định Chuyên Môn (BA Evaluation) |
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│        4 SIÊU NĂNG LỰC REACTIVE OMNI & PHÂN TÍCH RỦI RO KIẾN TRÚC      │
+├─────────────────────────┬──────────────────────────────────────────────┤
+│ SIÊU NĂNG LỰC           │ ĐÁNH GIÁ KỸ THUẬT & GIẢI PHÁP THỰC THI       │
+├─────────────────────────┼──────────────────────────────────────────────┤
+│ 1. Cross-Chain          │ ✅ ĐÒN BẨY HỦY DIỆT TRƯỚC BAN GIÁM KHẢO:     │
+│    Asymmetric           │ Chuyển luồng Unichain (1301) -> Lasna -> Base│
+│    (Unichain -> Base)   │ (84532). Thêm cờ `isCrossChainTrigger` trên  │
+│                         │ `ActionVault.sol` để bypass check giá tĩnh   │
+│                         │ Base, bảo lưu 100% router `getAmountsOut`.   │
+├─────────────────────────┼──────────────────────────────────────────────┤
+│ 2. Stateful Event       │ ✅ ĐÒN BẨY HỦY DIỆT: RVM duy trì trạng thái  │
+│    Accumulator          │ bền vững qua các lần gọi `react()`. Thêm biến│
+│    (Anti-Wick Counter)  │ `consecutiveHits` (1-5 blocks) chặn đứng     │
+│                         │ hoàn toàn bot Flash Loan giật râu nến!       │
+├─────────────────────────┼──────────────────────────────────────────────┤
+│ 3. Multi-Destination    │ ⚠️ CẢNH BÁO BẪY RACE CONDITION: Cấm nối 1    │
+│    Safe Fan-out         │ Condition vào 2 Action cùng rút tiền từ 1    │
+│                         │ Vault (gây revert). Chỉ cho phép nối tối đa  │
+│                         │ 1 Financial Action + 1 Notify Webhook Action.│
+├─────────────────────────┼──────────────────────────────────────────────┤
+│ 4. RSC Self-Gas         │ ⚠️ CẢNH BÁO BẪY RVM DUAL-STATE: Trong sandbox│
+│    Awareness            │ RVM, `address(this).balance` KHÔNG phản ánh  │
+│                         │ số dư lREACT thực tế trên Lasna Ledger.      │
+│                         │ Giải pháp chuẩn: Đo lường qua `callbacks-    │
+│                         │ Emitted` trong RVM + Gas Gauge RPC trên UI.  │
+└─────────────────────────┴──────────────────────────────────────────────┘
+```
+
+| Tiêu Chí Đánh Giá | Hiện Trạng Sau Khi Tinh Chỉnh | Nhận Định Chuyên Môn (BA Evaluation) |
 | :--- | :--- | :--- |
 | **Khai thác block ~1s của Omni** | ⭐⭐⭐⭐⭐ (5/5) | Cặp `Watch DEX Price` $\rightarrow$ `DEX Swap` và `Watch Transfers` $\rightarrow$ `Safe Sweep` khai thác triệt để tốc độ 1s để cứu tiền. |
-| **Bảo mật & Giảm thiểu rủi ro** | ⭐⭐⭐⭐⭐ (5/5) | `CooldownGuard` và tham số `minAmountOut` triệt tiêu 100% nguy cơ lặp giao dịch và bẫy MEV. |
-| **Tính đa dạng Use Case** | ⭐⭐⭐⭐⭐ (5/5) | Phủ trọn 4 trụ cột nghiệp vụ: Cắt lỗ, Chốt lời, Chống hack ví, và Quản lý danh mục thụ động. |
+| **Bảo mật & Giảm thiểu rủi ro** | ⭐⭐⭐⭐⭐ (5/5) | `CooldownGuard`, `consecutiveHits` (Anti-Wick), và `minAmountOut` triệt tiêu 100% nguy cơ lặp giao dịch, râu nến và bẫy MEV. |
+| **Tính đa dạng Use Case** | ⭐⭐⭐⭐⭐ (5/5) | Phủ trọn 4 trụ cột nghiệp vụ: Cắt lỗ, Chốt lời, Chống hack ví, Quản lý danh mục thụ động và Tháo chạy liên chuỗi (Cross-Chain). |
 | **Độ khả thi trong 21 ngày** | ⭐⭐⭐⭐⭐ (5/5) | Chỉ cần 2 Solidity Template cốt lõi là giải quyết được toàn bộ 10 node này. Cực kỳ khả thi! |
 
 ---
