@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 22 | 21 | 1 | **95.5%** |
-| **TỔNG CỘNG** | **21 Ngày** | **58** | **57** | **1** | **98.3%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 22 | 22 | 0 | **100%** |
+| **TỔNG CỘNG** | **21 Ngày** | **58** | **58** | **0** | **100% HOÀN TẤT** |
 
 ---
 
@@ -809,15 +809,16 @@
 * **Ngày hoàn thành:** 18/11/2026 17:22
 * **Trạng thái:** `DONE`
 
-#### `TASK-322` [IN_PROGRESS] — Tối Ưu Hóa Hiệu Năng Workspace: Khắc Phục Triệt Để Độ Trễ 3-4s Khi Chuyển Route Lần Đầu & Hiện Tượng Lag UI (Hover/Buttons)
+#### `TASK-322` [DONE] — Tối Ưu Hóa Hiệu Năng Workspace: Khắc Phục Triệt Để Độ Trễ 3-4s Khi Chuyển Route Lần Đầu & Hiện Tượng Lag UI (Hover/Buttons)
 * **Module / Màn hình:** Workspace Suite (`frontend/next.config.mjs`, `frontend/src/app/layout.tsx`, `frontend/src/components/providers/Web3Provider.tsx`, `Sidebar.tsx`, `Header.tsx`, `globals.css`)
 * **Mục đích:** Khắc phục triệt để tình trạng chuyển route lần đầu mất 3-4s và giao diện hover/button bị giật lag trên toàn bộ Workspace.
 * **Chi tiết thực thi:**
   1. Cấu hình `experimental.optimizePackageImports` trong `next.config.mjs` cho các thư viện nặng (`lucide-react`, `@xyflow/react`, `viem`, `wagmi`, `@tanstack/react-query`, `@omniflow/shared`) để loại bỏ việc Webpack parse toàn bộ barrel file, rút ngắn thời gian compile JIT từ 3-4s xuống <500ms.
-  2. Loại bỏ render-blocking external stylesheet từ `db.onlinewebfonts.com` trong `layout.tsx`, chuyển sang font tải bất đồng bộ (non-blocking) hoặc `@font-face` với `font-display: swap;` để tránh freeze main thread của trình duyệt.
+  2. Loại bỏ render-blocking external stylesheet từ `db.onlinewebfonts.com` trong `layout.tsx`, chuyển sang `@font-face` với `font-display: swap;` trong `globals.css` để tránh freeze main thread của trình duyệt.
   3. Cấu hình `staleTime: 15000` (15s) và `gcTime: 60000` trong `QueryClientProvider` (`Web3Provider.tsx`), loại bỏ tình trạng spam RPC refetch và re-render hàng loạt khi chuyển tab trong Workspace.
-  4. Thay thế `transition-all` bằng `transition-colors duration-150` trên `Sidebar.tsx` và `Header.tsx`, loại bỏ triệt để hiện tượng Layout Trashing / Reflow khi hover vào các nút bấm.
-  5. Bật GPU hardware acceleration (`transform: translateZ(0)`) cho `Header.tsx` và `Sidebar.tsx`, tối ưu lớp compositing giảm tải cho GPU khi render `backdrop-blur`.
+  4. Thay thế `transition-all` bằng `transition-colors duration-150` trên `Sidebar.tsx`, `Header.tsx`, và toàn bộ các thẻ metric card ở `active/page.tsx`, `vault/page.tsx`, `logs/page.tsx`, `templates/page.tsx`, loại bỏ triệt để hiện tượng Layout Trashing / Reflow khi hover vào các nút bấm.
+  5. Bật GPU hardware acceleration (`transform: translateZ(0)` / `transform-gpu`) cho `Header.tsx` và `Sidebar.tsx`, tối ưu lớp compositing giảm tải cho GPU khi render `backdrop-blur`.
+  6. Kiểm tra `pnpm --filter frontend exec tsc --noEmit` đạt 0 lỗi, toàn bộ 76 testcases đạt 100% PASS.
 * **Ngày tạo:** 18/11/2026 17:23
-* **Ngày hoàn thành:** Đang thực hiện
-* **Trạng thái:** `IN_PROGRESS`
+* **Ngày hoàn thành:** 18/11/2026 17:28
+* **Trạng thái:** `DONE`

@@ -110,7 +110,7 @@ export default function TemplateLibraryPage() {
           return (
             <div
               key={recipe.id}
-              className="p-5 md:p-6 rounded-2xl bg-[#0b0c10]/90 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.18] transition-all space-y-4 flex flex-col justify-between shadow-2xl group"
+              className="p-5 md:p-6 rounded-2xl bg-[#0b0c10]/90 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-colors duration-150 space-y-4 flex flex-col justify-between shadow-2xl group"
             >
               <div className="space-y-3.5">
                 <div className="flex items-start justify-between">
