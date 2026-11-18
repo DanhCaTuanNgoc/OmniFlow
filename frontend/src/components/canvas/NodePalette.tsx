@@ -254,9 +254,6 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
           <span className="text-xs font-bold text-white tracking-wide">
             Node Catalog
           </span>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-950/70 border border-purple-800/50 text-purple-300 font-semibold">
-            10 Nodes
-          </span>
         </div>
 
         {/* Search */}

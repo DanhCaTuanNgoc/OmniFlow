@@ -21,7 +21,7 @@ const NAV_ITEMS = [
     name: 'Pipeline Studio',
     href: '/workspace/studio',
     icon: Network,
-    badge: '10 Nodes',
+    badge: '',
   },
   {
     name: 'Active Automations',

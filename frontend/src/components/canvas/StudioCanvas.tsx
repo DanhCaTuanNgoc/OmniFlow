@@ -533,9 +533,6 @@ function StudioCanvasInner() {
                 Pipeline Studio
               </span>
             </div>
-            <span className="text-xs px-3 py-1 rounded-full bg-white/[0.06] border border-white/10 text-[#c4c2c3] font-mono tabular-nums">
-              DAG: {nodes.length} Nodes &bull; {edges.length} Edges
-            </span>
 
             {/* Recipe Preset Selector */}
             <div className="hidden sm:flex items-center gap-1.5 ml-1">
