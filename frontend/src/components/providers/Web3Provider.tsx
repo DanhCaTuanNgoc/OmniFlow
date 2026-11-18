@@ -12,6 +12,10 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
         defaultOptions: {
           queries: {
             refetchOnWindowFocus: false,
+            refetchOnMount: false,
+            refetchOnReconnect: false,
+            staleTime: 15_000, // 15 seconds: keeps balances hot in memory during route switching
+            gcTime: 60_000,
             retry: 1,
           },
         },

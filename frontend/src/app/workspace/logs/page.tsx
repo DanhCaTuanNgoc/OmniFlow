@@ -266,28 +266,28 @@ export default function ActivityLogsPage() {
 
       {/* 4 Telemetry Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.18] transition-all">
+        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-colors duration-150">
           <div className="text-[11px] text-[#8e8e8e] uppercase font-mono tracking-wider">Events Captured</div>
           <div className="text-2xl font-bold text-white mt-1 tabular-nums font-display">
             142 <span className="text-xs text-[#8e8e8e] font-sans font-normal">Events</span>
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.18] transition-all">
+        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-colors duration-150">
           <div className="text-[11px] text-[#8e8e8e] uppercase font-mono tracking-wider">Callbacks Fired</div>
           <div className="text-2xl font-bold text-emerald-400 mt-1 tabular-nums font-display">
             03 <span className="text-xs text-[#8e8e8e] font-sans font-normal">Executed</span>
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.18] transition-all">
+        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-colors duration-150">
           <div className="text-[11px] text-[#8e8e8e] uppercase font-mono tracking-wider">Storms Defended</div>
           <div className="text-2xl font-bold text-amber-400 mt-1 tabular-nums font-display">
             12 <span className="text-xs text-[#8e8e8e] font-sans font-normal">Protected</span>
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.18] transition-all">
+        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-colors duration-150">
           <div className="text-[11px] text-[#8e8e8e] uppercase font-mono tracking-wider">Average RVM Latency</div>
           <div className="text-2xl font-bold text-violet-300 mt-1 tabular-nums font-display">
             973 <span className="text-xs text-[#8e8e8e] font-sans font-normal">ms</span>

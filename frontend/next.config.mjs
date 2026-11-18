@@ -2,6 +2,16 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@omniflow/shared'],
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      '@xyflow/react',
+      'viem',
+      'wagmi',
+      '@tanstack/react-query',
+      '@omniflow/shared',
+    ],
+  },
   webpack: (config) => {
     config.externals.push('pino-pretty', 'lokijs', 'encoding');
     config.resolve.fallback = {

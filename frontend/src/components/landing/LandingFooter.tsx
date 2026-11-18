@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { Zap } from "lucide-react";
 
 export default function LandingFooter() {
   return (
@@ -40,13 +40,7 @@ export default function LandingFooter() {
           <div className="footer-brand-col">
             <div className="footer-logo-row">
               <div className="footer-logo-circle">
-                <Image
-                  src="/assets/logo.webp"
-                  alt=""
-                  width={36}
-                  height={36}
-                  className="footer-logo-img"
-                />
+                <Zap className="w-4 h-4 text-black fill-black" />
               </div>
               <span className="footer-brand-name">OmniFlow</span>
             </div>

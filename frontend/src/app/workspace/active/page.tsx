@@ -112,7 +112,7 @@ export default function ActiveAutomationsPage() {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => refetchRscBalance()}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-full bg-[#16171a] hover:bg-[#202126] text-[#c4c2c3] hover:text-white border border-white/20 transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-full bg-[#16171a] hover:bg-[#202126] text-[#c4c2c3] hover:text-white border border-white/20 transition-colors duration-150 cursor-pointer shadow-sm"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRscBalanceLoading ? 'animate-spin text-cyan-400' : 'text-slate-400'}`} />
             <span>Refresh Fuel</span>
@@ -121,7 +121,7 @@ export default function ActiveAutomationsPage() {
           <Link
             href="/workspace/studio"
             prefetch={true}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-white hover:bg-white/90 text-black shadow-[0_2px_12px_rgba(255,255,255,0.25)] transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-white hover:bg-white/90 text-black shadow-[0_2px_12px_rgba(255,255,255,0.25)] transition-[transform,background-color] duration-150 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
           >
             <Zap className="w-3.5 h-3.5 fill-black" />
             <span>New Pipeline</span>
@@ -131,7 +131,7 @@ export default function ActiveAutomationsPage() {
 
       {/* 4 Telemetry Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.18] transition-all">
+        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-colors duration-150">
           <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] text-xs">
             <span className="text-[11px] text-[#8e8e8e] uppercase font-mono tracking-wider">Engines</span>
             <span className="text-emerald-400 font-semibold px-2 py-0.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-[10px]">
@@ -148,7 +148,7 @@ export default function ActiveAutomationsPage() {
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.18] transition-all">
+        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-colors duration-150">
           <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] text-xs">
             <span className="text-[11px] text-[#8e8e8e] uppercase font-mono tracking-wider">Gas Gauge</span>
             <span className="text-cyan-300 font-semibold px-2 py-0.5 rounded-full border border-cyan-500/20 bg-cyan-500/10 text-[10px]">
@@ -165,7 +165,7 @@ export default function ActiveAutomationsPage() {
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.18] transition-all">
+        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-colors duration-150">
           <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] text-xs">
             <span className="text-[11px] text-[#8e8e8e] uppercase font-mono tracking-wider">RVM Latency</span>
             <span className="text-cyan-400 font-semibold px-2 py-0.5 rounded-full border border-cyan-500/20 bg-cyan-500/10 text-[10px]">
@@ -182,7 +182,7 @@ export default function ActiveAutomationsPage() {
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.18] transition-all">
+        <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-colors duration-150">
           <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] text-xs">
             <span className="text-[11px] text-[#8e8e8e] uppercase font-mono tracking-wider">Storm Guard</span>
             <span className="text-amber-400 font-semibold px-2 py-0.5 rounded-full border border-amber-500/20 bg-amber-500/10 text-[10px]">

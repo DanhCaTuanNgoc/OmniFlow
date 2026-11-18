@@ -35,7 +35,7 @@ export function Header() {
   };
 
   return (
-    <header className="h-16 border-b border-white/[0.08] bg-[#000000]/80 backdrop-blur-xl px-6 flex items-center justify-between z-20 select-none font-sans">
+    <header className="h-16 border-b border-white/[0.08] bg-[#000000]/85 backdrop-blur-lg px-6 flex items-center justify-between z-20 select-none font-sans transform-gpu will-change-transform">
       {/* Left Breadcrumb & Mode */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 text-xs font-medium">
@@ -66,7 +66,7 @@ export function Header() {
           <div className="relative">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center gap-2.5 py-1.5 px-4 rounded-full bg-[#16171a] hover:bg-[#202126] border border-white/20 text-white text-xs font-mono font-medium transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-2.5 py-1.5 px-4 rounded-full bg-[#16171a] hover:bg-[#202126] border border-white/20 text-white text-xs font-mono font-medium transition-colors duration-150 shadow-sm cursor-pointer"
             >
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
               <span className="tabular-nums tracking-wide">{truncateAddress(address)}</span>
@@ -95,7 +95,7 @@ export function Header() {
         ) : (
           <button
             onClick={handleConnect}
-            className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-white hover:bg-white/90 text-black shadow-[0_2px_12px_rgba(255,255,255,0.25)] transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+            className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-white hover:bg-white/90 text-black shadow-[0_2px_12px_rgba(255,255,255,0.25)] transition-[transform,background-color] duration-150 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
           >
             <span>Connect Wallet</span>
           </button>

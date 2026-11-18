@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { Zap } from "lucide-react";
 import dynamic from "next/dynamic";
 import LazySection from "./LazySection";
 import "@/styles/motion-landing.css";
@@ -105,6 +105,17 @@ function StatMetric({
 
 export default function MotionLanding() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  // Monitor scroll position for fixed header backdrop transitions
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Close mobile menu on Escape key or resize > 720
   useEffect(() => {
@@ -243,24 +254,18 @@ export default function MotionLanding() {
       {/* Retro Dot-Matrix Ambient Grid (synchronized with Bubbledot typography) */}
       <div className="motion-dot-grid" aria-hidden="true" />
 
-      {/* Page (Viewport 1: Header, Hero, Stats) */}
-      <div className="motion-page">
-        {/* 1) Header */}
+      {/* 1) Fixed Top Header Navigation Bar */}
+      <div
+        className={`motion-header-container ${scrolled ? "is-scrolled" : ""}`}
+      >
         <header className="motion-header">
           {/* Logo */}
           <Link
             href="/"
-            className="motion-logo-btn"
+            className="motion-logo-btn group"
             aria-label="OmniFlow Home"
           >
-            <Image
-              src="/assets/logo.webp"
-              alt=""
-              width={52}
-              height={52}
-              className="motion-logo-img"
-              priority
-            />
+            <Zap className="motion-logo-icon" />
           </Link>
 
           {/* Desktop Nav Pill (White) */}
@@ -300,54 +305,60 @@ export default function MotionLanding() {
             <span className="motion-burger-bar" />
           </button>
         </header>
+      </div>
 
-        {/* Mobile Menu Sheet + Overlay */}
-        {menuOpen && (
-          <>
-            <div
-              className="motion-mobile-overlay"
+      {/* Mobile Menu Sheet + Overlay */}
+      {menuOpen && (
+        <>
+          <div
+            className="motion-mobile-overlay"
+            onClick={() => setMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="motion-mobile-sheet" role="dialog" aria-modal="true">
+            <Link
+              href="/"
+              className="motion-mobile-link active"
               onClick={() => setMenuOpen(false)}
-              aria-hidden="true"
-            />
-            <div className="motion-mobile-sheet" role="dialog" aria-modal="true">
-              <Link
-                href="/"
-                className="motion-mobile-link active"
-                onClick={() => setMenuOpen(false)}
-              >
-                Home
-              </Link>
-              <a
-                href="#studio"
-                className="motion-mobile-link"
-                onClick={() => setMenuOpen(false)}
-              >
-                Product
-              </a>
-              <a
-                href="#proof"
-                className="motion-mobile-link"
-                onClick={() => setMenuOpen(false)}
-              >
-                Honesty
-              </a>
-              <a
-                href="#faq"
-                className="motion-mobile-link"
-                onClick={() => setMenuOpen(false)}
-              >
-                FAQ
-              </a>
-              <Link
-                href="/workspace/studio"
-                className="motion-mobile-sign-in"
-                onClick={() => setMenuOpen(false)}
-              >
-                Sign in
-              </Link>
-            </div>
-          </>
-        )}
+            >
+              Home
+            </Link>
+            <a
+              href="#studio"
+              className="motion-mobile-link"
+              onClick={() => setMenuOpen(false)}
+            >
+              Product
+            </a>
+            <a
+              href="#proof"
+              className="motion-mobile-link"
+              onClick={() => setMenuOpen(false)}
+            >
+              Honesty
+            </a>
+            <a
+              href="#faq"
+              className="motion-mobile-link"
+              onClick={() => setMenuOpen(false)}
+            >
+              FAQ
+            </a>
+            <Link
+              href="/workspace/studio"
+              className="motion-mobile-sign-in"
+              onClick={() => setMenuOpen(false)}
+            >
+              Sign in
+            </Link>
+          </div>
+        </>
+      )}
+
+      {/* Page (Viewport 1: Hero, Stats) */}
+      <div className="motion-page">
+        {/* Invisible header spacer to preserve exact hero & stats vertical balance */}
+        <div className="motion-header-spacer" aria-hidden="true" />
 
         {/* 2) Hero (Center) */}
         <section className="motion-hero">

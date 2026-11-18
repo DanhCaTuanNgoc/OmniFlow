@@ -52,7 +52,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'border-r border-white/[0.08] bg-[#000000] flex flex-col justify-between select-none transition-all duration-200 z-20 shrink-0 font-sans',
+        'border-r border-white/[0.08] bg-[#000000] flex flex-col justify-between select-none transition-[width] duration-200 will-change-[width] z-20 shrink-0 font-sans',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
@@ -113,7 +113,7 @@ export function Sidebar() {
                 prefetch={true}
                 title={collapsed ? item.name : undefined}
                 className={cn(
-                  'flex items-center text-xs rounded-full font-medium transition-all cursor-pointer relative group',
+                  'flex items-center text-xs rounded-full font-medium transition-colors duration-150 cursor-pointer relative group',
                   collapsed
                     ? 'justify-center p-2.5'
                     : 'justify-between px-3.5 py-2.5',

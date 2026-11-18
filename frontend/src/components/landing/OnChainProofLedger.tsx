@@ -367,7 +367,7 @@ export default function OnChainProofLedger() {
         )}
       </div>
 
-      {/* Honesty Claims Table (Canary Style Footer) */}
+      {/* Honesty Claims Table (Verification Footer) */}
       <div className="honesty-table-card scroll-reveal scroll-stagger-2">
         <div className="honesty-header">
           <div>

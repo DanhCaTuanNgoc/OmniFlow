@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 20 | 20 | 0 | **100%** |
-| **TỔNG CỘNG** | **21 Ngày** | **56** | **56** | **0** | **100% HOÀN TẤT** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 22 | 21 | 1 | **95.5%** |
+| **TỔNG CỘNG** | **21 Ngày** | **58** | **57** | **1** | **98.3%** |
 
 ---
 
@@ -796,3 +796,28 @@
 * **Ngày tạo:** 18/11/2026 15:13
 * **Ngày hoàn thành:** 18/11/2026 15:20
 * **Trạng thái:** `DONE`
+
+#### `TASK-321` [DONE] — Xóa Bỏ Logo Canary, Thay Thế Bằng Lucide Zap Icon & Cố Định Fixed Header Khi Scroll Trên Landing Page
+* **Module / Màn hình:** Landing Page (`frontend/src/components/landing/MotionLanding.tsx`, `LandingFooter.tsx`, `motion-landing.css`)
+* **Mục đích:** Xóa bỏ triệt để các hình ảnh/logo tồn dư của template Canary ở Header và Footer của Landing Page; thay thế bằng biểu tượng Zap của OmniFlow; đồng thời ghim cố định Header (Fixed Header with Backdrop Blur) khi cuộn trang xuống thay vì trôi mất.
+* **Chi tiết thực thi:**
+  * Thay thế `/assets/logo.webp` (logo Canary) trong `MotionLanding.tsx` và `LandingFooter.tsx` bằng icon `Zap` từ `lucide-react`, đồng bộ với visual style của sidebar Workspace.
+  * Cấu hình Fixed Header: đưa Header vào container cố định trên đầu trang với hiệu ứng chuyển đổi mượt mà sang nền mờ kính Obsidian (`backdrop-filter: blur(16px)`, `rgba(5, 6, 8, 0.72)`) khi cuộn quá 20px.
+  * Bổ sung invisible spacer trong viewport 1 để bảo toàn 100% tọa độ hiển thị và căn giữa của Hero và Stats Footer.
+  * Cấu hình `scroll-margin-top` cho các anchor sections (`#studio`, `#proof`, `#faq`, `#telemetry`) để điều hướng mượt mà, không bị che bởi fixed header.
+* **Ngày tạo:** 18/11/2026 17:20
+* **Ngày hoàn thành:** 18/11/2026 17:22
+* **Trạng thái:** `DONE`
+
+#### `TASK-322` [IN_PROGRESS] — Tối Ưu Hóa Hiệu Năng Workspace: Khắc Phục Triệt Để Độ Trễ 3-4s Khi Chuyển Route Lần Đầu & Hiện Tượng Lag UI (Hover/Buttons)
+* **Module / Màn hình:** Workspace Suite (`frontend/next.config.mjs`, `frontend/src/app/layout.tsx`, `frontend/src/components/providers/Web3Provider.tsx`, `Sidebar.tsx`, `Header.tsx`, `globals.css`)
+* **Mục đích:** Khắc phục triệt để tình trạng chuyển route lần đầu mất 3-4s và giao diện hover/button bị giật lag trên toàn bộ Workspace.
+* **Chi tiết thực thi:**
+  1. Cấu hình `experimental.optimizePackageImports` trong `next.config.mjs` cho các thư viện nặng (`lucide-react`, `@xyflow/react`, `viem`, `wagmi`, `@tanstack/react-query`, `@omniflow/shared`) để loại bỏ việc Webpack parse toàn bộ barrel file, rút ngắn thời gian compile JIT từ 3-4s xuống <500ms.
+  2. Loại bỏ render-blocking external stylesheet từ `db.onlinewebfonts.com` trong `layout.tsx`, chuyển sang font tải bất đồng bộ (non-blocking) hoặc `@font-face` với `font-display: swap;` để tránh freeze main thread của trình duyệt.
+  3. Cấu hình `staleTime: 15000` (15s) và `gcTime: 60000` trong `QueryClientProvider` (`Web3Provider.tsx`), loại bỏ tình trạng spam RPC refetch và re-render hàng loạt khi chuyển tab trong Workspace.
+  4. Thay thế `transition-all` bằng `transition-colors duration-150` trên `Sidebar.tsx` và `Header.tsx`, loại bỏ triệt để hiện tượng Layout Trashing / Reflow khi hover vào các nút bấm.
+  5. Bật GPU hardware acceleration (`transform: translateZ(0)`) cho `Header.tsx` và `Sidebar.tsx`, tối ưu lớp compositing giảm tải cho GPU khi render `backdrop-blur`.
+* **Ngày tạo:** 18/11/2026 17:23
+* **Ngày hoàn thành:** Đang thực hiện
+* **Trạng thái:** `IN_PROGRESS`

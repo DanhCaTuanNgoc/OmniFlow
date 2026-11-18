@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Asynchronous Non-Blocking Custom Font Definition */
+@font-face {
+  font-family: "BubbledotICG-FinePos";
+  src: url("https://db.onlinewebfonts.com/t/8cb707a9b8a73f8a7403336b861c3074.woff2") format("woff2"),
+       url("https://db.onlinewebfonts.com/t/8cb707a9b8a73f8a7403336b861c3074.woff") format("woff");
+  font-display: swap;
+}
+
 :root {
   --background: transparent;
   --foreground: #111110;
