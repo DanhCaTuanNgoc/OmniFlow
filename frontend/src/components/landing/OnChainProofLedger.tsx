@@ -83,6 +83,7 @@ export default function OnChainProofLedger() {
   return (
     <section className="motion-section proof-ledger-section" aria-label="On-Chain Proof & Honesty Table">
       <div className="motion-section-header">
+        <span className="motion-coord-tag">0x03 // ONCHAIN_PROOF_LEDGER</span>
         <div className="motion-badge-pill amber">
           <span className="motion-badge-dot amber" />
           <span>Strict Zero-Mock Protocol</span>

@@ -18,6 +18,7 @@ export default function MultiChainTelemetry() {
   return (
     <section className="motion-section telemetry-section" aria-label="Multi-Chain Network Topology">
       <div className="motion-section-header">
+        <span className="motion-coord-tag">0x04 // NETWORK_TELEMETRY</span>
         <div className="motion-badge-pill">
           <span className="motion-badge-dot" />
           <span>Multi-Chain Telemetry</span>

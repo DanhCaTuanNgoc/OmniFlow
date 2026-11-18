@@ -182,7 +182,7 @@ export default function MotionLanding() {
 
   return (
     <main className="motion-landing-root">
-      {/* Exact Background Video with Ambient Bottom Fade Mask */}
+      {/* Exact Background Video with Ambient Vignette & Dot-Matrix Grid */}
       <div className="motion-bg">
         <video
           className="motion-bg-video"
@@ -197,8 +197,11 @@ export default function MotionLanding() {
             type="video/mp4"
           />
         </video>
-        <div className="motion-bg-mask" aria-hidden="true" />
+        <div className="motion-bg-vignette" aria-hidden="true" />
       </div>
+
+      {/* Retro Dot-Matrix Ambient Grid (synchronized with Bubbledot typography) */}
+      <div className="motion-dot-grid" aria-hidden="true" />
 
       {/* Page (Viewport 1: Header, Hero, Stats) */}
       <div className="motion-page">
@@ -386,11 +389,19 @@ export default function MotionLanding() {
           </LazySection>
         </div>
 
+        <div className="motion-divider" aria-hidden="true">
+          <span className="motion-divider-dot" />
+        </div>
+
         {/* Section 3: 4 Core Defensive Pillars */}
         <div id="security">
           <LazySection minHeight="520px">
             <DefensivePillars />
           </LazySection>
+        </div>
+
+        <div className="motion-divider" aria-hidden="true">
+          <span className="motion-divider-dot" />
         </div>
 
         {/* Section 4: On-Chain Proof & Honesty Table (Canary Style) */}
@@ -400,6 +411,10 @@ export default function MotionLanding() {
           </LazySection>
         </div>
 
+        <div className="motion-divider" aria-hidden="true">
+          <span className="motion-divider-dot" />
+        </div>
+
         {/* Section 5: Multi-Chain Network Topology & Telemetry */}
         <div id="telemetry">
           <LazySection minHeight="460px">
@@ -407,11 +422,19 @@ export default function MotionLanding() {
           </LazySection>
         </div>
 
+        <div className="motion-divider" aria-hidden="true">
+          <span className="motion-divider-dot" />
+        </div>
+
         {/* Section 6: Frequently Asked Questions */}
         <div id="faq">
           <LazySection minHeight="420px">
             <ArchitectureFaq />
           </LazySection>
+        </div>
+
+        <div className="motion-divider" aria-hidden="true">
+          <span className="motion-divider-dot" />
         </div>
 
         {/* Section 7: Final Conversion CTA Banner & Footer */}

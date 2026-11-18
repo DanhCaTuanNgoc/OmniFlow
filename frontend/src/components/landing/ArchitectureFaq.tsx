@@ -51,6 +51,7 @@ export default function ArchitectureFaq() {
   return (
     <section className="motion-section faq-section" aria-label="Architecture FAQ">
       <div className="motion-section-header">
+        <span className="motion-coord-tag">0x05 // TECHNICAL_FAQ</span>
         <div className="motion-badge-pill">
           <span className="motion-badge-dot" />
           <span>Technical Reference</span>

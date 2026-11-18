@@ -54,6 +54,7 @@ export default function DefensivePillars() {
   return (
     <section className="motion-section defensive-pillars-section" aria-label="Defensive Security Pillars">
       <div className="motion-section-header">
+        <span className="motion-coord-tag">0x02 // DEFENSIVE_INVARIANTS</span>
         <div className="motion-badge-pill">
           <span className="motion-badge-dot" />
           <span>Security Architecture</span>

@@ -15,8 +15,8 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 7 | 7 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 6 | 0 | **60.0%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 12 | 0 | **66.7%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 12 | 8 | 0 | **66.7%** |
-| **TỔNG CỘNG** | **21 Ngày** | **47** | **33** | **0** | **70.2%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 13 | 9 | 0 | **69.2%** |
+| **TỔNG CỘNG** | **21 Ngày** | **48** | **34** | **0** | **70.8%** |
 
 ---
 
@@ -587,4 +587,15 @@
   * Thiết kế cơ chế Lazy Loading: Sử dụng `IntersectionObserver` với `rootMargin: '250px'` và `next/dynamic` tách bundle, chỉ render component và nạp tài nguyên khi người dùng cuộn đến gần.
 * **Ngày tạo:** 18/11/2026 11:54
 * **Ngày hoàn thành:** 18/11/2026 12:07
+* **Trạng thái:** `DONE`
+
+#### `TASK-313` [IN_PROGRESS] — Nâng Cấp Hệ Thống Nền Ambient Đa Tầng (Zero AI Slop) Đồng Bộ Motion UI
+* **Module / Màn hình:** Landing Page (`MotionLanding.tsx`, `motion-landing.css`, Section Dividers)
+* **Mục đích:** Xóa bỏ sự đơn điệu của màu đen trơn ở các Section 2-7 mà không lạm dụng hiệu ứng AI-slop rực rỡ rẻ tiền. Thiết lập hệ thống nền đa tầng kỷ luật cao:
+  1. Pin video CloudFront gốc cố định toàn trang (`position: fixed; inset: 0`), kết hợp lớp mặt nạ Obsidian Vignette chuyển sắc nhẹ cho phép dòng chảy của video tiếp tục thở mờ ảo dưới các khe hở của card khi cuộn trang.
+  2. Lưới dot-matrix siêu mịn (28px) đồng bộ với phông chữ Bubbledot, tích hợp mặt nạ gradient hình elip để chỉ sáng nhẹ quanh khu vực nội dung.
+  3. Đường chỉ laser phân cách siêu mảnh (`1px hairline`) giữa các section kèm micro-dot phát sáng trung tâm theo ngôn ngữ 3-chấm của Header.
+  4. Coordinate Tech Badges tinh tế (`0x01 // STUDIO`, `0x02 // INVARIANTS`, `0x03 // PROOF`) tăng tính kỹ thuật chuẩn Web3 FinTech.
+* **Ngày tạo:** 18/11/2026 12:12
+* **Ngày hoàn thành:** 18/11/2026 12:15
 * **Trạng thái:** `DONE`
