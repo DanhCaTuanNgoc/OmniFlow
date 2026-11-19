@@ -22,6 +22,8 @@
 2. [CẨM NANG NGHIỆP VỤ DEFI THỰC TẾ DÀNH CHO BUILDER](#2-cẩm-nang-nghiệp-vụ-defi-thực-tế-dành-cho-builder)
 3. [PHẠM VI HỆ THỐNG & NĂNG LỰC CỦA SẢN PHẨM (SCOPE & CAPABILITIES)](#3-phạm-vi-hệ-thống--năng-lực-của-sản-phẩm-scope--capabilities)
 4. [ĐẶC TẢ CHỨC NĂNG 5 MÀN HÌNH WORKSPACE (FUNCTIONAL BREAKDOWN)](#4-đặc-tả-chức-năng-5-màn-hình-workspace-functional-breakdown)
+   * [4.7 Phiên Workspace và quyền thao tác](#47-phiên-workspace-và-quyền-thao-tác)
+   * [4.8 Quản lý nhiều pipeline và vận hành liên tục](#48-quản-lý-nhiều-pipeline-và-vận-hành-liên-tục)
 5. [LUỒNG THAO TÁC END-TO-END CHI TIẾT (STEP-BY-STEP USER JOURNEY)](#5-luồng-thao-tác-end-to-end-chi-tiết-step-by-step-user-journey)
 6. [YÊU CẦU PHI CHỨC NĂNG (NON-FUNCTIONAL REQUIREMENTS - NFR)](#6-yêu-cầu-phi-chức-năng-non-functional-requirements---nfr)
 7. [TỪ ĐIỂN DỮ LIỆU & THUẬT NGỮ CHUYÊN MÔN (GLOSSARY)](#7-từ-điển-dữ-liệu--thuật-ngữ-chuyên-môn-glossary)
@@ -214,7 +216,7 @@ mindmap
 * **Gas Balance Gauge (Đo lường Gas lREACT):**
   * Hiển thị thanh tiến trình lượng gas `lREACT` nạp sẵn trong RSC.
   * Khi gas < 0.2 lREACT, thanh hiển thị cảnh báo đỏ kèm nút **[ + Refuel Gas ]** cho phép nạp thêm trong 1 click.
-* **Control Actions:** Nút tạm dừng (Pause), Tiếp tục (Resume), hoặc Hủy bỏ hợp đồng (Terminate & Refund).
+* **Control Actions:** Tạm dừng, tiếp tục và dừng vĩnh viễn theo khả năng của deployment. Hoàn quỹ phí chỉ áp dụng khi hợp đồng hỗ trợ.
 
 ---
 
@@ -233,12 +235,12 @@ mindmap
   * Hiển thị địa chỉ hợp đồng `ActionVault.sol` của người dùng trên Base Sepolia.
   * Số dư tài sản hiện tại: `ETH Balance` và `USDC Balance`.
 * **Nạp / Rút Thường (Deposit / Withdraw):**
-  * Cho phép user nạp ETH vào vault để phục vụ cho các lệnh swap tự động, hoặc rút một phần vốn khi cần.
+  * Cho phép user nạp ETH vào vault để phục vụ cho các lệnh swap tự động. Rút một phần là khả năng cần bổ sung vào Vault trước khi mở trên giao diện.
 * **Danh sách RSC được cấp quyền (Authorized Policies):**
   * Bảng hiển thị các địa chỉ hợp đồng RSC trên Reactive Network đang được phép ra lệnh cho Vault.
 * **🚨 NÚT KHẨN CẤP (PANIC BUTTON — Emergency Withdraw):**
   * Nút bấm màu đỏ cảnh báo ở vị trí trang trọng nhất.
-  * **Hành vi nghiệp vụ:** Khi người dùng nghi ngờ hệ thống hoặc muốn rút lui ngay lập tức, bấm nút này sẽ kích hoạt hàm `emergencyWithdraw()` trên `ActionVault`, chuyển 100% ETH/Token về thẳng địa chỉ ví cá nhân mà không qua bất kỳ lớp kiểm tra trung gian nào.
+  * **Hành vi nghiệp vụ:** Chủ Vault có thể ký gọi `emergencyWithdraw()` để chuyển toàn bộ ETH trong ActionVault hiện tại về ví chủ. Rút ERC-20 cần khả năng riêng của Vault.
 
 ---
 
@@ -270,7 +272,7 @@ Một ví quản lý được nhiều pipeline. Mỗi pipeline có thể có b�
 - Pipeline on-chain tiếp tục hoạt động khi người dùng đóng Workspace hoặc backend bảo trì nếu còn subscription, quyền thực thi và quỹ phí. Sau khi mở lại, Workspace khôi phục danh sách và đọc bù lịch sử.
 - Tạm dừng, tiếp tục, hoàn phí và rút tài sản được cung cấp theo khả năng của deployment. Với ActionVault hiện tại, thu hồi quyền RSC chặn hành động đích. RSC vẫn có thể phát sinh phí trên Lasna. Rút khẩn cấp hiện áp dụng cho ETH.
 
-Xem ma trận thao tác và tiêu chí kỹ thuật trong [FRS mục 8](REACTIVEFLOW_DETAILED_FRS.md#8-van-hanh-workspace-theo-vi) và kế hoạch trong [Phân tích vận hành Workspace](WORKSPACE_OPERATIONS_ANALYSIS.md).
+Xem ma trận thao tác và tiêu chí kỹ thuật trong [FRS mục 8](REACTIVEFLOW_DETAILED_FRS.md#8-vận-hành-workspace-theo-ví) và kế hoạch trong [Phân tích vận hành Workspace](WORKSPACE_OPERATIONS_ANALYSIS.md).
 
 # 5. LUỒNG THAO TÁC END-TO-END CHI TIẾT (STEP-BY-STEP USER JOURNEY)
 

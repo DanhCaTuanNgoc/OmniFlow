@@ -41,6 +41,7 @@
 7. [ĐẶC TẢ TÍNH NĂNG MỞ RỘNG CHIẾN LƯỢC: AI COPILOT & TELEGRAM SENTINEL BOT](#7-đặc-tả-tính-năng-mở-rộng-chiến-lược-ai-copilot--telegram-sentinel-bot)
    * 7.1 AI Prompt-to-Pipeline Copilot ("Magic Pipeline Engine")
    * 7.2 Telegram Sentinel Bot Companion (Real-Time Push Alerts & Panic Remote)
+8. [Vận hành Workspace theo ví](#8-vận-hành-workspace-theo-ví)
 
 ---
 
@@ -120,8 +121,8 @@ stateDiagram-v2
 | **3. COMPILING & DEPLOYING** | Backend Runner / Lasna RPC | Backend điền tham số vào Template $\rightarrow$ chạy `forge create` deploy `StopLoss_Pipeline.sol` lên Reactive Lasna Testnet. |
 | **4. BINDING & SPONSORSHIP** | Multi-chain Tx | Ký transaction ủy quyền địa chỉ RSC vừa sinh vào `ActionVault.sol` trên Base Sepolia; tự động chuyển `1.0 lREACT` vào RSC để nuôi gas. |
 | **5. RUNNING 24/7 (Sống On-chain)** | **Reactive Network Consensus** | **Canvas có thể đóng!** Hợp đồng RSC liên tục lắng nghe event trên Base Sepolia thông qua Reactive System Contract `0x...fffFfF`. |
-| **6. STOP / PAUSE (Tạm dừng)** | Destination Chain State | Người dùng bấm Pause $\rightarrow$ gọi hàm `revokeRSC(address)` trên `ActionVault`, tạm thời tước quyền thực thi của RSC. |
-| **7. TERMINATED (Hủy hoàn toàn)** | On-chain Unsubscribe | RSC gọi `service.unsubscribe()`, rút toàn bộ `lREACT` còn dư về ví của người dùng. Canvas lưu trữ thành dạng Archived. |
+| **6. PAUSED (Tạm dừng)** | Destination Chain State | Chủ Vault ký `setAuthorizedRSC(rscAddress, false)` để chặn thực thi tại Vault. RSC có thể vẫn nghe sự kiện trên Lasna và tiêu phí. |
+| **7. TERMINATED (Dừng vĩnh viễn)** | Trạng thái xác nhận on-chain | Yêu cầu cơ chế dừng subscription của deployment. Hoàn quỹ phí áp dụng theo khả năng hợp đồng. Lưu trữ canvas là thao tác riêng. |
 
 ### 2.1.1 Tính Năng Bổ Trợ Trải Nghiệm Studio (Craft & DevTools)
 1. **Nút `[ 🧪 Simulate Flow / Dry-Run ]` trên Canvas Toolbar:**
@@ -561,16 +562,16 @@ Nơi người dùng an tâm "quên nó đi" nhưng vẫn nắm trọn quyền đ
 ### Bảng Đặc Tả Chi Tiết:
 * **Data Sources (Inputs):**
   * Lấy danh sách hợp đồng đã deploy của `connectedWallet` từ Local Index / Factory Contract.
-  * Đọc `balance` của địa chỉ RSC trên Reactive Lasna (`provider.getBalance(rscAddress)`).
-  * Đọc biến `lastTriggered` và `totalEventsProcessed` từ hợp đồng RSC.
+  * Đọc `balance`, `reserves` và `debt` của RSC và phí callback của Vault từ đúng mạng, theo mục 8.4.
+  * Đọc thời điểm kích hoạt gần nhất và bộ đếm từ contract hoặc lịch sử đã lập chỉ mục khi deployment có cung cấp.
 * **Business Rules (Quy tắc xử lý):**
   * **Cảnh báo Gas Cạn:** 
     * Nếu `balance(lREACT) >= 0.5` $\rightarrow$ Thanh màu xanh lục (Bình thường).
     * Nếu `0.1 <= balance(lREACT) < 0.5` $\rightarrow$ Thanh màu vàng cam (Khuyến nghị nạp thêm).
     * Nếu `balance(lREACT) < 0.1` $\rightarrow$ Thanh màu đỏ nhấp nháy: *"Gas critical! Callback may fail."*
-  * **Xử lý Nút [ + Refuel Gas ]:** Mở popup cho phép gửi `0.5` hoặc `1.0 lREACT` từ ví sang địa chỉ hợp đồng RSC.
-  * **Xử lý Nút [ Pause ]:** Gọi transaction `setAuthorizedRSC(address(0))` trên `ActionVault` $\rightarrow$ Trạng thái chuyển sang 🟡 `PAUSED`.
-  * **Xử lý Nút [ Terminate ]:** Hủy vĩnh viễn, gọi hàm rút toàn bộ gas dư về ví $\rightarrow$ Trạng thái chuyển sang ⚪ `TERMINATED`.
+  * **Xử lý Nút [ + Refuel Gas ]:** Hiển thị chain, đối tượng được nạp và số tiền. Với quỹ phí Lasna, gọi `depositTo(rscAddress)` trên system contract. Với quỹ phí callback, gọi `depositTo(vaultAddress)` trên proxy đích. Cập nhật sau receipt.
+  * **Xử lý Nút [ Pause ]:** Chờ receipt của `setAuthorizedRSC(rscAddress, false)` trên `ActionVault` trước khi hiển thị `PAUSED`. Resume cấp lại quyền cho đúng RSC.
+  * **Xử lý Nút [ Terminate ]:** Chỉ hiển thị khi deployment hỗ trợ dừng vĩnh viễn. Chỉ cho yêu cầu hoàn phí khi contract hỗ trợ.
 * **Outputs:** Bảng điều khiển real-time cập nhật số event nhảy liên tục mỗi khi Base Sepolia sinh block mới.
 
 ---
@@ -1016,3 +1017,49 @@ Tin nhắn gửi về người dùng bao gồm:
 #### 7.2.4 Tiêu Chí Nghiệm Thu (Acceptance Criteria)
 1. **Decoupled Failure:** Nếu token Telegram không tồn tại hoặc Telegram API bị gián đoạn, backend chỉ log warning và tiếp tục vận hành WebSocket bình thường, không làm gián đoạn luồng xử lý on-chain.
 2. **Zero-Mock Alert:** Chỉ gửi tin nhắn khi có receipt xác nhận on-chain từ Base Sepolia và Lasna, không gửi tin nhắn dựa trên dữ liệu giả định.
+
+## 8. Vận hành Workspace theo ví
+
+Mục này đặc tả chế độ khách, đồng bộ theo ví và khả năng phục hồi của các màn hình ở mục 2–4. Các điều khiển Pause, Resume, Terminate và Refund trong sơ đồ vòng đời chỉ khả dụng khi deployment hỗ trợ và có bằng chứng xác nhận trên chain. Xem [phân tích và kế hoạch triển khai](WORKSPACE_OPERATIONS_ANALYSIS.md).
+
+### 8.1 Trạng thái phiên và phạm vi truy cập
+
+1. Chế độ khách chỉ tải catalog công khai và nháp cục bộ. Ví đã kết nối nhưng chưa xác thực vẫn có thể thiết kế, có CTA ký thông điệp để mở Workspace cá nhân.
+2. Dùng SIWE với nonce dùng một lần, kiểm tra domain, chain của thông điệp, chữ ký và thời hạn. API lấy địa chỉ chủ từ phiên và xác thực quyền trên từng tài nguyên. WebSocket chỉ nhận subscription thuộc phiên, ngừng nhận khi phiên hết hiệu lực. Địa chỉ client gửi chỉ là dữ liệu đầu vào cần đối chiếu.
+3. Cache và query theo địa chỉ ví, môi trường và đối tượng chain tương ứng. Khi đổi ví, logout hoặc disconnect, hủy fetch/stream cũ, xóa dữ liệu cá nhân trên UI và bỏ kết quả về muộn. Cung cấp thao tác nhập nháp khách có xác nhận.
+4. Mỗi màn hình có trạng thái chưa kết nối, chờ xác thực, đang tải, rỗng, có dữ liệu và lỗi. Hiện số 0 sau khi đọc thành công. Khi RPC lỗi, ghi rõ dữ liệu chưa xác minh hoặc thời điểm cập nhật gần nhất. Khi sai mạng, vẫn đọc qua RPC đúng chain và chỉ yêu cầu chuyển mạng cho giao dịch cần ký.
+
+### 8.2 Ma trận dữ liệu và thao tác
+
+| Màn hình | Khách | Có phiên ví hợp lệ |
+|---|---|---|
+| Studio | Canvas và recipe, sửa graph, validate, nháp cục bộ, export. Deploy yêu cầu kết nối và xác thực. | Danh sách canvas theo ví. Lưu, nhân bản, tạo revision, xem graph đã deploy hoặc deploy revision hợp lệ. Xác minh Vault trước khi deploy. |
+| Active | CTA kết nối, không hiển thị số liệu cá nhân. | Deployment theo ví và trạng thái, địa chỉ RSC/Vault, chain, quỹ phí và hoạt động gần nhất. Cho tiếp tục deploy, refuel, Pause/Resume/Terminate theo khả năng và quyền. |
+| Templates | Duyệt công khai, dùng recipe tạo nháp cục bộ. | Tạo canvas mới theo ví, điền tham số phụ thuộc tài khoản từ ví/Vault đã xác minh. |
+| Vault | CTA kết nối. Tắt thao tác tài sản và quyền. | Tra cứu Vault theo ví và chain, xác minh owner(). Đọc số dư cùng quyền từng RSC, hiển thị thiếu Vault hoặc đề nghị liên kết. Mở thao tác theo khả năng hợp đồng và quyền owner. |
+| Logs | CTA kết nối. Proof công khai dẫn qua trang riêng. | Lịch sử theo ví và pipeline, có phân trang, bộ lọc, link explorer. Thông báo mất stream và đọc bù khi kết nối lại. |
+
+### 8.3 Mô hình dữ liệu và triển khai
+
+- **Pipeline** có ID ổn định, ví chủ và tên. **Revision** thuộc Pipeline, chứa cấu hình graph, tham số, vị trí node và số phiên bản. Revision đã deploy là snapshot bất biến. **Deployment** tham chiếu Revision và lưu RSC, Vault, chain ID, trạng thái, tx hash, lỗi và thời điểm từng bước. Một pipeline có thể có nháp mới song song với bản đang chạy.
+- **Vault link** ghi ví, chain ID và địa chỉ Vault. Xác minh owner từ RPC khi tạo liên kết và trước thao tác đặc quyền. **Execution** ghi tham chiếu receipt và log liên chuỗi, kết quả, timestamp. **Chain cursor** ghi mốc đã xử lý để đọc lại theo từng mạng.
+- Dùng storage bền vững ngoài chain cho dữ liệu Workspace. PostgreSQL là lựa chọn đề xuất. Nháp khách lưu trong trình duyệt. Deployment, quyền, tài sản, quỹ phí và receipt được đối soát từ chain. RPC trả quyền hiện hành, storage phục vụ tra cứu và khôi phục.
+- API cần khả năng lấy danh sách và chi tiết Pipeline/Deployment, tạo hoặc cập nhật nháp, tạo revision, kiểm tra trạng thái deploy và lấy lịch sử theo cursor. Mọi yêu cầu riêng kiểm tra phiên và quyền sở hữu. Ghi job kèm khóa idempotency trước khi gửi deployment, lưu tx hash từng bước và đối soát trước khi retry. Khôi phục được các bước nạp phí và cấp quyền sau reload hoặc restart.
+
+### 8.4 Vòng đời và trạng thái vận hành
+
+- Vòng đời gồm **DRAFT**, **DEPLOYING**, **SETUP_REQUIRED**, **RUNNING**, **PAUSED**, **TERMINATED** và **DEPLOY_FAILED**. Lưu trữ là thuộc tính tổ chức danh sách. Pipeline đã deploy có thể được lưu trữ mà không xóa lịch sử, sau khi xử lý trạng thái on-chain theo lựa chọn của người dùng.
+- Chỉ xác nhận **RUNNING** sau khi đối soát deployment và các điều kiện on-chain cần thiết, gồm subscription, quyền Vault và quỹ. Quy trình chờ chữ ký phải chỉ rõ bước đang thiếu. Listening, Evaluating, Executing, Cooldown và kết quả callback được hiển thị riêng.
+- Với Vault hiện tại, Pause thu hồi quyền riêng của RSC qua setAuthorizedRSC với trạng thái false. Hiện cảnh báo RSC có thể vẫn nghe và tiêu phí. Resume cần cấp quyền lại và kiểm tra quỹ. Terminate cần bằng chứng cơ chế dừng thực sự, chỉ hiển thị hoàn phí khi có triển khai tương ứng. Chuyển revision đang chạy cần kiểm soát quyền hai RSC để tránh thực thi trùng.
+- Đọc balance, reserves và debt đúng RSC trên Lasna và đúng Vault tại proxy Base Sepolia. Hiển thị vốn swap trong Vault riêng. Đánh dấu đọc lỗi và sức khỏe phí riêng với trạng thái vòng đời. Rút khẩn cấp hiện hỗ trợ ETH, thao tác rút một phần hoặc ERC-20 cần capability riêng.
+
+### 8.5 Đồng bộ và nghiệm thu
+
+Indexer đọc bù sau restart theo cursor và loại trùng theo chain ID, tx hash và log index. Đối soát reorg theo mạng. Ghép nguồn, Lasna và callback bằng tham chiếu có thể xác minh. Chỉ gắn thành công khi receipt và sự kiện đích xác nhận thực thi. WebSocket báo thay đổi, API trả lịch sử đã lưu và đọc bù phần thiếu sau reconnect.
+
+1. Khách tạo nháp, reload vẫn mở được, tài sản và deployment yêu cầu phiên phù hợp.
+2. Ví A có một nháp và một pipeline đã triển khai. Đăng nhập trên thiết bị mới tải đúng hai canvas và graph đã deploy.
+3. Chuyển A sang B trong lúc fetch và stream. Không hiển thị phản hồi A đến muộn. Phiên B không truy cập được đối tượng riêng của A qua API hoặc WebSocket.
+4. Reload trong quá trình deploy và tiếp tục bước cấp quyền còn thiếu. Retry không tạo RSC trùng. Sửa revision mới không đổi cấu hình đang deploy.
+5. Phân biệt lỗi RPC, số dư bằng 0, sai mạng và thiếu quyền. Đối chiếu Pause/Resume bằng receipt. Deployment thiếu capability không hiện thao tác chưa hỗ trợ.
+6. Khi frontend và backend tắt, phát event nguồn cho pipeline đủ điều kiện. Sau restart, mở lại Workspace và đối chiếu đủ các receipt, lịch sử không trùng và trạng thái deployment khôi phục đúng.

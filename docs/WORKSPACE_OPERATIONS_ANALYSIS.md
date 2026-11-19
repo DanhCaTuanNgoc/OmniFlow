@@ -1,6 +1,6 @@
 # Phân tích vận hành Workspace OmniFlow
 
-Workspace cho phép thiết kế automation khi chưa kết nối ví và quản lý nhiều pipeline sau khi xác thực ví. Tài liệu này ghi nhận hiện trạng, thiết kế đề xuất và thứ tự thực hiện. [BRD](REACTIVEFLOW_BUSINESS_REQUIREMENTS_SPEC.md#47-phien-workspace-va-quyen-thao-tac) · [FRS](REACTIVEFLOW_DETAILED_FRS.md#8-van-hanh-workspace-theo-vi) · [Blueprint](../PROJECT_BLUEPRINT.md)
+Workspace cho phép thiết kế automation khi chưa kết nối ví và quản lý nhiều pipeline sau khi xác thực ví. Tài liệu này ghi nhận hiện trạng, thiết kế đề xuất và thứ tự thực hiện. [BRD](REACTIVEFLOW_BUSINESS_REQUIREMENTS_SPEC.md#47-phiên-workspace-và-quyền-thao-tác) · [FRS](REACTIVEFLOW_DETAILED_FRS.md#8-vận-hành-workspace-theo-ví) · [Blueprint](../PROJECT_BLUEPRINT.md)
 
 ## 1. Năm màn hình theo trạng thái ví
 
@@ -67,3 +67,40 @@ Hiện RSC đã deploy vẫn tồn tại sau restart, nhưng backend chưa lưu 
 4. Sửa revision mới trong khi revision cũ chạy. Graph đã deploy giữ nguyên. Reload giữa deploy và cấp quyền khôi phục bước đang dở mà không tạo RSC trùng.
 5. RPC lỗi, số dư bằng 0 và ví sai mạng có trạng thái khác nhau. Thao tác cần ký chỉ mở đúng mạng và đúng quyền.
 6. Tắt frontend và backend, phát event nguồn khi RSC đủ điều kiện. Sau restart, ví A tìm được pipeline, graph và trọn chuỗi receipt được đọc bù, mỗi sự kiện xuất hiện một lần.
+
+## 6. Kế hoạch triển khai Supabase cho Workspace
+
+**Phạm vi MVP.** Dùng Supabase làm PostgreSQL cho dữ liệu Workspace. Giữ Express trên Railway làm API và giữ WebSocket hiện tại. Frontend gọi Express bằng phiên xác thực ví. Backend nắm thông tin kết nối database. Supabase Auth, Realtime và Storage nằm ngoài phạm vi MVP. Reactive Omni và ActionVault tiếp tục thực thi theo trạng thái on-chain khi database tạm gián đoạn.
+
+### 6.1 Môi trường và phân quyền
+
+- Chuẩn bị database local và dự án Supabase riêng cho môi trường testnet. Đưa SQL migrations vào `supabase/migrations/`. CI áp migration trên DB sạch để kiểm tra schema. Áp migration lên testnet trước khi rollout backend tương thích. Dùng thay đổi bổ sung trong giai đoạn chuyển đổi để có thể quay lại bản backend trước. [Supabase Database Migrations](https://supabase.com/docs/guides/deployment/database-migrations)
+- Cấu hình `DATABASE_URL` bằng Railway Variables. Kiểm tra đường kết nối từ container Railway, dùng TLS và giới hạn connection pool. Chọn kết nối trực tiếp nếu hạ tầng hỗ trợ hoặc dùng Supavisor session mode khi cần kết nối IPv4 cho Express chạy lâu dài. Tách role chạy migration và role runtime giới hạn quyền. [Supabase PostgreSQL Connections](https://supabase.com/docs/guides/database/connecting-to-postgres)
+- Lưu bảng Workspace trong schema riêng, ngoài danh sách schema được Data API phơi bày. Runtime role chỉ có quyền cần thiết. Express thực thi phân quyền ở lớp truy vấn theo địa chỉ ví chuẩn hóa và môi trường lấy từ phiên SIWE. Kiểm tra chữ ký, domain, nonce dùng một lần và hạn phiên. Áp cùng phạm vi cho WebSocket, từ chối subscribe pipeline của ví khác và đóng subscription khi phiên hết hiệu lực.
+- Giữ khóa riêng người dùng trong ví. Xác minh `owner()` qua RPC trước khi liên kết Vault hoặc chuẩn bị deploy cho Vault đó. Việc cấp quyền Vault vẫn cần giao dịch do chủ Vault ký.
+
+### 6.2 Schema tối thiểu
+
+| Bảng | Dữ liệu chính | Ràng buộc cần có |
+|---|---|---|
+| `pipelines` | ID, ví chủ, môi trường, tên, thời điểm tạo/cập nhật, thời điểm lưu trữ | Index theo ví và môi trường để liệt kê nhanh. |
+| `pipeline_revisions` | Pipeline ID, số revision, graph và layout dạng JSONB, phiên bản schema graph | Duy nhất theo pipeline và số revision. Revision đã gửi deploy trở thành snapshot bất biến. Dùng version để phát hiện ghi đè nháp từ nhiều tab. |
+| `vault_links` | Ví chủ, chain ID, địa chỉ Vault, thời điểm và bằng chứng đã kiểm tra owner | Duy nhất theo chain và địa chỉ Vault. Đọc lại quyền từ chain trước thao tác đặc quyền. |
+| `deployments` | Revision và Vault link, chain ID, RSC, bước hiện tại, trạng thái, khóa idempotency, tx hash và lỗi theo bước | Khóa ngoại và kiểm tra cùng phạm vi ví/môi trường. Khóa idempotency theo ví/môi trường. Địa chỉ RSC duy nhất theo chain khi đã xác định. |
+
+Lưu nonce và phiên SIWE bằng cơ chế có khả năng xác minh và thu hồi sau restart. Nếu backend chọn lưu trong DB, dùng bảng riêng với thời hạn. Giai đoạn lịch sử bổ sung `executions` để ghép receipt liên chuỗi và `chain_cursors` để tiếp tục đọc sau restart. Lưu nhận dạng log theo `chainId + txHash + logIndex` và cursor theo indexer/chain.
+
+### 6.3 Các giai đoạn triển khai
+
+| Giai đoạn | Thay đổi | Điều kiện qua giai đoạn |
+|---|---|---|
+| **1. Kết nối DB và thiết lập quyền** | Migration cho schema MVP, cấu hình backend, kiểm tra connectivity và readiness riêng cho chức năng lưu trữ. Thêm phiên SIWE và truy vấn giới hạn theo ví. | CI áp được migration trên DB sạch. Ví B không đọc hoặc sửa dữ liệu A qua API hay đăng ký stream riêng của A. |
+| **2. Lưu canvas và liên kết Vault** | API tạo/liệt kê Pipeline, đọc và lưu nháp, tạo revision, liên kết Vault có kiểm tra owner. Giữ nháp khách trong trình duyệt và chỉ nhập nháp khi người dùng chọn. Gắn Studio, Active và Vault với API theo ví. | A có thể lưu hai canvas, mở từ thiết bị khác và đổi sang B mà dữ liệu A không còn xuất hiện. Xung đột phiên bản nháp trả lỗi rõ thay vì ghi đè. |
+| **3. Khôi phục luồng deploy** | API dùng khóa idempotency, khóa hoặc cập nhật có điều kiện để chỉ một worker nhận bước. Ghi ý định gửi giao dịch trước khi broadcast. Lưu hash, chain và dữ liệu đối soát theo từng bước deploy, nạp phí và cấp quyền. Cho UI mở lại Deployment sau reload. | Restart ngay sau broadcast vẫn xác định được giao dịch đã gửi. Retry từ bước còn thiếu và không tạo RSC thứ hai. RUNNING chỉ xuất hiện sau khi đối soát quyền và quỹ on-chain. |
+| **4. Lịch sử và đọc bù** | Thêm indexer, lưu execution và cursor theo từng chain. Chỉ tiến cursor sau khi sự kiện đã được ghi bền vững. Thay buffer mẫu bằng lịch sử theo ví. Backfill và đối soát reorg, gửi thông báo WebSocket sau khi ghi DB. | Restart backend, phát sinh giao dịch trong lúc backend tắt và mở lại Workspace. Lịch sử phục hồi đủ các bước, mỗi sự kiện xuất hiện một lần. |
+
+**Trường hợp kết quả broadcast chưa rõ.** Với giao dịch backend ký, lưu dữ liệu có thể đối soát trước khi gửi, chẳng hạn hash của giao dịch đã ký và thông tin signer/nonce. Khi không xác định được kết quả, đưa bước về trạng thái cần đối soát. Chỉ gửi lại cùng giao dịch hoặc tiếp tục sau khi xác minh trạng thái on-chain. Với bước do ví người dùng ký, lưu hash khi nhận được và kiểm tra quyền hoặc receipt nếu bị gián đoạn giữa lúc ký và lúc cập nhật giao diện.
+
+**Chuyển dữ liệu hiện có.** Chỉ liên kết deployment cũ khi có graph hoặc metadata hợp lệ, địa chỉ RSC/Vault, bằng chứng deployment và quyền sở hữu Vault. Để Workspace trống nếu không có dữ liệu đủ điều kiện. Dữ liệu proof công khai vẫn truy cập qua trang riêng.
+
+**Sự cố và kiểm tra trước rollout.** Khi Supabase lỗi, báo không tải hoặc lưu được Workspace, giữ nháp cục bộ và giữ lịch sử đã tải của đúng ví với thời điểm cập nhật. Tạm ngừng bắt đầu deploy mới nếu chưa ghi được job. Theo dõi lỗi DB, deployment kẹt theo bước và độ trễ indexer. Kiểm tra backup và diễn tập khôi phục sang DB test, sau đó thử khôi phục quan hệ ví–canvas–revision–deployment và tiến trình deploy còn dở.
