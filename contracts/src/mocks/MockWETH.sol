@@ -5,7 +5,7 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 /**
  * @title MockWETH
- * @notice Token Wrapped Ether chuẩn 18 decimals phục vụ testbed và ép giá demo
+ * @notice An 18-decimal wrapped ether test token for the demo pool.
  */
 contract MockWETH is ERC20 {
     constructor() ERC20("Mock Wrapped Ether", "WETH") {}

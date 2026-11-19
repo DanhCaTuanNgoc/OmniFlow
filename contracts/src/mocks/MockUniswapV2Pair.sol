@@ -5,7 +5,7 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 /**
  * @title MockUniswapV2Pair
- * @notice Cặp thanh khoản Uniswap V2 phát ra sự kiện Sync chuẩn để Reactive Network bắt được
+ * @notice A Uniswap V2 test pair that emits Sync events for Reactive Network subscriptions.
  */
 contract MockUniswapV2Pair {
     address public immutable token0;
@@ -37,7 +37,7 @@ contract MockUniswapV2Pair {
     }
 
     /**
-     * @notice Nạp hoặc cập nhật dự trữ thanh khoản để kiểm soát tỷ giá tự do khi test/demo
+     * @notice Sets the pool reserves to control the price in tests and demos.
      */
     function setReserves(uint112 _reserve0, uint112 _reserve1) external {
         reserve0 = _reserve0;
@@ -47,7 +47,7 @@ contract MockUniswapV2Pair {
     }
 
     /**
-     * @notice Giả lập hàm swap chuẩn của Uniswap V2
+     * @notice Simulates a Uniswap V2 swap.
      */
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata /*data*/) external {
         require(amount0Out > 0 || amount1Out > 0, "INSUFFICIENT_OUTPUT_AMOUNT");

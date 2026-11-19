@@ -11,10 +11,10 @@ import '../src/mocks/MockUniswapV2Router.sol';
 
 /**
  * @title DeployScript
- * @notice Script triển khai hạ tầng OmniFlow lên Base Sepolia và Reactive Lasna Testnet
+ * @notice Deploys OmniFlow infrastructure to Base Sepolia and Reactive Lasna Testnet.
  */
 contract DeployScript is Script {
-    // Official Reactive Network Callback Proxy trên Base Sepolia
+    // Official Reactive Network callback proxy on Base Sepolia.
     address public constant CALLBACK_PROXY_BASE_SEPOLIA = 0x476F44b11F5C942c58f4c8E3d0300E5710743585;
 
     function run() external {
@@ -33,7 +33,7 @@ contract DeployScript is Script {
 
         if (block.chainid == 84532) {
             // ==========================================
-            // DEPLOYMENT TRÊN BASE SEPOLIA (CHAIN ID 84532)
+            // BASE SEPOLIA DEPLOYMENT (CHAIN ID 84532)
             // ==========================================
             console.log("--- Trien khai Testbed & ActionVault tren Base Sepolia ---");
 
@@ -53,7 +53,7 @@ contract DeployScript is Script {
             MockUniswapV2Router router = new MockUniswapV2Router(address(weth), address(pair));
             console.log("MockUniswapV2Router deployed at:", address(router));
 
-            // Ví lạnh dự phòng mặc định là deployer
+            // Use the deployer as the default backup wallet.
             address coldWallet = deployer;
 
             uint256 vaultFunding = vm.envOr("VAULT_FUNDING", uint256(0.002 ether));
@@ -69,7 +69,7 @@ contract DeployScript is Script {
             console.log("ActionVault funded with ETH:", vaultFunding);
         } else if (block.chainid == 5318007) {
             // ==========================================
-            // DEPLOYMENT TRÊN REACTIVE LASNA (CHAIN ID 5318007)
+            // REACTIVE LASNA DEPLOYMENT (CHAIN ID 5318007)
             // ==========================================
             console.log("--- Trien khai StopLoss_Pipeline tren Reactive Lasna ---");
 
@@ -79,9 +79,9 @@ contract DeployScript is Script {
             require(pairAddress != address(0), "PAIR_ADDRESS must be set");
             require(vaultAddress != address(0), "VAULT_ADDRESS must be set");
 
-            uint256 priceThreshold = 1800 ether; // Cắt lỗ dưới $1,800
-            uint256 cooldownSeconds = 300; // 5 phút cooldown
-            uint256 percentToSwap = 50; // Bán 50%
+            uint256 priceThreshold = 1800 ether; // Stop-loss threshold of $1,800.
+            uint256 cooldownSeconds = 300; // Five-minute cooldown.
+            uint256 percentToSwap = 50; // Swap 50% of the Vault balance.
             uint256 requiredHits = 1; // Stateless ReactVM: 1 hit trigger
             uint256 velocityBps = 0;
             uint256 windowSec = 0;

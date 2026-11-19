@@ -10,7 +10,7 @@ contract StopLoss_PipelineTest is Test {
     address public pairAddress = address(0xAAAA);
     address public actionVault = address(0xBBBB);
     uint256 public priceThreshold = 1800 ether;
-    uint256 public cooldownSeconds = 300; // 5 phút
+    uint256 public cooldownSeconds = 300; // Five-minute cooldown.
     uint256 public percentToSwap = 50;
 
     function setUp() public {
@@ -66,7 +66,7 @@ contract StopLoss_PipelineTest is Test {
     }
 
     function test_React_IgnoresPriceAboveThreshold() public {
-        // Giá = 1900 USDC / 1 ETH > Ngưỡng 1800
+        // The price of 1,900 USDC per ETH exceeds the 1,800 threshold.
         IReactive.LogRecord memory log = createLog(pairAddress, uint112(1 ether), uint112(1900 ether));
         pipeline.react(log);
         assertEq(pipeline.lastTriggeredTimestamp(), 0);
@@ -74,10 +74,10 @@ contract StopLoss_PipelineTest is Test {
     }
 
     function test_React_TriggersCallbackAndSetsTimestamp() public {
-        // Giá = 1750 USDC / 1 ETH <= Ngưỡng 1800
+        // The price of 1,750 USDC per ETH is below the 1,800 threshold.
         IReactive.LogRecord memory log = createLog(pairAddress, uint112(1 ether), uint112(1750 ether));
 
-        vm.warp(1000); // Đặt thời gian block = 1000s
+        vm.warp(1000); // Set the block timestamp to 1,000 seconds.
         pipeline.react(log);
 
         assertEq(pipeline.lastTriggeredTimestamp(), 1000);
@@ -87,36 +87,36 @@ contract StopLoss_PipelineTest is Test {
     function test_React_StatelessCooldownProtectsAgainst200msBlocks() public {
         IReactive.LogRecord memory log = createLog(pairAddress, uint112(1 ether), uint112(1750 ether));
 
-        // 1. Kích hoạt lần đầu tại t = 1000
+        // 1. Trigger the first callback at t = 1000.
         vm.warp(1000);
         pipeline.react(log);
         assertEq(pipeline.lastTriggeredTimestamp(), 1000);
         assertEq(pipeline.callbacksEmitted(), 1);
 
-        // 2. Block 200ms tiếp theo dội đến (t = 1001), điều kiện vẫn thỏa mãn
+        // 2. The next event arrives at t = 1001 while the price condition still holds.
         vm.warp(1001);
         pipeline.react(log);
-        // lastTriggeredTimestamp không đổi -> Bị chặn tức thì bởi Cooldown Guard!
+        // The cooldown blocks the callback and preserves lastTriggeredTimestamp.
         assertEq(pipeline.lastTriggeredTimestamp(), 1000);
         assertEq(pipeline.callbacksEmitted(), 1);
 
-        // 3. Sau khi hết 300 giây cooldown (t = 1301)
+        // 3. Wait for the 300-second cooldown to elapse at t = 1301.
         vm.warp(1301);
         pipeline.react(log);
-        // Tự động mở lại cho chu kỳ tiếp theo không bị Deadlock!
+        // The next cycle can trigger automatically.
         assertEq(pipeline.lastTriggeredTimestamp(), 1301);
         assertEq(pipeline.callbacksEmitted(), 2);
     }
 
     function test_React_StatefulAntiWick_RequiresConsecutiveBlocks() public {
-        // Khởi tạo pipeline với requiredHits = 3 (chống giật râu nến qua 3 block liên tiếp)
+        // Require three consecutive price hits to filter a brief dip.
         StopLoss_Pipeline antiWickPipeline = new StopLoss_Pipeline(
             pairAddress,
             priceThreshold,
             cooldownSeconds,
             percentToSwap,
             actionVault,
-            3, // Cần 3 hits liên tục
+            3, // Require three consecutive hits.
             0,
             0,
             84532,
@@ -127,24 +127,24 @@ contract StopLoss_PipelineTest is Test {
         IReactive.LogRecord memory bounceLog = createLog(pairAddress, uint112(1 ether), uint112(1850 ether));
 
         vm.warp(100);
-        // Hit 1: Giá giảm dưới 1800
+        // Hit 1: The price drops below 1,800.
         antiWickPipeline.react(dropLog);
         assertEq(antiWickPipeline.consecutiveHits(), 1);
-        assertEq(antiWickPipeline.callbacksEmitted(), 0); // Chưa đủ 3 hits -> chưa emit callback!
+        assertEq(antiWickPipeline.callbacksEmitted(), 0); // The first hit does not emit a callback.
 
-        // Hit 2: Giá tiếp tục dưới 1800
+        // Hit 2: The price stays below 1,800.
         vm.warp(101);
         antiWickPipeline.react(dropLog);
         assertEq(antiWickPipeline.consecutiveHits(), 2);
         assertEq(antiWickPipeline.callbacksEmitted(), 0);
 
-        // Flash Wick: Giá hồi lên 1850 trong 1 block -> Phải reset ngay về 0!
+        // A rebound to 1,850 resets the hit counter to zero.
         vm.warp(102);
         antiWickPipeline.react(bounceLog);
         assertEq(antiWickPipeline.consecutiveHits(), 0);
         assertEq(antiWickPipeline.callbacksEmitted(), 0);
 
-        // Bắt đầu chuỗi 3 hits thật sự
+        // Start a new sequence of three consecutive hits.
         vm.warp(103);
         antiWickPipeline.react(dropLog);
         assertEq(antiWickPipeline.consecutiveHits(), 1);
@@ -154,17 +154,17 @@ contract StopLoss_PipelineTest is Test {
         assertEq(antiWickPipeline.consecutiveHits(), 2);
 
         vm.warp(105);
-        antiWickPipeline.react(dropLog); // Hit thứ 3 thỏa mãn!
+        antiWickPipeline.react(dropLog); // The third hit meets the trigger condition.
         assertEq(antiWickPipeline.callbacksEmitted(), 1);
         assertEq(antiWickPipeline.lastTriggeredTimestamp(), 105);
         assertEq(antiWickPipeline.consecutiveHits(), 0);
     }
 
     function test_React_PriceVelocityGuard_TriggersOnFastDrop() public {
-        // Khởi tạo pipeline theo dõi Price Velocity: Giảm >= 5% (500 bps) trong vòng 60 giây
+        // Configure the velocity trigger for a drop of at least 5% (500 basis points) within 60 seconds.
         StopLoss_Pipeline velocityPipeline = new StopLoss_Pipeline(
             pairAddress,
-            1500 ether, // priceThreshold rất thấp (1500) để đảm bảo không trigger bằng threshold tĩnh
+            1500 ether, // Set the static threshold low enough that only the velocity rule can trigger this test.
             cooldownSeconds,
             percentToSwap,
             actionVault,
@@ -175,7 +175,7 @@ contract StopLoss_PipelineTest is Test {
             0
         );
 
-        // t = 100: Giá ban đầu $2,000 (neo windowStartPrice = $2,000)
+        // At t = 100, anchor the window at $2,000.
         vm.warp(100);
         IReactive.LogRecord memory initialLog = createLog(pairAddress, uint112(1 ether), uint112(2000 ether));
         velocityPipeline.react(initialLog);
@@ -183,18 +183,18 @@ contract StopLoss_PipelineTest is Test {
         assertEq(velocityPipeline.windowStartTime(), 100);
         assertEq(velocityPipeline.callbacksEmitted(), 0);
 
-        // t = 120 (trong vòng 60s): Giá giảm xuống $1,880 (sụt 6% > 5% threshold)
+        // At t = 120, the price falls to $1,880, a 6% drop within the 60-second window.
         vm.warp(120);
         IReactive.LogRecord memory dropLog = createLog(pairAddress, uint112(1 ether), uint112(1880 ether));
         velocityPipeline.react(dropLog);
 
-        // Price Velocity kích hoạt thành công!
+        // The velocity rule triggers a callback.
         assertEq(velocityPipeline.callbacksEmitted(), 1);
         assertEq(velocityPipeline.lastTriggeredTimestamp(), 120);
     }
 
     function test_React_CrossChainOrigin_Configuration() public {
-        // Kiểm tra cấu hình Cross-Chain (Unichain Sepolia 1301)
+        // Check the cross-chain configuration for Unichain Sepolia (1301).
         StopLoss_Pipeline crossChainPipeline = new StopLoss_Pipeline(
             pairAddress,
             priceThreshold,
@@ -210,7 +210,7 @@ contract StopLoss_PipelineTest is Test {
 
         assertEq(crossChainPipeline.originChainId(), 1301);
 
-        // Kích hoạt callback từ Unichain
+        // Trigger a callback from the Unichain event.
         vm.warp(500);
         IReactive.LogRecord memory log = createLog(pairAddress, uint112(1 ether), uint112(1750 ether));
         crossChainPipeline.react(log);
@@ -220,48 +220,48 @@ contract StopLoss_PipelineTest is Test {
     }
 
     function test_React_Scenario_FlashWick_Rejection_And_Recovery() public {
-        // Thiết lập pipeline yêu cầu 2 block liên tiếp (Anti-Wick)
+        // Require two consecutive hits to filter brief price dips.
         StopLoss_Pipeline antiWickPipeline = new StopLoss_Pipeline(
             pairAddress,
             priceThreshold,
             cooldownSeconds,
             percentToSwap,
             actionVault,
-            2, // Cần 2 hits liên tiếp
+            2, // Require two consecutive hits.
             0,
             0,
             84532,
             0
         );
 
-        // Block 101: Giá giảm đột ngột nến bấc xuống $1,750 (Hit 1)
+        // Block 101: The price briefly drops to $1,750 for the first hit.
         IReactive.LogRecord memory wickLog = createLog(pairAddress, uint112(1 ether), uint112(1750 ether));
         antiWickPipeline.react(wickLog);
         assertEq(antiWickPipeline.consecutiveHits(), 1);
-        assertEq(antiWickPipeline.callbacksEmitted(), 0); // Chưa kích hoạt!
+        assertEq(antiWickPipeline.callbacksEmitted(), 0); // The first hit does not trigger a callback.
 
-        // Block 102: Giá hồi phục ngay lập tức lên $1,900 (Fake Wick)
+        // Block 102: The price rebounds to $1,900.
         IReactive.LogRecord memory recoveryLog = createLog(pairAddress, uint112(1 ether), uint112(1900 ether));
         antiWickPipeline.react(recoveryLog);
-        assertEq(antiWickPipeline.consecutiveHits(), 0); // Đã reset về 0!
-        assertEq(antiWickPipeline.callbacksEmitted(), 0); // An toàn: không bị bán tháo đáy!
+        assertEq(antiWickPipeline.consecutiveHits(), 0); // The rebound resets the hit counter to zero.
+        assertEq(antiWickPipeline.callbacksEmitted(), 0); // The brief dip produces no callback.
     }
 
     function test_React_Scenario_Storm_10SwapsIn2Seconds_Only1Callback() public {
         vm.warp(1000);
-        // Giao dịch 1: Kích hoạt thành công
+        // The first transaction triggers a callback.
         IReactive.LogRecord memory log1 = createLog(pairAddress, uint112(1 ether), uint112(1750 ether));
         pipeline.react(log1);
         assertEq(pipeline.callbacksEmitted(), 1);
 
-        // Bão 9 giao dịch dồn dập trong 200ms blocks (từ t=1000 đến t=1002)
+        // Submit nine more events in a burst between t = 1000 and t = 1002.
         for (uint256 i = 0; i < 9; i++) {
-            vm.warp(1000 + (i / 4)); // Giả lập rapid 200ms Denim blocks
+            vm.warp(1000 + (i / 4)); // Approximate rapid Base Sepolia block timing.
             IReactive.LogRecord memory spamLog = createLog(pairAddress, uint112(1 ether), uint112(1740 ether));
             pipeline.react(spamLog);
         }
 
-        // Toàn bộ 9 giao dịch sau bị chặn bởi Cooldown Guard!
+        // The cooldown blocks all nine subsequent callbacks.
         assertEq(pipeline.callbacksEmitted(), 1);
         assertEq(pipeline.lastTriggeredTimestamp(), 1000);
     }
@@ -283,7 +283,7 @@ contract StopLoss_PipelineTest is Test {
 
         assertEq(topicPipeline.originTopic0(), customTopic);
 
-        // Phát log sai topic0
+        // Send a log with the wrong topic0.
         IReactive.LogRecord memory wrongTopicLog = IReactive.LogRecord({
             chain_id: 1301,
             _contract: pairAddress,
@@ -299,9 +299,9 @@ contract StopLoss_PipelineTest is Test {
             log_index: 0
         });
         topicPipeline.react(wrongTopicLog);
-        assertEq(topicPipeline.callbacksEmitted(), 0); // Bị chặn do sai topic0
+        assertEq(topicPipeline.callbacksEmitted(), 0); // The topic filter blocks the callback.
 
-        // Phát log đúng topic0
+        // Send a log with the configured topic0.
         IReactive.LogRecord memory correctTopicLog = IReactive.LogRecord({
             chain_id: 1301,
             _contract: pairAddress,
@@ -317,21 +317,21 @@ contract StopLoss_PipelineTest is Test {
             log_index: 0
         });
         topicPipeline.react(correctTopicLog);
-        assertEq(topicPipeline.callbacksEmitted(), 1); // Kích hoạt thành công
+        assertEq(topicPipeline.callbacksEmitted(), 1); // The matching log triggers a callback.
     }
 
     function test_React_Scenario_MultipleCooldownCycles() public {
-        // Chu kỳ 1: t = 100
+        // Cycle 1: Trigger at t = 100.
         vm.warp(100);
         pipeline.react(createLog(pairAddress, uint112(1 ether), uint112(1700 ether)));
         assertEq(pipeline.callbacksEmitted(), 1);
 
-        // t = 200: Chưa đủ 300s cooldown -> Bị chặn
+        // At t = 200, the 300-second cooldown still blocks the callback.
         vm.warp(200);
         pipeline.react(createLog(pairAddress, uint112(1 ether), uint112(1650 ether)));
         assertEq(pipeline.callbacksEmitted(), 1);
 
-        // Chu kỳ 2: t = 450 (100 + 350s > 300s) -> Kích hoạt lần 2 thành công!
+        // Cycle 2: The next callback triggers at t = 450, after the cooldown.
         vm.warp(450);
         pipeline.react(createLog(pairAddress, uint112(1 ether), uint112(1600 ether)));
         assertEq(pipeline.callbacksEmitted(), 2);

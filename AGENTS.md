@@ -99,6 +99,7 @@ Mandatory whenever testing, verifying data bindings, or running integration suit
 - **Non-Custodial Guarantee**: `ActionVault` must always grant `owner` immediate, unconditional access to `emergencyWithdraw()` and `executeSafeSweep()`.
 - **Gas Lifecycle Awareness**: Always account for RSC `lREACT` gas balances and support refuel capabilities.
 - **Zero AI Slop & No Emojis in Source Code**: No emojis in contract variable names, schemas, or tests. Keep code clean and production-ready.
+- **Code Comment Language**: Write all comments in source code, tests, and scripts in English, including inline comments and documentation comments such as NatSpec and JSDoc. Documentation files may be written in Vietnamese.
 
 ---
 

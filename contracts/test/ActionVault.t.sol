@@ -30,10 +30,10 @@ contract ActionVaultTest is Test {
         pair = new MockUniswapV2Pair(address(weth), address(usdc));
         router = new MockUniswapV2Router(address(weth), address(pair));
 
-        // Nạp thanh khoản ban đầu cho Pool (1 ETH = $2,000 USDC)
+        // Seed the pool at 2,000 USDC per ETH.
         pair.setReserves(1 ether, 2000 ether);
 
-        // 2. Deploy Vault bởi Owner
+        // 2. Deploy the Vault as the owner.
         vm.prank(owner);
         vault = new ActionVault{value: 1 ether}(
             callbackProxy,
@@ -55,7 +55,7 @@ contract ActionVaultTest is Test {
         vault.setAuthorizedRSC(rscContract, true);
         assertTrue(vault.authorizedRSCs(rscContract));
 
-        // Unauthorized caller không thể gán quyền
+        // An unauthorized caller cannot grant execution permission.
         vm.prank(hacker);
         vm.expectRevert("Only owner can execute");
         vault.setAuthorizedRSC(hacker, true);
@@ -64,7 +64,7 @@ contract ActionVaultTest is Test {
     function test_PanicButton_EmergencyWithdraw() public {
         uint256 ownerInitial = owner.balance;
 
-        // Chỉ owner mới có thể gọi Panic Button
+        // Only the owner can trigger an emergency withdrawal.
         vm.prank(owner);
         vault.emergencyWithdraw();
 
@@ -82,11 +82,11 @@ contract ActionVaultTest is Test {
         vm.prank(owner);
         vault.setAuthorizedRSC(rscContract, true);
 
-        // Mô phỏng Callback Proxy gọi executeSafeSweep
+        // Simulate the callback proxy calling executeSafeSweep.
         vm.prank(callbackProxy);
         vault.executeSafeSweep(address(0), rscContract);
 
-        // Tiền phải chạy về Cold Wallet chứ không phải hacker/owner
+        // The funds must go to the backup wallet.
         assertEq(address(vault).balance, 0);
         assertEq(coldWallet.balance, 1 ether);
     }
@@ -95,24 +95,24 @@ contract ActionVaultTest is Test {
         vm.prank(owner);
         vault.setAuthorizedRSC(rscContract, true);
 
-        // Giả lập giá rớt xuống $1,750 (Sync: 1 ETH, 1750 USDC)
+        // Simulate a price drop to 1,750 USDC per ETH.
         pair.setReserves(1 ether, 1750 ether);
 
         uint256 ownerUsdcBefore = usdc.balanceOf(owner);
 
-        // Callback Proxy thực thi bán 50% ETH khi giá <= $1800
+        // The callback proxy sells 50% of the ETH when the price is at or below $1,800.
         vm.prank(callbackProxy);
         vault.executeStopLoss(
             address(0),
             rscContract,
-            50, // Bán 50% ETH
-            1800 ether // Ngưỡng kích hoạt
+            50, // Swap 50% of the ETH.
+            1800 ether // Trigger price threshold.
         );
 
-        // Số dư ETH của Vault giảm 50% (còn 0.5 ETH)
+        // The Vault's ETH balance falls by half to 0.5 ETH.
         assertEq(address(vault).balance, 0.5 ether);
 
-        // USDC được chuyển thẳng về ví cá nhân của Owner
+        // The swap sends USDC directly to the owner's wallet.
         uint256 ownerUsdcAfter = usdc.balanceOf(owner);
         assertTrue(ownerUsdcAfter > ownerUsdcBefore);
     }
@@ -121,14 +121,14 @@ contract ActionVaultTest is Test {
         vm.prank(owner);
         vault.setAuthorizedRSC(rscContract, true);
 
-        // Giả lập giá hồi phục lên $1,850 (trên ngưỡng $1,800)
+        // Simulate a recovery to $1,850, above the $1,800 threshold.
         pair.setReserves(1 ether, 1850 ether);
 
-        // Callback Proxy gọi tới nhưng giá đã hồi -> Phải SKIP an toàn không swap
+        // The Vault must skip the swap when the price has recovered before the callback.
         vm.prank(callbackProxy);
         vault.executeStopLoss(address(0), rscContract, 50, 1800 ether);
 
-        // Số dư Vault vẫn nguyên vẹn 1 ETH!
+        // The Vault retains its full 1 ETH balance.
         assertEq(address(vault).balance, 1 ether);
         assertEq(usdc.balanceOf(owner), 0);
     }
@@ -137,7 +137,7 @@ contract ActionVaultTest is Test {
         vm.prank(owner);
         vault.setAuthorizedRSC(rscContract, true);
 
-        // Hacker gọi giả mạo không qua Proxy
+        // An unauthorized caller attempts to bypass the callback proxy.
         vm.prank(hacker);
         vm.expectRevert();
         vault.executeStopLoss(address(0), rscContract, 50, 1800 ether);
@@ -147,21 +147,21 @@ contract ActionVaultTest is Test {
         vm.prank(owner);
         vault.setAuthorizedRSC(rscContract, true);
 
-        // Giá Base Sepolia hiện tại là $2,000 (vẫn cao hơn $1,800)
+        // The Base Sepolia price is $2,000, above the $1,800 threshold.
         pair.setReserves(1 ether, 2000 ether);
 
         uint256 ownerUsdcBefore = usdc.balanceOf(owner);
 
-        // Trigger đến từ Cross-chain hoặc Velocity với thresholdPriceUSD = type(uint256).max
+        // Simulate a cross-chain or velocity trigger with thresholdPriceUSD set to type(uint256).max.
         vm.prank(callbackProxy);
         vault.executeStopLoss(
             address(0),
             rscContract,
-            50, // Bán 50%
+            50, // Swap 50% of the ETH.
             type(uint256).max // Decoupled trigger
         );
 
-        // Vault đã swap 0.5 ETH thành công bất chấp giá Base vẫn $2,000!
+        // The Vault swaps 0.5 ETH while the Base Sepolia price is still $2,000.
         assertEq(address(vault).balance, 0.5 ether);
         assertTrue(usdc.balanceOf(owner) > ownerUsdcBefore);
     }
@@ -170,12 +170,12 @@ contract ActionVaultTest is Test {
         vm.prank(owner);
         vault.setAuthorizedRSC(rscContract, true);
 
-        // Giá Base Sepolia hiện tại là $2,000 (vẫn cao hơn $1,800)
+        // The Base Sepolia price is $2,000, above the $1,800 threshold.
         pair.setReserves(1 ether, 2000 ether);
 
         uint256 ownerUsdcBefore = usdc.balanceOf(owner);
 
-        // Gọi overload 5 tham số với isCrossChainTrigger = true
+        // Call the five-argument overload with isCrossChainTrigger set to true.
         vm.prank(callbackProxy);
         vault.executeStopLoss(
             address(0),
@@ -185,7 +185,7 @@ contract ActionVaultTest is Test {
             true // isCrossChainTrigger
         );
 
-        // Vault swap 50% thành công
+        // The Vault swaps 50% of its ETH balance.
         assertEq(address(vault).balance, 0.5 ether);
         assertTrue(usdc.balanceOf(owner) > ownerUsdcBefore);
     }
@@ -194,12 +194,12 @@ contract ActionVaultTest is Test {
         vm.prank(owner);
         vault.setAuthorizedRSC(rscContract, true);
 
-        // Chủ ví bấm nút Panic Button rút 100% ETH khẩn cấp về ví cá nhân
+        // The owner withdraws all ETH to their wallet through the emergency exit.
         vm.prank(owner);
         vault.emergencyWithdraw();
         assertEq(address(vault).balance, 0);
 
-        // Sau đó có callback từ RSC bay tới
+        // An RSC callback arrives after the withdrawal.
         pair.setReserves(1 ether, 1700 ether);
         vm.prank(callbackProxy);
         vm.expectRevert("No ETH available in vault");
@@ -210,22 +210,22 @@ contract ActionVaultTest is Test {
             1800 ether
         );
 
-        // Vault đã bảo vệ tài sản thành công, số dư an toàn = 0
+        // The Vault balance remains zero after the callback attempt.
         assertEq(address(vault).balance, 0);
     }
 
     function test_Scenario_DeauthorizeRSC_ImmediatelyBlocksCallbacks() public {
-        // Cấp quyền ban đầu
+        // Grant initial execution permission.
         vm.prank(owner);
         vault.setAuthorizedRSC(rscContract, true);
         assertTrue(vault.authorizedRSCs(rscContract));
 
-        // Chủ ví phát hiện bất thường và thu hồi quyền ngay lập tức
+        // The owner immediately revokes permission after detecting unusual activity.
         vm.prank(owner);
         vault.setAuthorizedRSC(rscContract, false);
         assertFalse(vault.authorizedRSCs(rscContract));
 
-        // Callback Proxy cố thực thi sẽ bị revert ngay lập tức!
+        // The proxy callback reverts after authorization is revoked.
         pair.setReserves(1 ether, 1700 ether);
         vm.prank(callbackProxy);
         vm.expectRevert("Unauthorized RSC contract");
@@ -243,11 +243,11 @@ contract ActionVaultTest is Test {
 
         uint256 coldWalletBefore = coldWallet.balance;
 
-        // Callback Proxy kích hoạt Safe Sweep chuyển toàn bộ tài sản về ví lạnh
+        // The callback proxy triggers a safe sweep to the backup wallet.
         vm.prank(callbackProxy);
         vault.executeSafeSweep(address(0), rscContract);
 
-        // 100% tài sản chuyển đến ví lạnh
+        // The backup wallet receives the full balance.
         assertEq(coldWallet.balance, coldWalletBefore + 1 ether);
         assertEq(address(vault).balance, 0);
     }
@@ -258,15 +258,15 @@ contract ActionVaultTest is Test {
 
         pair.setReserves(1 ether, 1700 ether);
 
-        // Đợt 1: Bán 50% số ETH (1 ether * 50% = 0.5 ether swapped, còn 0.5 ether)
+        // First swap: sell half of 1 ETH, leaving 0.5 ETH.
         vm.prank(callbackProxy);
         vault.executeStopLoss(address(0), rscContract, 50, 1800 ether);
         assertEq(address(vault).balance, 0.5 ether);
 
-        // Giá sập tiếp xuống $1,500
+        // The price drops again to $1,500.
         pair.setReserves(1 ether, 1500 ether);
 
-        // Đợt 2: Bán tiếp 50% số còn lại (0.5 ether * 50% = 0.25 ether swapped, còn 0.25 ether)
+        // Second swap: sell half of the remaining 0.5 ETH, leaving 0.25 ETH.
         vm.prank(callbackProxy);
         vault.executeStopLoss(address(0), rscContract, 50, 1800 ether);
         assertEq(address(vault).balance, 0.25 ether);

@@ -5,7 +5,7 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 /**
  * @title MockUSDC
- * @notice Token USDC chuẩn 18 decimals giúp công thức chia tỷ giá không bị lệch số 0
+ * @notice An 18-decimal USDC test token that keeps the demo pool's price calculation on a shared scale.
  */
 contract MockUSDC is ERC20 {
     constructor() ERC20("Mock USD Coin", "USDC") {}

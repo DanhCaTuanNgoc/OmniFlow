@@ -22,18 +22,18 @@ interface IUniswapV2Pair {
 
 /**
  * @title ActionVault
- * @notice Két an toàn phi lưu ký (Non-Custodial) thuộc sở hữu của người dùng trên Base Sepolia.
- * @dev Kế thừa AbstractCallback để xác thực an toàn các cuộc gọi từ Reactive Callback Proxy.
+ * @notice A user-owned, non-custodial vault on Base Sepolia.
+ * @dev Inherits AbstractCallback to authenticate calls from the Reactive callback proxy.
  */
 contract ActionVault is AbstractCallback {
     address public immutable owner;
-    address public immutable backupSafeAddress; // Ví lạnh dự phòng nhận tiền khi ví owner bị hack
-    mapping(address => bool) public authorizedRSCs; // Hỗ trợ đa Pipeline song song
+    address public immutable backupSafeAddress; // Backup wallet that receives funds if the owner's wallet is compromised.
+    mapping(address => bool) public authorizedRSCs; // Supports multiple pipelines in parallel.
     address public immutable uniswapRouter;
     address public immutable usdcToken;
     address public immutable tokenPair;
 
-    uint256 public constant MAX_SLIPPAGE_BPS = 500; // 5% trượt giá tối đa cho phép
+    uint256 public constant MAX_SLIPPAGE_BPS = 500; // Maximum allowed slippage is 5%.
 
     event StopLossExecuted(uint256 ethAmountIn, uint256 minUsdcOut, uint256 timestamp);
     event OrderSkipped(string reason, uint256 currentPrice);
@@ -66,9 +66,9 @@ contract ActionVault is AbstractCallback {
     }
 
     /**
-     * @notice Cấp quyền hoặc tước quyền thực thi của một hợp đồng RSC
-     * @param _rsc Địa chỉ hợp đồng RSC trên Reactive Lasna
-     * @param _status true = cấp quyền, false = tước quyền
+     * @notice Grants or revokes execution permission for a reactive contract.
+     * @param _rsc Address of the reactive contract on Reactive Lasna.
+     * @param _status True to authorize the contract, false to revoke authorization.
      */
     function setAuthorizedRSC(address _rsc, bool _status) external onlyOwner {
         require(_rsc != address(0), "Invalid RSC");
@@ -77,11 +77,11 @@ contract ActionVault is AbstractCallback {
     }
 
     /**
-     * @notice Thực thi lệnh cắt lỗ từ Reactive Network
-     * @param rvmId Slot 1: Được Reactive Callback Proxy tự động ghi đè bằng RVM ID
-     * @param rscContract Slot 2: Địa chỉ thực sự của hợp đồng StopLoss_Pipeline.sol
-     * @param percentToSwap Tỷ lệ ETH trong vault cần bán (1 - 100)
-     * @param thresholdPriceUSD Ngưỡng giá đã kích hoạt lệnh tại thời điểm origin (nếu == type(uint256).max: bypass local price check)
+     * @notice Executes a stop-loss order from Reactive Network.
+     * @param rvmId Identity injected by the callback proxy into the first argument.
+     * @param rscContract Address of the StopLoss_Pipeline contract.
+     * @param percentToSwap Percentage of the Vault's ETH balance to swap, from 1 to 100.
+     * @param thresholdPriceUSD Origin price threshold. Use type(uint256).max to skip the local price check.
      */
     function executeStopLoss(
         address rvmId,
@@ -93,7 +93,7 @@ contract ActionVault is AbstractCallback {
     }
 
     /**
-     * @notice Quá tải hỗ trợ cờ tường minh isCrossChainTrigger
+     * @notice Executes a stop-loss order with an explicit isCrossChainTrigger flag.
      */
     function executeStopLoss(
         address rvmId,
@@ -118,8 +118,8 @@ contract ActionVault is AbstractCallback {
         uint256 ethBalance = address(this).balance;
         require(ethBalance > 0, "No ETH available in vault");
 
-        // PATTERN 3: TÁI THẨM ĐỊNH GIÁ TỨC THỜI (LIVE PRICE RE-VALIDATION)
-        // DECOUPLED VALIDATION: Nếu là Cross-Chain hoặc Velocity trigger, bypass kiểm tra giá tĩnh pool nội bộ Base Sepolia
+        // Revalidate the live pool price before swapping.
+        // Cross-chain and velocity triggers skip the static price check on the Base Sepolia pool.
         if (!isCrossChainTrigger && thresholdPriceUSD != type(uint256).max) {
             (uint112 reserve0, uint112 reserve1,) = IUniswapV2Pair(tokenPair).getReserves();
             require(reserve0 > 0, "Empty pool reserve");
@@ -137,13 +137,13 @@ contract ActionVault is AbstractCallback {
         path[0] = IUniswapV2Router02(uniswapRouter).WETH();
         path[1] = usdcToken;
 
-        // TÍNH minAmountOut CHUẨN XÁC QUA getAmountsOut CỦA ROUTER (TÍNH CẢ PHÍ VÀ ĐỘ TRƯỢT x*y=k)
+        // Use the router quote to account for pool fees and price impact when setting minAmountOut.
         uint256[] memory amountsOut = IUniswapV2Router02(uniswapRouter).getAmountsOut(swapAmount, path);
         uint256 minAmountOut = (amountsOut[1] * (10000 - MAX_SLIPPAGE_BPS)) / 10000;
 
         emit StopLossExecuted(swapAmount, minAmountOut, block.timestamp);
 
-        // Thực hiện swap và chuyển USDC thẳng về ví User (owner), không giữ lại trong Vault!
+        // Send the swap output directly to the Vault owner.
         IUniswapV2Router02(uniswapRouter).swapExactETHForTokens{value: swapAmount}(
             minAmountOut,
             path,
@@ -153,7 +153,7 @@ contract ActionVault is AbstractCallback {
     }
 
     // =========================================================================
-    // EMERGENCY SAFE SWEEP: TẨU TÁN KHẨN CẤP VỀ VÍ LẠNH KHI VÍ OWNER BỊ HACK PHISHING
+    // Emergency safe sweep to the backup wallet if the owner's wallet is compromised.
     // =========================================================================
     function executeSafeSweep(
         address /* rvmId */,
@@ -168,7 +168,7 @@ contract ActionVault is AbstractCallback {
     }
 
     // =========================================================================
-    // PANIC BUTTON: RÚT TIỀN KHẨN CẤP PHI LƯU KÝ (NON-CUSTODIAL EMERGENCY EXIT)
+    // Non-custodial emergency withdrawal for the Vault owner.
     // =========================================================================
     function emergencyWithdraw() external onlyOwner {
         uint256 balance = address(this).balance;

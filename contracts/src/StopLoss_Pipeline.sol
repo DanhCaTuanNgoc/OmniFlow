@@ -17,9 +17,9 @@ interface IOmniCallbackSystem {
 
 /**
  * @title StopLoss_Pipeline
- * @notice Bộ não điều phối tự động hóa chạy trên Reactive Omni (Lasna Testnet)
- * @dev Tận dụng Instant Finality block ~1s để phát hiện rủi ro và bắn callback tức thời.
- *      Hỗ trợ Stateful Anti-Wick Counter, Anchored Sliding Window (Price Velocity) và Dynamic Origin Chain.
+ * @notice Runs stop-loss automation on Reactive Omni (Lasna Testnet).
+ * @dev Uses Reactive Omni's fast block finality to detect price drops and request callbacks.
+ *      Supports consecutive-hit confirmation, an anchored price velocity window, and configurable origin chains.
  */
 contract StopLoss_Pipeline is IReactive, AbstractReactive {
     address private constant OMNI_SYSTEM = 0x8888888888888888888888888888888888888888;
@@ -30,12 +30,12 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
     uint256 public immutable originChainId;
     uint256 public immutable originTopic0;
     address public immutable pairAddress;
-    uint256 public immutable priceThreshold; // Đơn vị: 1e18
+    uint256 public immutable priceThreshold; // Price scaled by 1e18.
     uint256 public immutable cooldownSeconds;
     uint256 public immutable percentToSwap;
     address public immutable actionVault;
 
-    // Stateful Anti-Wick Counter (chống giật râu nến qua N blocks)
+    // Track consecutive price hits to filter brief price dips.
     uint256 public consecutiveHits;
     uint256 public immutable requiredHits;
 
@@ -79,7 +79,7 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
         originChainId = _originChainId > 0 ? _originChainId : DEFAULT_ORIGIN_CHAIN_ID;
         originTopic0 = _originTopic0 != 0 ? _originTopic0 : SYNC_TOPIC;
 
-        // Đăng ký event subscription với Reactive System Contract khi deploy on-chain (!vm)
+        // Register the subscription when the Reactive system contract is available.
         if (OMNI_SYSTEM.code.length != 0) {
             vendor = service = ISystemContract(payable(OMNI_SYSTEM));
             addAuthorizedSender(OMNI_SYSTEM);
@@ -96,7 +96,7 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
         }
     }
 
-    // Tương thích cả Reactive Omni (CometBFT) lẫn Legacy ReactVM
+    // Supports Reactive Omni and legacy ReactVM.
     function react(LogRecord calldata log) external {
         if (OMNI_SYSTEM.code.length != 0) {
             require(msg.sender == OMNI_SYSTEM, "Only Omni system");
@@ -106,15 +106,15 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
         if (log._contract != pairAddress) return;
         if (log.topic_0 != 0 && log.topic_0 != originTopic0) return;
 
-        // PATTERN 2: STATELESS TIMESTAMP COOLDOWN (CHỐNG DỘI BLOCK 200MS & ZERO-DEADLOCK)
+        // Use a timestamp-based cooldown to limit callbacks during rapid Base Sepolia blocks.
         if (lastTriggeredTimestamp != 0 && block.timestamp - lastTriggeredTimestamp < cooldownSeconds) return;
 
-        // Giải mã reserve0 và reserve1 từ event Sync
+        // Decode the reserve values from the Sync event.
         (uint112 reserve0, uint112 reserve1) = abi.decode(log.data, (uint112, uint112));
         if (reserve0 == 0) return;
 
 
-        // Tỷ giá hiện tại chuẩn 18 decimals: (reserve1 * 1e18) / reserve0
+        // Compute the reserve price with 18 decimal places.
         uint256 currentPrice = (uint256(reserve1) * 1e18) / uint256(reserve0);
 
         bool triggerConditionMet = false;
@@ -136,7 +136,7 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
             }
         }
 
-        // 2. STATEFUL ANTI-WICK CONFIRMATION: Ngưỡng giá tĩnh kết hợp bộ đếm liên tục
+        // Confirm the static threshold with consecutive price hits.
         if (priceThreshold > 0) {
             if (currentPrice <= priceThreshold) {
                 consecutiveHits++;
@@ -144,24 +144,24 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
                     triggerConditionMet = true;
                 }
             } else {
-                // Giá phục hồi trên ngưỡng -> reset ngay lập tức về 0 để triệt tiêu râu nến giật
+                // Reset the hit count when the price recovers above the threshold.
                 consecutiveHits = 0;
             }
         }
 
         if (!triggerConditionMet) return;
 
-        // Cập nhật timestamp, reset hits và tăng biến đếm gas an toàn
+        // Record the trigger timestamp, reset the hit count, and increment the callback counter.
         lastTriggeredTimestamp = block.timestamp;
         consecutiveHits = 0;
         callbacksEmitted++;
 
         emit ConditionTriggered(currentPrice, block.timestamp);
 
-        // ĐẶC TẢ PAYLOAD REACTIVE (TWO-SLOT PAYLOAD):
-        // Slot 1 (address(0)): Sẽ tự động bị Reactive Callback Proxy ghi đè thành RVM ID
-        // Slot 2 (address(this)): Địa chỉ thực sự của hợp đồng RSC StopLoss_Pipeline trên Lasna
-        // Nếu là Cross-chain hoặc Velocity trigger, truyền type(uint256).max để ActionVault bypass check giá tĩnh
+        // The callback payload reserves two address arguments.
+        // Slot 1 (address(0)): The proxy injects the reactive contract address on Omni or the ReactVM ID on legacy networks.
+        // Slot 2 (address(this)): Address of this StopLoss_Pipeline contract.
+        // Cross-chain and velocity triggers use type(uint256).max to skip the Vault's static price check.
         uint256 passedThreshold = isCrossChainOrVelocity ? type(uint256).max : priceThreshold;
 
         bytes memory payload = abi.encodeWithSignature(

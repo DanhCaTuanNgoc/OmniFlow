@@ -7,7 +7,7 @@ import './MockUSDC.sol';
 
 /**
  * @title MockUniswapV2Router
- * @notice Router giả lập phục vụ ActionVault swap chuẩn theo đường cong Uniswap V2
+ * @notice A test router that lets ActionVault swap along a Uniswap V2 constant-product curve.
  */
 contract MockUniswapV2Router {
     address public immutable weth;
@@ -23,13 +23,13 @@ contract MockUniswapV2Router {
     }
 
     /**
-     * @notice Tính toán lượng token đầu ra chuẩn xác theo công thức x * y = k với 0.3% phí
+     * @notice Calculates the output amount using the x * y = k formula with a 0.3% fee.
      */
     function getAmountsOut(uint amountIn, address[] calldata /*path*/) external view returns (uint[] memory amounts) {
         (uint112 reserve0, uint112 reserve1,) = MockUniswapV2Pair(pair).getReserves();
         require(reserve0 > 0 && reserve1 > 0, "INSUFFICIENT_LIQUIDITY");
 
-        // Giả định token0 là WETH và token1 là USDC
+        // Assume token0 is WETH and token1 is USDC.
         uint amountInWithFee = amountIn * 997;
         uint numerator = amountInWithFee * uint256(reserve1);
         uint denominator = (uint256(reserve0) * 1000) + amountInWithFee;
@@ -41,7 +41,7 @@ contract MockUniswapV2Router {
     }
 
     /**
-     * @notice Thực hiện swap ETH sang USDC và chuyển thẳng tới ví `to`
+     * @notice Swaps ETH for USDC and sends the output directly to the specified recipient.
      */
     function swapExactETHForTokens(
         uint amountOutMin,
@@ -52,7 +52,7 @@ contract MockUniswapV2Router {
         amounts = this.getAmountsOut(msg.value, path);
         require(amounts[1] >= amountOutMin, "INSUFFICIENT_OUTPUT_AMOUNT");
 
-        // Chuyển USDC từ Router (hoặc mint) sang cho người nhận
+        // Send USDC from the router balance or mint it for the recipient.
         MockUSDC(path[1]).mint(to, amounts[1]);
     }
 }
