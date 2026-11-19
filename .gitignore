@@ -35,3 +35,5 @@ canary-landing.png
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
+
+example/

@@ -253,6 +253,25 @@ mindmap
 
 ---
 
+### 4.7 Phiên Workspace và quyền thao tác
+
+Người dùng được vào Workspace trước khi kết nối ví. Pipeline Studio và Template Library cho phép thiết kế, kiểm tra graph, dùng recipe, lưu nháp trên trình duyệt và export JSON. Active Automations, Vault Manager và Activity Logs hiển thị lời mời kết nối và mô tả chức năng. Proof demo công khai mở qua liên kết riêng.
+
+Sau khi ví được kết nối và xác thực, Workspace hiển thị canvas, deployment, Vault và lịch sử thuộc đúng địa chỉ đó. Người dùng có thể nhập nháp khách theo lựa chọn. Khi đổi ví hoặc ngắt kết nối, Workspace phải chuyển phạm vi dữ liệu ngay. Chỉ cho thao tác on-chain khi ví có quyền, chain phù hợp và hợp đồng hỗ trợ. Giao dịch quản lý tài sản do chủ Vault ký.
+
+Mỗi màn hình phân biệt chưa kết nối, chờ xác thực, đang tải, rỗng và lỗi đọc. Địa chỉ, quyền, trạng thái và số dư cá nhân dựa trên dữ liệu có nguồn xác minh. Số 0 biểu thị kết quả đọc thành công.
+
+### 4.8 Quản lý nhiều pipeline và vận hành liên tục
+
+Một ví quản lý được nhiều pipeline. Mỗi pipeline có thể có bản nháp và một hoặc nhiều phiên bản đã triển khai. Người dùng có thể soạn phiên bản mới trong khi phiên bản đã deploy tiếp tục chạy.
+
+- Trạng thái quản lý gồm bản nháp, đang triển khai, chờ thiết lập, đang chạy, tạm dừng, đã dừng và lỗi triển khai. Đã dừng và lưu trữ lịch sử là hai thao tác riêng. Kết quả kích hoạt và sức khỏe phí được trình bày riêng với trạng thái quản lý.
+- Workspace lưu graph, phiên bản và địa chỉ deployment theo ví để tải lại sau đăng nhập hoặc restart. Lịch sử giữ được kể cả khi pipeline đã dừng.
+- Pipeline on-chain tiếp tục hoạt động khi người dùng đóng Workspace hoặc backend bảo trì nếu còn subscription, quyền thực thi và quỹ phí. Sau khi mở lại, Workspace khôi phục danh sách và đọc bù lịch sử.
+- Tạm dừng, tiếp tục, hoàn phí và rút tài sản được cung cấp theo khả năng của deployment. Với ActionVault hiện tại, thu hồi quyền RSC chặn hành động đích. RSC vẫn có thể phát sinh phí trên Lasna. Rút khẩn cấp hiện áp dụng cho ETH.
+
+Xem ma trận thao tác và tiêu chí kỹ thuật trong [FRS mục 8](REACTIVEFLOW_DETAILED_FRS.md#8-van-hanh-workspace-theo-vi) và kế hoạch trong [Phân tích vận hành Workspace](WORKSPACE_OPERATIONS_ANALYSIS.md).
+
 # 5. LUỒNG THAO TÁC END-TO-END CHI TIẾT (STEP-BY-STEP USER JOURNEY)
 
 Kịch bản dưới đây mô tả hành trình thực tế của **Alex (Trader)** sử dụng ReactiveFlow từ lúc truy cập web cho đến khi bảo vệ thành công tài sản:
