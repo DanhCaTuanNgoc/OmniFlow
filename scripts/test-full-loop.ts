@@ -3,9 +3,9 @@ import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { config } from '../backend/node_modules/dotenv';
 import {
-  createPublicClient, createWalletClient, decodeAbiParameters, decodeFunctionData, defineChain, encodeFunctionData,
+  createPublicClient, createWalletClient, decodeFunctionData, defineChain, encodeFunctionData,
   formatEther, getAddress, http, isAddressEqual, numberToHex, parseAbi, parseEventLogs,
-  parseAbiParameters, slice, toEventSelector, zeroAddress, type Address, type Hash, type Hex, type TransactionReceipt,
+  toEventSelector, type Address, type Hash, type Hex, type TransactionReceipt,
 } from '../backend/node_modules/viem';
 import { baseSepolia } from '../backend/node_modules/viem/chains';
 import { privateKeyToAccount } from '../backend/node_modules/viem/accounts';
@@ -29,8 +29,8 @@ const reactive = createPublicClient({ chain: lasna, transport: http(process.env.
 const pair = getAddress((process.env.PAIR_ADDRESS || deployment.contracts.originPair.address).toLowerCase());
 const vault = getAddress((process.env.VAULT_ADDRESS || deployment.contracts.destinationVault.address).toLowerCase());
 const rsc = getAddress((process.env.RSC_ADDRESS || deployment.contracts.reactiveSmartContract.address).toLowerCase());
-const legacyProxy = '0xa6ea49ed671b8a4dfcdd34e36b7a75ac79b8a5a6';
-const proxy = getAddress((process.env.CALLBACK_PROXY_BASE_SEPOLIA || legacyProxy).toLowerCase());
+const officialProxy = '0x476F44b11F5C942c58f4c8E3d0300E5710743585';
+const proxy = getAddress((process.env.CALLBACK_PROXY_BASE_SEPOLIA || officialProxy).toLowerCase());
 const system = '0x8888888888888888888888888888888888888888';
 const callbackGas = 350_000n;
 const reactiveGasCap = 900_000n;
@@ -81,11 +81,13 @@ async function funding(
   client: typeof base | typeof reactive, provider: Address, payer: Address, gasBudget: bigint, currency: string,
 ) {
   const read = { address: provider, abi } as const;
-  const [balance, debt, reserves, [coefficient, extraGas, chargeGas], price, block] = await Promise.all([
+  const [balance, debt, reserves, coefficient, extraGas, chargeGas, price, block] = await Promise.all([
     client.getBalance({ address: payer }),
     client.readContract({ ...read, functionName: 'debt', args: [payer] }),
     client.readContract({ ...read, functionName: 'reserves', args: [payer] }),
-    feeParameters(client, provider),
+    client.readContract({ ...read, functionName: '_gasPriceCoeffPer1000' }),
+    client.readContract({ ...read, functionName: '_extraGas' }),
+    client.readContract({ ...read, functionName: '_maxChargeGas' }),
     client.getGasPrice(),
     client.getBlock(),
   ]);
@@ -98,32 +100,8 @@ async function funding(
   return { balance, debt, reserves, budget, extraGas, chargeGas };
 }
 
-async function feeParameters(client: typeof base | typeof reactive, provider: Address) {
-  if (client === base && isAddressEqual(provider, legacyProxy)) {
-    // The verified legacy proxy stores these settings at construction and has no setters or getters.
-    const hash = '0xfbd12791a75be611566a9d437491842f3b0879e08bd892731cdded1f37ef7398';
-    const [creation, receipt] = await Promise.all([
-      base.getTransaction({ hash }), base.getTransactionReceipt({ hash }),
-    ]);
-    requireCheck(receipt.status === 'success' && receipt.contractAddress &&
-      isAddressEqual(receipt.contractAddress, provider), 'Legacy proxy creation receipt does not match.');
-    // This deployment has six head words and one callback sender in the array tail.
-    const [coefficient, , extraGas, , chargeGas, senders] = decodeAbiParameters(
-      parseAbiParameters('uint256, uint256, uint256, uint256, uint256, address[]'),
-      slice(creation.input, -8 * 32),
-    );
-    requireCheck(senders.length === 1, 'Unexpected legacy proxy constructor layout.');
-    return [coefficient, extraGas, chargeGas] as const;
-  }
-  const read = { address: provider, abi } as const;
-  return Promise.all([
-    client.readContract({ ...read, functionName: '_gasPriceCoeffPer1000' }),
-    client.readContract({ ...read, functionName: '_extraGas' }),
-    client.readContract({ ...read, functionName: '_maxChargeGas' }),
-  ]);
-}
-
 async function preflight() {
+  requireCheck(isAddressEqual(proxy, officialProxy), `Use the current Base Sepolia callback proxy: ${officialProxy}.`);
   const [baseId, lasnaId] = await Promise.all([base.getChainId(), reactive.getChainId()]);
   requireCheck(baseId === baseSepolia.id && lasnaId === lasna.id, 'Unexpected RPC chain ID.');
   const deployments = await Promise.all([
@@ -191,11 +169,12 @@ async function preflight() {
     try {
       await base.call({
         account: proxy, to: vault, gas: remainingGas,
-        data: encodeFunctionData({ abi, functionName: 'executeStopLoss', args: [zeroAddress, rsc, percent, threshold] }),
+        data: encodeFunctionData({ abi, functionName: 'executeStopLoss', args: [rsc, rsc, percent, threshold] }),
       });
       console.log(`Live RPC swap simulation succeeded: ${formatEther(amountIn)} ETH -> ${quote[1]} raw token units.`);
     } catch (error) {
-      blockers.push(`Live RPC swap simulation failed: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`);
+      const reason = error instanceof Error ? error.message.split('\n')[0] : String(error);
+      throw new Error(`Live RPC swap simulation failed: ${reason} Verify Vault compatibility before funding.`);
     }
   }
   return { reserve0, reserve1, token, owner, blockers };

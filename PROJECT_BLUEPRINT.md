@@ -494,7 +494,7 @@ internalPort = 8080
 | `RELAYER_PRIVATE_KEY` | **Railway** | **CỰC KỲ BẢO MẬT** | Khóa bí mật của Relayer: Dùng để ký deploy RSC lên Lasna và nạp `lREACT` gas sponsorship. |
 | `BASE_SEPOLIA_RPC_URL` | **Railway** | Private | RPC URL Base Sepolia có throughput cao (Alchemy/Infura/Public). |
 | `LASNA_RPC_URL` | **Railway** | Private | RPC URL Reactive Lasna Testnet: `https://lasna-rpc.rnk.dev`. |
-| `CALLBACK_PROXY_BASE_SEPOLIA` | **Railway** | Private | Địa chỉ Callback Proxy chính thức do Reactive Network vận hành trên Base Sepolia: `0xa6eA49Ed671B8a4dfCDd34E36b7a75Ac79B8A5a6`. |
+| `CALLBACK_PROXY_BASE_SEPOLIA` | **Railway** | Địa chỉ Callback Proxy chính thức do Reactive Network vận hành trên Base Sepolia: `0x476F44b11F5C942c58f4c8E3d0300E5710743585`. |
 | `SYSTEM_CONTRACT_LASNA` | **Railway** | Private | Địa chỉ Reactive System Contract: `0x0000000000000000000000000000000000fffFfF`. |
 
 ---
@@ -815,7 +815,7 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
 ---
 
 ### 4.3 Pattern 1: Callback Proxy Authentication & Two-Slot Payload Pattern (Xác Thực 2 Chiều Chuẩn Giao Thức)
-* Khi Callback được chuyển tiếp từ Lasna sang Base Sepolia thông qua Relayer, tài khoản thực sự gọi vào `ActionVault` là **Reactive Callback Proxy** (`0xa6eA49Ed671B8a4dfCDd34E36b7a75Ac79B8A5a6`).
+* Khi Callback được chuyển tiếp từ Lasna sang Base Sepolia thông qua Relayer, tài khoản thực sự gọi vào `ActionVault` là **Reactive Callback Proxy** (`0x476F44b11F5C942c58f4c8E3d0300E5710743585`).
 * Hợp đồng kế thừa `AbstractCallback` và sử dụng modifier chính thức **`authorizedSenderOnly`**:
   ```solidity
   modifier authorizedSenderOnly() {

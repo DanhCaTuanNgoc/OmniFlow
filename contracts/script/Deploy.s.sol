@@ -15,7 +15,7 @@ import '../src/mocks/MockUniswapV2Router.sol';
  */
 contract DeployScript is Script {
     // Official Reactive Network Callback Proxy trên Base Sepolia
-    address public constant CALLBACK_PROXY_BASE_SEPOLIA = 0xa6eA49Ed671B8a4dfCDd34E36b7a75Ac79B8A5a6;
+    address public constant CALLBACK_PROXY_BASE_SEPOLIA = 0x476F44b11F5C942c58f4c8E3d0300E5710743585;
 
     function run() external {
         uint256 deployerPrivateKey = vm.envOr("DEPLOYER_PRIVATE_KEY", uint256(0));
