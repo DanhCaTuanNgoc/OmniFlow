@@ -204,7 +204,7 @@ export default function ActivityLogsPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-white tracking-tight font-display">
+              <h1 className="text-xl font-bold text-white tracking-tight font-sans">
                 Activity Logs
               </h1>
               <span className="px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20 text-[10px] font-mono font-medium">
@@ -240,28 +240,28 @@ export default function ActivityLogsPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
         <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-colors duration-150">
           <div className="text-[11px] text-[#8e8e8e] uppercase font-mono tracking-wider">Events Captured</div>
-          <div className="text-2xl font-bold text-white mt-1 tabular-nums font-display">
+          <div className="text-2xl font-bold text-white mt-1 tabular-nums font-sans">
             142 <span className="text-xs text-[#8e8e8e] font-sans font-normal">Events</span>
           </div>
         </div>
 
         <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-colors duration-150">
           <div className="text-[11px] text-[#8e8e8e] uppercase font-mono tracking-wider">Callbacks Fired</div>
-          <div className="text-2xl font-bold text-emerald-400 mt-1 tabular-nums font-display">
+          <div className="text-2xl font-bold text-emerald-400 mt-1 tabular-nums font-sans">
             03 <span className="text-xs text-[#8e8e8e] font-sans font-normal">Executed</span>
           </div>
         </div>
 
         <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-colors duration-150">
           <div className="text-[11px] text-[#8e8e8e] uppercase font-mono tracking-wider">Storms Defended</div>
-          <div className="text-2xl font-bold text-amber-400 mt-1 tabular-nums font-display">
+          <div className="text-2xl font-bold text-amber-400 mt-1 tabular-nums font-sans">
             12 <span className="text-xs text-[#8e8e8e] font-sans font-normal">Protected</span>
           </div>
         </div>
 
         <div className="p-4 rounded-2xl bg-[#0b0c10]/80 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-colors duration-150">
           <div className="text-[11px] text-[#8e8e8e] uppercase font-mono tracking-wider">Average RVM Latency</div>
-          <div className="text-2xl font-bold text-violet-300 mt-1 tabular-nums font-display">
+          <div className="text-2xl font-bold text-violet-300 mt-1 tabular-nums font-sans">
             973 <span className="text-xs text-[#8e8e8e] font-sans font-normal">ms</span>
           </div>
         </div>

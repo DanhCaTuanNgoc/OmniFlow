@@ -496,7 +496,7 @@ function StudioCanvasInner() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-              <span className="font-display font-bold text-sm text-white tracking-tight">
+              <span className="font-sans font-bold text-sm text-white tracking-tight">
                 Pipeline Studio
               </span>
             </div>

@@ -180,7 +180,7 @@ export default function VaultManagerPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-white tracking-tight font-display">
+              <h1 className="text-xl font-bold text-white tracking-tight font-sans">
                 Vault Manager
               </h1>
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[10px] font-mono font-medium">
@@ -271,7 +271,7 @@ export default function VaultManagerPage() {
             </span>
           </div>
           <div className="my-2.5">
-            <div className="text-2xl font-bold text-white tracking-tight tabular-nums flex items-baseline gap-1.5 font-display">
+            <div className="text-2xl font-bold text-white tracking-tight tabular-nums flex items-baseline gap-1.5 font-sans">
               <span>{formattedVaultEth}</span>
               <span className="text-xs text-[#8e8e8e] font-normal font-sans">ETH</span>
             </div>
@@ -314,7 +314,7 @@ export default function VaultManagerPage() {
             </span>
           </div>
           <div className="my-2.5">
-            <div className="text-2xl font-bold text-white tracking-tight tabular-nums flex items-baseline gap-1.5 font-display">
+            <div className="text-2xl font-bold text-white tracking-tight tabular-nums flex items-baseline gap-1.5 font-sans">
               <span>300</span>
               <span className="text-xs text-[#8e8e8e] font-normal font-sans">Seconds</span>
             </div>

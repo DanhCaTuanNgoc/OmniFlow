@@ -71,7 +71,7 @@ export function Sidebar() {
             {!collapsed && (
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-display font-bold text-sm tracking-tight text-white truncate">
+                  <span className="font-sans font-bold text-sm tracking-tight text-white truncate">
                     OmniFlow
                   </span>
                   <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-white/[0.08] text-[#c4c2c3] border border-white/20 font-semibold">

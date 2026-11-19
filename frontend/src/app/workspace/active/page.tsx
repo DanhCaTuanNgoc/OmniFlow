@@ -93,7 +93,7 @@ export default function ActiveAutomationsPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-white tracking-tight font-display">
+              <h1 className="text-xl font-bold text-white tracking-tight font-sans">
                 Active Automations
               </h1>
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[10px] font-mono font-medium">
@@ -139,7 +139,7 @@ export default function ActiveAutomationsPage() {
             </span>
           </div>
           <div className="my-2.5">
-            <div className="text-2xl font-bold text-white tracking-tight tabular-nums font-display">
+            <div className="text-2xl font-bold text-white tracking-tight tabular-nums font-sans">
               01 <span className="text-xs text-[#8e8e8e] font-sans font-normal">Active RSC</span>
             </div>
           </div>
@@ -156,7 +156,7 @@ export default function ActiveAutomationsPage() {
             </span>
           </div>
           <div className="my-2.5">
-            <div className="text-2xl font-bold text-white tracking-tight tabular-nums font-display">
+            <div className="text-2xl font-bold text-white tracking-tight tabular-nums font-sans">
               {rawBalance.toFixed(4)} <span className="text-xs text-[#8e8e8e] font-sans font-normal">lREACT</span>
             </div>
           </div>
@@ -173,7 +173,7 @@ export default function ActiveAutomationsPage() {
             </span>
           </div>
           <div className="my-2.5">
-            <div className="text-2xl font-bold text-white tracking-tight tabular-nums font-display">
+            <div className="text-2xl font-bold text-white tracking-tight tabular-nums font-sans">
               1,140 <span className="text-xs text-[#8e8e8e] font-sans font-normal">ms (P99)</span>
             </div>
           </div>
@@ -190,7 +190,7 @@ export default function ActiveAutomationsPage() {
             </span>
           </div>
           <div className="my-2.5">
-            <div className="text-2xl font-bold text-white tracking-tight tabular-nums font-display">
+            <div className="text-2xl font-bold text-white tracking-tight tabular-nums font-sans">
               300 <span className="text-xs text-[#8e8e8e] font-sans font-normal">Seconds</span>
             </div>
           </div>
@@ -212,7 +212,7 @@ export default function ActiveAutomationsPage() {
             <div>
               <div className="flex items-center gap-2.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="font-bold text-base text-white tracking-tight font-display">
+                <span className="font-bold text-base text-white tracking-tight font-sans">
                   Flash Crash Stop-Loss &bull; Denim Guard
                 </span>
                 <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-white/[0.06] border border-white/10 text-[#c4c2c3] font-mono">
@@ -311,7 +311,7 @@ export default function ActiveAutomationsPage() {
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
               <div className="flex items-center gap-2.5">
                 <Fuel className="w-5 h-5 text-violet-400" />
-                <h3 className="text-base font-bold text-white tracking-tight font-display">
+                <h3 className="text-base font-bold text-white tracking-tight font-sans">
                   Refuel lREACT Gas
                 </h3>
               </div>

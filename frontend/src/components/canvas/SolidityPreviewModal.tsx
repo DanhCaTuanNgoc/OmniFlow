@@ -176,7 +176,7 @@ contract OmniFlow_AutonomousPipeline is IReactive, AbstractReactive {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-white tracking-tight font-display">
+                <h3 className="text-base font-bold text-white tracking-tight font-sans">
                   Live Solidity Preview
                 </h3>
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[10px] font-mono">
