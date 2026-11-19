@@ -858,6 +858,7 @@
 #### `TASK-326` [TODO] — Bổ sung chứng cứ callback đích và đồng bộ nhãn proof
 * **Module:** Evidence JSON, landing proof ledger.
 * **Chi tiết:** Hai bản evidence ghi giao dịch cấu hình proxy ở bước 3. Bổ sung receipt callback Base Sepolia và event StopLossExecuted cho cùng một vòng lặp. Ghi rõ pool thử nghiệm được triển khai on-chain để phân biệt với pool DEX thật.
+* **Tiến độ:** Đã cập nhật `scripts/test-full-loop.ts` để đọc phí và nợ trực tiếp từ hai mạng, mô phỏng swap qua RPC và đối chiếu receipt theo tham chiếu liên chuỗi. Còn chờ xử lý nợ Lasna và xác nhận callback của lượt chạy mới trước khi cập nhật evidence dự thi.
 * **Ngày tạo:** 18/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
