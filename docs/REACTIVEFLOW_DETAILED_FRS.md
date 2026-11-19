@@ -38,6 +38,9 @@
    * 5.3 Live Price Re-Validation Pattern (Tái thẩm định giá tức thời chống Stale Trigger)
    * 5.4 Dual-Way Event State Synchronization (Đồng bộ trạng thái lệnh qua Event Stream)
 6. [Đề xuất mở rộng tự động hóa cá nhân](#đề-xuất-mở-rộng-tự-động-hóa-cá-nhân)
+7. [ĐẶC TẢ TÍNH NĂNG MỞ RỘNG CHIẾN LƯỢC: AI COPILOT & TELEGRAM SENTINEL BOT](#7-đặc-tả-tính-năng-mở-rộng-chiến-lược-ai-copilot--telegram-sentinel-bot)
+   * 7.1 AI Prompt-to-Pipeline Copilot ("Magic Pipeline Engine")
+   * 7.2 Telegram Sentinel Bot Companion (Real-Time Push Alerts & Panic Remote)
 
 ---
 
@@ -931,3 +934,85 @@ Vault cần hỗ trợ chủ sở hữu rút USDC và tính số tiền trích t
 | Active / Workspace | Active hiển thị vốn, phí hai phía và kết quả gần nhất của pipeline đã chọn. Workspace tóm tắt các quy tắc cần người dùng xử lý. |
 | Vault | Tái sử dụng thông tin owner và authorizedRSCs. Hiển thị vốn ETH và ví nhận USDC cho stop-loss. Khi bổ sung recipe khoản thu, hiển thị số dư, quyền rút USDC và ví tiết kiệm đã duyệt. |
 | Activity Logs | Liên kết sự kiện nguồn, quyết định trên Lasna và receipt trên Base. Phân biệt chờ callback, thực thi thành công, bỏ qua và thất bại. Khôi phục lịch sử xác nhận sau khi WebSocket kết nối lại. |
+
+---
+
+## 7. ĐẶC TẢ TÍNH NĂNG MỞ RỘNG CHIẾN LƯỢC: AI COPILOT & TELEGRAM SENTINEL BOT
+
+> **Bối cảnh phát triển:** Bổ sung ngày 19/11/2026 sau khi nghiên cứu và đối chiếu các dự án đoạt giải Nhất của đối thủ (*ClashX*, *RogueAgent*, *CodeForgeAI*). Hai tính năng này đóng vai trò quyết định trong việc thuyết phục ban giám khảo ở hai track **Set It and Forget It** và **Reactive Meets AI**.
+
+### 7.1 AI Prompt-to-Pipeline Copilot ("Magic Pipeline Engine")
+
+#### 7.1.1 Mục Tiêu & Cơ Chế Hoạt Động
+Cho phép người dùng thiết lập quy trình tự động hóa cross-chain hoàn chỉnh chỉ bằng một câu lệnh ngôn ngữ tự nhiên.
+- **Input:** Câu lệnh tự nhiên tiếng Anh hoặc tiếng Việt (Ví dụ: *"Protect my wallet: If ETH drops below $3,000 on Base Uniswap pool, swap all WETH in ActionVault to USDC"*).
+- **Processing:** Backend Copilot Service (`/api/copilot/generate-graph`) gọi LLM (Gemini 1.5 Flash hoặc GPT-4o-mini) với chế độ Structured Outputs (JSON Schema chuẩn hóa theo `PipelineGraphSchema`).
+- **Graph Auto-Layout:** Tự động tính toán tọa độ `(x, y)` theo chuẩn DAG (Trigger bên trái -> Condition ở giữa -> Action bên phải) để render trực tiếp lên `@xyflow/react` Studio Canvas mà không cần người dùng kéo thả thủ công.
+
+#### 7.1.2 Luồng Dữ Liệu & API Contract
+- **Endpoint:** `POST /api/copilot/generate-graph`
+- **Request Body:**
+```json
+{
+  "prompt": "Stop-loss my ETH when price drops below 3000 USD on Base",
+  "ownerAddress": "0x1234...abcd"
+}
+```
+- **Response Body (Chuẩn PipelineGraphSchema):**
+```json
+{
+  "pipelineVersion": "1.0.0",
+  "metadata": {
+    "name": "AI Generated: ETH Stop-Loss @ $3000",
+    "ownerAddress": "0x1234...abcd"
+  },
+  "networks": {
+    "originChainId": 84532,
+    "reactiveChainId": 5318007,
+    "destinationChainId": 84532
+  },
+  "nodes": [
+    { "id": "node-1", "type": "UniswapV2SyncTriggerNode", "position": { "x": 100, "y": 200 }, "data": { ... } },
+    { "id": "node-2", "type": "PriceThresholdGuardNode", "position": { "x": 400, "y": 200 }, "data": { ... } },
+    { "id": "node-3", "type": "DEXSwapActionNode", "position": { "x": 700, "y": 200 }, "data": { ... } }
+  ],
+  "edges": [
+    { "id": "e1-2", "source": "node-1", "target": "node-2" },
+    { "id": "e2-3", "source": "node-2", "target": "node-3" }
+  ]
+}
+```
+
+#### 7.1.3 Tiêu Chí Nghiệm Thu (Acceptance Criteria)
+1. **Schema Validation:** Toàn bộ payload trả về từ LLM phải được xác thực bằng `PipelineGraphSchema.parse()`. Nếu có lỗi, trả về HTTP 422 kèm fallback template mặc định, không bao giờ để crash giao diện.
+2. **Canvas Hydration:** Khi nhận response, `StudioCanvas.tsx` kích hoạt hook `hydrateGraphFromAI()` thay thế node/edges hiện tại với transition hiệu ứng mượt mà.
+
+---
+
+### 7.2 Telegram Sentinel Bot Companion (Real-Time Push Alerts & Panic Remote)
+
+#### 7.2.1 Mục Tiêu & Cơ Chế Hoạt Động
+Cung cấp giải pháp theo dõi và điều khiển từ xa trên thiết bị di động, hiện thực hóa 100% tuyên ngôn "Set It and Forget It" (người dùng đóng tab trình duyệt vẫn nắm bắt được mọi biến cố on-chain).
+- **Nền tảng:** Sử dụng Telegram Bot API chính thức (`node-telegram-bot-api`), hoàn toàn miễn phí.
+- **Event Hook:** Hook trực tiếp vào `EventListenerService` trên backend. Khi sự kiện `CallbackExecuted` hoặc `VaultExecuted` được ghi nhận từ Base Sepolia, bot tự động đẩy tin nhắn push notification tới tài khoản Telegram đã liên kết.
+
+#### 7.2.2 Cấu Trúc Tin Nhắn Thông Báo (Alert Schema)
+Tin nhắn gửi về người dùng bao gồm:
+1. **Tiêu đề cảnh báo:** `🚨 OMNIFLOW EXECUTION ALERT 🚨`
+2. **Tên Pipeline & Loại hành động:** `Stop-Loss Protection` / `Safe Sweep`
+3. **Độ trễ toàn vòng (Full Loop Latency):** Thời gian tính bằng ms từ khi Base sinh log Sync đến khi Base Callback xác nhận (Minh chứng tốc độ ~1s của Reactive Omni).
+4. **Bộ 3 Link Explorer Xác Minh:**
+   - Origin Event Tx (Basescan)
+   - RSC Execution Tx (Lasna Reactscan)
+   - Destination Callback Tx (Basescan)
+5. **Số dư & Vốn còn lại:** Tóm tắt số dư ETH/USDC sau khi swap.
+
+#### 7.2.3 Cơ Chế Liên Kết Ví & Bot (Zero-Registration Deep Link)
+- Trên giao diện `Vault Manager`, người dùng bấm **"Connect Telegram Alerts"**.
+- Trình duyệt mở đường dẫn dạng: `https://t.me/OmniFlowSentinelBot?start=0xOwnerAddress_SignToken`.
+- Bot ghi nhận `chatId` tương ứng với `ownerAddress` vào cơ sở dữ liệu/in-memory map của backend.
+- Người dùng có thể gõ lệnh `/status` để xem danh sách pipeline đang active hoặc `/panic` để nhận link rút vốn khẩn cấp.
+
+#### 7.2.4 Tiêu Chí Nghiệm Thu (Acceptance Criteria)
+1. **Decoupled Failure:** Nếu token Telegram không tồn tại hoặc Telegram API bị gián đoạn, backend chỉ log warning và tiếp tục vận hành WebSocket bình thường, không làm gián đoạn luồng xử lý on-chain.
+2. **Zero-Mock Alert:** Chỉ gửi tin nhắn khi có receipt xác nhận on-chain từ Base Sepolia và Lasna, không gửi tin nhắn dựa trên dữ liệu giả định.

@@ -16,8 +16,8 @@
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 24 | 24 | 0 | **100%** |
-| **Đánh giá cạnh tranh & bằng chứng dự thi** | 18/11/2026 | 6 | 3 | 0 | **50%** |
-| **TỔNG CỘNG** | **21 Ngày** | **66** | **63** | **0** | **95%** |
+| **Đánh giá cạnh tranh & bằng chứng dự thi** | 18/11/2026 | 8 | 3 | 0 | **37.5%** |
+| **TỔNG CỘNG** | **21 Ngày** | **68** | **63** | **0** | **92.6%** |
 
 ---
 
@@ -897,3 +897,29 @@
 * **Người thực hiện:** Codex.
 * **Ngày hoàn thành:** 18/11/2026. Đã bổ sung mục 6.1–6.4 vào FRS.
 * **Trạng thái:** `DONE`.
+
+#### `TASK-331` [TODO] — Triển khai AI Prompt-to-Pipeline Copilot trên Studio Canvas (Magic Pipeline)
+* **Module:** Frontend Studio Canvas, Backend Copilot API (`/api/copilot/generate-graph`).
+* **Mục đích:** Hỗ trợ người dùng gõ câu lệnh tự nhiên (natural language) để tự động sinh cấu trúc đồ thị JSON (nodes & edges) hợp lệ trên Canvas, tối đa hóa trải nghiệm "No-Code" cho track *Set It and Forget It* và đáp ứng tiêu chí track *Reactive Meets AI*.
+* **Chi tiết thực thi:**
+  * Xây dựng `copilot.service.ts` tại backend sử dụng Gemini 1.5 Flash / OpenAI với Structured Outputs ép kiểu theo `PipelineGraphSchema`.
+  * Xây dựng UI thanh Copilot Input Bar nổi (floating) trên `StudioCanvas.tsx` kèm 3 chip gợi ý nhanh (ETH Stop-Loss, Whale Copy-Trade, Drainer Shield).
+  * Tự động tính toán vị trí DAG (Dagre layout) cho Trigger -> Condition -> Action.
+  * Cài đặt cơ chế kiểm định Schema an toàn và fallback về template có sẵn nếu model trả về lỗi cấu trúc.
+* **Ngày tạo:** 19/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-332` [TODO] — Triển khai Telegram Sentinel Bot cho thông báo on-chain & điều khiển khẩn cấp
+* **Module:** Backend Telegram Service, EventListener integration, Vault Manager UI.
+* **Mục đích:** Cung cấp kênh thông báo tức thì (real-time push alert) trên điện thoại khi Reactive Smart Contract kích hoạt callback trên Base Sepolia, hiện thực hóa 100% tinh thần "Set It and Forget It".
+* **Chi tiết thực thi:**
+  * Tạo module `backend/src/services/telegram.service.ts` sử dụng `node-telegram-bot-api` (hoàn toàn miễn phí qua `@BotFather`).
+  * Tích hợp hook vào `eventListener.service.ts`: khi bắt được sự kiện `CallbackExecuted` hoặc `VaultExecuted`, tự động gửi thông báo chi tiết (Tx Hashes nguồn/RSC/đích, giá khớp, độ trễ `latencyMs`).
+  * Thêm nút "Connect Telegram Notifications" tại trang `Vault Manager` qua cơ chế deep-link `t.me/OmniFlowBot?start=<ownerAddress>`.
+  * Hỗ trợ lệnh `/status` (tra cứu tình trạng các pipeline) và `/panic` (gợi ý link rút vốn khẩn cấp).
+* **Ngày tạo:** 19/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
