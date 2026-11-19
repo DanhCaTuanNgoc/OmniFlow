@@ -44,7 +44,7 @@ export function Header() {
           <span className="font-semibold text-white tracking-tight">{currentTitle}</span>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[#c4c2c3] text-[11px] font-medium shadow-sm">
+        <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/10 text-[#c4c2c3] text-[11px] font-medium shadow-sm">
           <Sparkles className="w-3.5 h-3.5 text-violet-400" />
           <span>Reactive Omni Live Testnet</span>
         </div>
@@ -53,7 +53,7 @@ export function Header() {
       {/* Right Controls */}
       <div className="flex items-center gap-3">
         {/* Active Chain Pill */}
-        <div className="hidden md:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-[#121318] border border-white/20 text-xs">
+        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#121318] border border-white/15 text-xs">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="font-medium text-[#c4c2c3]">
             {chain?.name || 'Base Sepolia'}
@@ -66,7 +66,7 @@ export function Header() {
           <div className="relative">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center gap-2.5 py-1.5 px-4 rounded-full bg-[#16171a] hover:bg-[#202126] border border-white/20 text-white text-xs font-mono font-medium transition-colors duration-150 shadow-sm cursor-pointer"
+              className="flex items-center gap-2 py-1.5 px-3.5 rounded-lg bg-[#14151a] hover:bg-[#1e2026] border border-white/15 text-white text-xs font-mono font-medium transition-colors duration-150 shadow-sm cursor-pointer"
             >
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
               <span className="tabular-nums tracking-wide">{truncateAddress(address)}</span>
@@ -74,7 +74,7 @@ export function Header() {
             </button>
 
             {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-[#0c0d12] border border-white/20 shadow-2xl py-1.5 text-xs text-slate-200 z-50 backdrop-blur-2xl">
+              <div className="absolute right-0 mt-2 w-52 rounded-xl bg-[#0c0d12] border border-white/20 shadow-2xl py-1.5 text-xs text-slate-200 z-50 backdrop-blur-2xl">
                 <div className="px-3.5 py-2 border-b border-white/[0.06] text-[11px] text-[#8e8e8e] flex items-center justify-between font-medium">
                   <span>MetaMask Connected</span>
                   <span className="text-emerald-400 text-[10px]">Active</span>
@@ -84,7 +84,7 @@ export function Header() {
                     disconnect();
                     setDropdownOpen(false);
                   }}
-                  className="w-full text-left px-3.5 py-2.5 hover:bg-rose-500/10 hover:text-rose-300 flex items-center gap-2.5 transition-colors cursor-pointer text-slate-300"
+                  className="w-full text-left px-3.5 py-2 hover:bg-rose-500/10 hover:text-rose-300 flex items-center gap-2 transition-colors cursor-pointer text-slate-300"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Disconnect Wallet</span>
@@ -95,7 +95,7 @@ export function Header() {
         ) : (
           <button
             onClick={handleConnect}
-            className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-white hover:bg-white/90 text-black shadow-[0_2px_12px_rgba(255,255,255,0.25)] transition-[transform,background-color] duration-150 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+            className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-white hover:bg-slate-200 text-black shadow-sm transition-all duration-150 cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
           >
             <span>Connect Wallet</span>
           </button>

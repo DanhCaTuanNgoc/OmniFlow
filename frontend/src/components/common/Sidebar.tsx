@@ -113,12 +113,12 @@ export function Sidebar() {
                 prefetch={true}
                 title={collapsed ? item.name : undefined}
                 className={cn(
-                  'flex items-center text-xs rounded-full font-medium transition-colors duration-150 cursor-pointer relative group',
+                  'flex items-center text-xs rounded-lg font-medium transition-colors duration-150 cursor-pointer relative group',
                   collapsed
                     ? 'justify-center p-2.5'
-                    : 'justify-between px-3.5 py-2.5',
+                    : 'justify-between px-3 py-2',
                   isActive
-                    ? 'bg-[#18191e] text-white font-semibold border border-white/20 shadow-sm'
+                    ? 'bg-white/[0.08] text-white font-semibold border border-white/15 shadow-sm'
                     : 'text-[#8e8e8e] hover:text-white hover:bg-white/[0.04]'
                 )}
               >
@@ -129,14 +129,10 @@ export function Sidebar() {
                 {!collapsed && (
                   <div className="flex items-center gap-1.5">
                     {isActive && (
-                      <span className="flex items-center gap-0.5 text-white/50 text-[10px]">
-                        <span className="w-1 h-1 rounded-full bg-white" />
-                        <span className="w-1 h-1 rounded-full bg-white/60" />
-                        <span className="w-1 h-1 rounded-full bg-white/30" />
-                      </span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.8)]" />
                     )}
                     {item.badge && (
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.06] text-[#c4c2c3] border border-white/10 shrink-0">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/[0.06] text-[#c4c2c3] border border-white/10 shrink-0">
                         {item.badge}
                       </span>
                     )}

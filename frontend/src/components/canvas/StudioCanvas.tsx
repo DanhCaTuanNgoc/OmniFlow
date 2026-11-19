@@ -493,21 +493,27 @@ function StudioCanvasInner() {
       <div className="flex-1 flex flex-col h-full relative" ref={reactFlowWrapper}>
         {/* Studio Top Control Bar */}
         <div className="h-16 border-b border-white/[0.08] bg-[#000000]/85 backdrop-blur-md px-5 flex items-center justify-between z-10 font-sans transform-gpu">
+          {/* Cluster 1: Left (Breadcrumb, Pipeline Title, Autosave, Preset Selector) */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-              <span className="font-sans font-bold text-sm text-white tracking-tight">
-                Pipeline Studio
-              </span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-xs text-white tracking-tight">
+                  {RECIPE_PRESETS[activeRecipeId]?.title || 'Custom Pipeline'}
+                </span>
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  AUTOSYNCED
+                </span>
+              </div>
             </div>
 
             {/* Recipe Preset Selector */}
-            <div className="hidden sm:flex items-center gap-1.5 ml-1">
-              <span className="text-[11px] text-[#8e8e8e] font-mono">Preset:</span>
+            <div className="hidden lg:flex items-center gap-1.5 pl-2 border-l border-white/10">
+              <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider">Preset:</span>
               <select
                 value={activeRecipeId}
                 onChange={(e) => handleSelectPreset(e.target.value)}
-                className="bg-[#16171a] hover:bg-[#202126] border border-white/20 rounded-full px-3 py-1 text-xs text-white font-medium focus:outline-none focus:border-white transition-colors cursor-pointer"
+                className="bg-[#14151a] hover:bg-[#202126] border border-white/10 rounded-lg px-2.5 py-1 text-xs text-slate-200 font-medium focus:outline-none focus:border-cyan-500/50 transition-colors cursor-pointer"
               >
                 {Object.values(RECIPE_PRESETS).map((p) => (
                   <option key={p.id} value={p.id}>
@@ -518,53 +524,62 @@ function StudioCanvasInner() {
             </div>
           </div>
 
+          {/* Cluster 2: Center (Segmented View / Execution Switcher) */}
+          <div className="hidden md:flex items-center gap-1 p-1 bg-[#12141c] rounded-xl border border-white/[0.08] text-xs">
+            <button
+              className="px-3 py-1 font-medium rounded-lg bg-white/10 text-white shadow-sm transition-colors cursor-pointer"
+            >
+              Graph Canvas
+            </button>
+            <button
+              onClick={() => setIsSolidityOpen(true)}
+              className="px-3 py-1 font-medium rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <Code2 className="w-3.5 h-3.5 text-violet-400" />
+              <span>Solidity Preview</span>
+            </button>
+            <button
+              onClick={handleSimulateFlow}
+              disabled={isSimulating}
+              className={`px-3 py-1 font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+                isSimulating
+                  ? 'bg-cyan-500/20 text-cyan-300 animate-pulse border border-cyan-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <FlaskConical className={`w-3.5 h-3.5 ${isSimulating ? 'text-cyan-400 animate-spin' : 'text-cyan-400'}`} />
+              <span>{isSimulating ? `Simulating (${simulationStep}/3)...` : 'Simulate Dry-Run'}</span>
+            </button>
+          </div>
+
+          {/* Cluster 3: Right (WS Status, Reset, Deploy CTA) */}
           <div className="flex items-center gap-2.5">
             {/* Live WebSocket Stream Indicator */}
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[11px] font-mono">
+            <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#14151a] border border-white/10 text-[11px] font-mono">
               <span className={`w-2 h-2 rounded-full ${wsStatus === 'CONNECTED' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              <span className="text-[#c4c2c3]">{wsStatus === 'CONNECTED' ? 'WS Live Stream' : 'WS Standby'}</span>
+              <span className="text-slate-300">{wsStatus === 'CONNECTED' ? 'WS Live' : 'WS Standby'}</span>
             </div>
 
             {validationWarning && (
-              <div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800/60 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 animate-pulse">
+              <div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800/60 px-3 py-1.5 rounded-lg flex items-center gap-1.5 animate-pulse">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                 <span>{validationWarning}</span>
               </div>
             )}
 
             <button
-              onClick={handleSimulateFlow}
-              disabled={isSimulating}
-              className={`py-1.5 px-3.5 rounded-full border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
-                isSimulating
-                  ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-300 animate-pulse'
-                  : 'border-white/20 bg-[#16171a] hover:bg-[#202126] text-[#c4c2c3] hover:text-white'
-              }`}
-            >
-              <FlaskConical className={`w-3.5 h-3.5 ${isSimulating ? 'text-cyan-400 animate-spin' : 'text-cyan-400'}`} />
-              <span>{isSimulating ? `Simulating (${simulationStep}/3)...` : 'Simulate Flow'}</span>
-            </button>
-
-            <button
-              onClick={() => setIsSolidityOpen(true)}
-              className="py-1.5 px-3.5 rounded-full border border-white/20 bg-[#16171a] hover:bg-[#202126] text-[#c4c2c3] hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Code2 className="w-3.5 h-3.5 text-violet-400" />
-              <span>View Solidity</span>
-            </button>
-
-            <button
               onClick={handleResetGraph}
-              className="py-1.5 px-3.5 rounded-full border border-white/20 bg-[#16171a] hover:bg-[#202126] text-[#c4c2c3] hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="py-1.5 px-3 rounded-lg border border-white/10 bg-[#14151a] hover:bg-[#202126] text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Reset graph to preset default"
             >
               <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
-              <span>Reset Demo</span>
+              <span>Reset</span>
             </button>
 
-            {/* Primary CTA: Motion UI White Pill Button */}
+            {/* Primary CTA: Institutional High-Contrast Button */}
             <button
               onClick={handleOpenDeploy}
-              className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-white hover:bg-white/90 text-black shadow-[0_2px_12px_rgba(255,255,255,0.25)] transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-white hover:bg-slate-200 text-black shadow-sm transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
             >
               <Rocket className="w-3.5 h-3.5 fill-black" />
               <span>Deploy Automation (1-Click)</span>
