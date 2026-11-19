@@ -144,11 +144,10 @@ export function Sidebar() {
         </nav>
       </div>
 
-      {/* Network Live Telemetry Footer */}
+      {/* Network Links */}
       <div className="p-2.5 bg-[#050608] border-t border-white/[0.08]">
         {collapsed ? (
           <div className="flex flex-col items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Live Networks Online" />
             <button
               onClick={() => setCollapsed(false)}
               className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
@@ -159,27 +158,8 @@ export function Sidebar() {
           </div>
         ) : (
           <div className="p-3 rounded-2xl bg-[#0b0c10] border border-white/[0.08] space-y-2.5 shadow-sm">
-            <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] text-xs">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-white font-semibold text-xs">Live Networks</span>
-              </div>
-              <span className="text-emerald-400 font-mono font-medium px-2 py-0.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-[10px]">
-                ONLINE
-              </span>
-            </div>
-
-            <div className="space-y-1.5 text-[11px]">
-              <div className="flex items-center justify-between p-1.5 px-2.5 rounded-xl bg-[#000000] border border-white/[0.05]">
-                <span className="text-[#8e8e8e]">Base Sepolia</span>
-                <span className="text-cyan-400 font-mono font-medium tabular-nums">200ms Denim</span>
-              </div>
-
-              <div className="flex items-center justify-between p-1.5 px-2.5 rounded-xl bg-[#000000] border border-white/[0.05]">
-                <span className="text-[#8e8e8e]">Reactive Lasna</span>
-                <span className="text-violet-300 font-mono font-medium tabular-nums">~1s RVM</span>
-              </div>
-            </div>
+            <p className="text-xs text-slate-300">Test networks</p>
+            <p className="text-[11px] text-[#8e8e8e]">Base Sepolia ? Reactive Lasna</p>
 
             <a
               href="https://lasna.reactscan.net"

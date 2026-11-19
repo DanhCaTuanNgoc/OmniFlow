@@ -368,7 +368,7 @@ export function InspectorPanel({
               <label className="block text-slate-400 mb-1 font-medium">Destination ActionVault</label>
               <input
                 type="text"
-                value={String(data.actionVaultAddress || '0xABCDEF0123456789ABCDEF0123456789ABCDEF01')}
+                value={String(data.actionVaultAddress || '')}
                 onChange={(e) => handleChange('actionVaultAddress', e.target.value)}
                 className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 font-mono text-[11px] text-slate-200 focus:outline-none focus:border-violet-500"
               />

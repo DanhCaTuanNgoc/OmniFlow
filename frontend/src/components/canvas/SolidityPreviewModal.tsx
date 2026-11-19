@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { X, Code2, Copy, Check, Download, ExternalLink, ShieldCheck } from 'lucide-react';
-import { CONTRACT_ADDRESSES } from '@/lib/constants';
+
 
 interface SolidityPreviewModalProps {
   isOpen: boolean;
@@ -37,7 +37,7 @@ export function SolidityPreviewModal({
   const pairAddress = String(
     triggerNode?.data?.pairAddress ||
       triggerNode?.data?.contractAddress ||
-      CONTRACT_ADDRESSES.DEFAULT_PAIR_ETH_USDC
+      '/* select an origin contract */'
   );
   const originTopic0 = String(
     triggerNode?.data?.topic0 ||
@@ -47,7 +47,7 @@ export function SolidityPreviewModal({
   const cooldownSeconds = Number(cooldownNode?.data?.cooldownSeconds || 300);
   const percentToSwap = Number(actionNode?.data?.amountPercentage || 50);
   const actionVault = String(
-    actionNode?.data?.actionVaultAddress || CONTRACT_ADDRESSES.DEFAULT_ACTION_VAULT
+    actionNode?.data?.actionVaultAddress || '/* select an ActionVault */'
   );
   const velocityBps = Number(conditionVelocityNode?.data?.velocityThresholdBps || 500);
   const windowSecs = Number(conditionVelocityNode?.data?.windowSeconds || 10);
@@ -177,7 +177,7 @@ contract OmniFlow_AutonomousPipeline is IReactive, AbstractReactive {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-white tracking-tight font-sans">
-                  Live Solidity Preview
+                  Solidity Draft Preview
                 </h3>
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[10px] font-mono">
                   SOLC ^0.8.20

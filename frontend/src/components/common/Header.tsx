@@ -46,20 +46,19 @@ export function Header() {
 
         <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/10 text-[#c4c2c3] text-[11px] font-medium shadow-sm">
           <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-          <span>Reactive Omni Live Testnet</span>
+          <span>Reactive Omni Testnet</span>
         </div>
       </div>
 
       {/* Right Controls */}
       <div className="flex items-center gap-3">
         {/* Active Chain Pill */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#121318] border border-white/15 text-xs">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-medium text-[#c4c2c3]">
-            {chain?.name || 'Base Sepolia'}
-          </span>
-          <span className="text-[11px] font-mono text-cyan-400 tabular-nums">#84532</span>
-        </div>
+        {isConnected && chain && (
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#121318] border border-white/15 text-xs">
+            <span className="font-medium text-[#c4c2c3]">{chain.name}</span>
+            <span className="text-[11px] font-mono text-cyan-400 tabular-nums">#{chain.id}</span>
+          </div>
+        )}
 
         {/* Wallet Button */}
         {isConnected && address ? (

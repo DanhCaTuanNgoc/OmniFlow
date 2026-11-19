@@ -20,13 +20,15 @@ pipelineRouter.post('/compile-and-deploy', async (req: Request, res: Response) =
     // 2. Trích xuất tham số và deploy lên Reactive Lasna
     const result = await deployerService.deployPipeline(validation.data);
     return res.status(200).json(result);
-  } catch (error: any) {
-    console.error('Pipeline deploy error:', error);
-    const isClientError = error?.message?.includes('DAG Validation Failed');
-    return res.status(isClientError ? 400 : 500).json({
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : '';
+    const isClientError = message.startsWith('DAG Validation Failed:');
+    const signerUnavailable = message === 'Deployment signer is not configured.';
+    console.error('Pipeline deploy failed:', error instanceof Error ? error.name : 'Unknown error');
+    return res.status(isClientError ? 400 : signerUnavailable ? 503 : 500).json({
       success: false,
       error: isClientError ? 'DAG Validation Error' : 'Failed to deploy reactive pipeline',
-      message: error?.message || 'Unknown error',
+      message: isClientError || signerUnavailable ? message : 'Unable to confirm the deployment on Lasna.',
     });
   }
 });

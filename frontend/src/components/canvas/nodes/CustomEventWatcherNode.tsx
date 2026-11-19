@@ -9,7 +9,7 @@ import { truncateAddress } from '@/lib/utils';
 
 function CustomEventWatcherNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as CustomEventWatcherData;
-  const contractAddress = nodeData.contractAddress || '0x0000000000000000000000000000000000000000';
+  const contractAddress = nodeData.contractAddress;
   const eventName = nodeData.eventName || 'Transfer(address,address,uint256)';
   const chainId = nodeData.chainId || 84532;
   const chainLabel = chainId === 1301 ? 'Unichain Sepolia (1301)' : 'Base Sepolia (84532)';
@@ -31,7 +31,7 @@ function CustomEventWatcherNodeComponent({ id, data, selected }: NodeProps) {
         <div className="flex justify-between items-center text-slate-400">
           <span>Target Contract:</span>
           <span className="font-mono text-white font-medium text-[11px]">
-            {truncateAddress(contractAddress, 6)}
+            {contractAddress ? truncateAddress(contractAddress, 6) : '?'}
           </span>
         </div>
         <div className="flex justify-between items-center text-slate-400">

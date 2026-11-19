@@ -40,9 +40,7 @@ interface Recipe {
     action: string;
   };
   metrics: {
-    latency: string;
     cooldown: string;
-    gasEst: string;
   };
   nodesList: {
     name: string;
@@ -69,9 +67,7 @@ const RECIPES: Recipe[] = [
       action: 'ActionVault.executeStopLoss(50%)'
     },
     metrics: {
-      latency: '~980ms',
       cooldown: '300s Cooldown Guard',
-      gasEst: '~120k Gas'
     },
     nodesList: [
       { name: 'DEX Sync Event Listener', type: 'trigger', summary: 'Subscribes to Base Sepolia Uniswap pair topic0 0x1c411e9a...' },
@@ -107,9 +103,7 @@ function react(LogRecord calldata record) external vmOnly {
       action: 'ActionVault.executeTakeProfit(25%)'
     },
     metrics: {
-      latency: '~950ms',
       cooldown: '600s Cooldown Guard',
-      gasEst: '~115k Gas'
     },
     nodesList: [
       { name: 'Uniswap Sync Listener', type: 'trigger', summary: 'Base Sepolia DEX liquidity tracking' },
@@ -140,9 +134,7 @@ if (price >= TARGET_PROFIT && block.timestamp - lastTriggered >= 600) {
       action: 'ActionVault.executeSafeSweep(coldSafe)'
     },
     metrics: {
-      latency: '~850ms',
       cooldown: 'Stateless 0s (Instant)',
-      gasEst: '~85k Gas'
     },
     nodesList: [
       { name: 'Wallet Egress Filter', type: 'trigger', summary: 'Monitors outbound Transfer and Approval events' },
@@ -171,9 +163,7 @@ if (isUnauthorizedEgress(record)) {
       action: 'ActionVault.rebalancePortfolio()'
     },
     metrics: {
-      latency: '~1,100ms',
       cooldown: '86400s Interval',
-      gasEst: '~140k Gas'
     },
     nodesList: [
       { name: 'System Block Interval', type: 'trigger', summary: 'Pure on-chain Lasna CometBFT time keeper' },
@@ -203,9 +193,7 @@ if (block.timestamp - lastRebalance >= 1 days) {
       action: 'ActionVault.splitInflow(20%, 30%, 50%)'
     },
     metrics: {
-      latency: '~920ms',
       cooldown: '3600s Guard',
-      gasEst: '~160k Gas'
     },
     nodesList: [
       { name: 'Inbound Transfer Listener', type: 'trigger', summary: 'Monitors USDC token incoming deposits' },
@@ -234,9 +222,7 @@ if (record.topic2 == bytes32(uint256(uint160(vaultAddress))) && amount >= 1000e6
       action: 'Base Sepolia Vault Hedge Swap'
     },
     metrics: {
-      latency: '~1,250ms',
       cooldown: '600s Cooldown',
-      gasEst: '~135k Gas'
     },
     nodesList: [
       { name: 'Unichain Event Listener', type: 'trigger', summary: 'Cross-chain event ingestion from Unichain testnet' },
@@ -394,7 +380,7 @@ export default function TemplateLibraryPage() {
                 {/* Architectural Flow Strip */}
                 <div className="p-2.5 rounded-xl bg-[#12141c] border border-white/[0.06] text-[11px] font-mono space-y-1">
                   <div className="text-[9px] uppercase tracking-wider text-slate-500 font-semibold">
-                    Autonomous Execution Flow
+                    Template Logic
                   </div>
                   <div className="flex items-center gap-1.5 flex-wrap text-slate-300">
                     <span className="text-cyan-300 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20 truncate max-w-[140px]" title={recipe.flow.trigger}>
@@ -411,19 +397,12 @@ export default function TemplateLibraryPage() {
                   </div>
                 </div>
 
-                {/* Telemetry Metrics Strip */}
-                <div className="grid grid-cols-3 gap-2 text-[10px] font-mono text-slate-400 pt-1">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-slate-500" />
-                    <span>{recipe.metrics.latency}</span>
-                  </div>
+                {/* Template defaults */}
+                <p className="text-[10px] text-slate-400">{recipe.id === 'stop-loss' ? 'Configure a Vault before deploying.' : 'Review deploy compatibility in Studio.'}</p>
+                <div className="text-[10px] font-mono text-slate-400 pt-1">
                   <div className="flex items-center gap-1">
                     <ShieldAlert className="w-3 h-3 text-amber-500" />
                     <span className="truncate">{recipe.metrics.cooldown}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-right justify-end">
-                    <Cpu className="w-3 h-3 text-violet-400" />
-                    <span>{recipe.metrics.gasEst}</span>
                   </div>
                 </div>
               </div>

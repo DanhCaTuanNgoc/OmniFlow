@@ -11,8 +11,10 @@ import {
   X, 
   KeyRound
 } from 'lucide-react';
-import { useAccount, useWriteContract } from 'wagmi';
-import { APP_CONFIG, CONTRACT_ADDRESSES } from '@/lib/constants';
+import { useAccount, useConfig, useWriteContract } from 'wagmi';
+import { getAccount, readContract, waitForTransactionReceipt } from 'wagmi/actions';
+import { isAddress, isAddressEqual, type Address } from 'viem';
+import { APP_CONFIG } from '@/lib/constants';
 import { ACTION_VAULT_ABI } from '@omniflow/shared';
 import { truncateAddress } from '@/lib/utils';
 
@@ -24,21 +26,40 @@ interface DeployModalProps {
 
 export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
   const { address: userAddress, isConnected } = useAccount();
+  const config = useConfig();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deployResult, setDeployResult] = useState<any | null>(null);
 
   const { writeContractAsync, isPending: isAuthPending } = useWriteContract();
+  const [deployOwner, setDeployOwner] = useState<Address>();
   const [authSuccess, setAuthSuccess] = useState(false);
 
   if (!isOpen) return null;
+  if (deployOwner && (!userAddress || !isConnected || !isAddressEqual(deployOwner, userAddress))) {
+    return null;
+  }
 
   const handleDeploy = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const owner = userAddress || '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+      const owner = getAccount(config).address;
+      if (!isConnected || !owner) throw new Error('Connect a wallet to deploy.');
+      const vault = graph.nodes.find((node: { type?: string; data: { actionVaultAddress?: string } }) =>
+        node.type === 'dexSwap' || node.data.actionVaultAddress)?.data.actionVaultAddress;
+      if (typeof vault !== 'string' || !isAddress(vault, { strict: false })) {
+        throw new Error('Configure an ActionVault address in the graph.');
+      }
+      const actualOwner = await readContract(config, {
+        address: vault, abi: ACTION_VAULT_ABI, functionName: 'owner', chainId: 84532,
+      });
+      const current = getAccount(config).address;
+      if (!current || !isAddressEqual(owner, current) || !isAddressEqual(owner, actualOwner)) {
+        throw new Error('The connected wallet must own the selected Vault.');
+      }
+      setDeployOwner(owner);
 
       const payload = {
         pipelineVersion: '1.0.0',
@@ -64,7 +85,7 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || `Deploy failed with status ${res.status}`);
+        throw new Error(errJson.message || errJson.error || `Deploy failed with status ${res.status}`);
       }
 
       const data = await res.json();
@@ -78,19 +99,24 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
   };
 
   const handleAuthorizeVault = async () => {
-    if (!deployResult?.contracts?.rscAddress) return;
+    if (!deployResult?.contracts?.rscAddress || !deployOwner) return;
     try {
       const rscAddress = deployResult.contracts.rscAddress as `0x${string}`;
-      const vaultAddress =
-        (deployResult.contracts.vaultAddress as `0x${string}`) ||
-        CONTRACT_ADDRESSES.DEFAULT_ACTION_VAULT;
-
-      await writeContractAsync({
+      const vaultAddress = deployResult.contracts.vaultAddress as Address;
+      const account = getAccount(config);
+      if (!account.address || !isAddressEqual(account.address, deployOwner) || account.chainId !== 84532) {
+        throw new Error('Reconnect the deployment wallet on Base Sepolia to authorize the RSC.');
+      }
+      const hash = await writeContractAsync({
         address: vaultAddress,
         abi: ACTION_VAULT_ABI,
         functionName: 'setAuthorizedRSC',
         args: [rscAddress, true],
+        chainId: 84532,
+        account: deployOwner,
       });
+      const receipt = await waitForTransactionReceipt(config, { hash, chainId: 84532 });
+      if (receipt.status !== 'success') throw new Error(`Vault authorization reverted: ${hash}`);
 
       setAuthSuccess(true);
     } catch (err: any) {
@@ -141,13 +167,9 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
                 <span className="font-semibold text-white tabular-nums">{graph.nodes.length} Nodes &bull; {graph.edges.length} Edges</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Gas Sponsorship:</span>
-                <span className="font-bold text-emerald-400 tabular-nums">1.0 lREACT (Sponsored Free)</span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-slate-400">Owner Signer:</span>
                 <span className="font-mono text-violet-300">
-                  {isConnected && userAddress ? truncateAddress(userAddress) : 'Default Demo Wallet'}
+                  {isConnected && userAddress ? truncateAddress(userAddress) : 'Connect wallet'}
                 </span>
               </div>
             </div>
@@ -155,13 +177,13 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
             <div className="p-3.5 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-xs text-slate-300 flex gap-2.5">
               <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-violet-400" />
               <span>
-                Pre-compiled bytecode deploys in under 2 seconds on Lasna. No dynamic compilation stalls.
+                Deployment requires a confirmed Lasna receipt. Vault authorization is a separate Base Sepolia transaction.
               </span>
             </div>
 
             <button
               onClick={handleDeploy}
-              disabled={loading}
+              disabled={loading || !isConnected || !userAddress}
               className="w-full flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold rounded-full bg-violet-600 hover:bg-violet-500 text-white shadow-[0_0_25px_-3px_rgba(139,92,246,0.5)] transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
             >
               {loading ? (
@@ -172,7 +194,7 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
               ) : (
                 <>
                   <Rocket className="w-4 h-4" />
-                  <span>Deploy to Reactive Lasna (1s)</span>
+                  <span>Deploy to Reactive Lasna</span>
                 </>
               )}
             </button>
@@ -197,8 +219,8 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Gas Tank:</span>
-                  <span className="text-emerald-400 font-bold tabular-nums">1.0 lREACT (~5,000 Callbacks)</span>
+                  <span className="text-slate-400">Funded at deployment:</span>
+                  <span className="text-emerald-400 font-bold tabular-nums">{deployResult.gasSponsored?.amountLReact} lREACT</span>
                 </div>
               </div>
 

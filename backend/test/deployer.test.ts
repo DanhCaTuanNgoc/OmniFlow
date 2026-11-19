@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { chainService } from '../src/services/chain.service.js';
 import { deployerService } from '../src/services/deployer.service.js';
 import type { PipelineGraph } from '../src/schemas/pipeline.schema.js';
 import { STOP_LOSS_PIPELINE_BYTECODE } from '../src/abis/StopLossPipeline.js';
@@ -140,18 +141,16 @@ describe('DeployerService & DAG Compiler Suite (10 Test Cases)', () => {
     assert.ok(STOP_LOSS_PIPELINE_BYTECODE.startsWith('0x'));
   });
 
-  // DEP-07
-  it('DEP-07: test_GasSponsorship_Funding - Xác thực cấu hình tài trợ gas tự động (1.0 lREACT)', async () => {
-    const result = await deployerService.deployPipeline(sampleValidGraph);
-    assert.equal(result.gasSponsored.amountLReact, '1.0');
-    assert.ok(result.gasSponsored.estimatedCallbacks >= 10);
+  it('rejects deployment with a missing origin pool address', async () => {
+    const graph = structuredClone(sampleValidGraph);
+    delete graph.nodes.find(node => node.type === 'watchDEXPrice')!.data.pairAddress;
+    await assert.rejects(deployerService.deployPipeline(graph), /configure a valid origin pool address/);
   });
 
-  // DEP-08
-  it('DEP-08: test_ActionVault_RSCAuthCheck - Xác thực liên kết Vault Address đến Base Sepolia (84532)', async () => {
-    const result = await deployerService.deployPipeline(sampleValidGraph);
-    assert.equal(result.contracts.vaultChainId, 84532);
-    assert.equal(result.contracts.vaultAddress.toLowerCase(), '0x005d4cb896c9e0B07Bbf961FDC26b098D84079d7'.toLowerCase());
+  it('rejects deployment with a missing Vault address', async () => {
+    const graph = structuredClone(sampleValidGraph);
+    delete graph.nodes.find(node => node.type === 'dexSwap')!.data.actionVaultAddress;
+    await assert.rejects(deployerService.deployPipeline(graph), /configure a valid ActionVault address/);
   });
 
   // DEP-09
@@ -171,14 +170,13 @@ describe('DeployerService & DAG Compiler Suite (10 Test Cases)', () => {
     );
   });
 
-  // DEP-10
-  it('DEP-10: test_Deploy_ResponseSchema - Cấu trúc DeploymentResult trả về đầy đủ định dạng chuẩn', async () => {
-    const result = await deployerService.deployPipeline(sampleValidGraph);
-    assert.equal(result.success, true);
-    assert.ok(result.pipelineId.startsWith('omniflow-pipe-'));
-    assert.ok(result.contracts.rscAddress.startsWith('0x'));
-    assert.equal(result.contracts.rscChainId, 5318007);
-    assert.ok(result.explorerUrls.reactscan.includes('reactscan.net'));
-    assert.ok(result.explorerUrls.basescan.includes('basescan.org'));
+  it('fails without a relayer signer instead of returning a fabricated deployment', async (context) => {
+    const descriptor = Object.getOwnPropertyDescriptor(chainService, 'lasnaWalletClient');
+    Object.defineProperty(chainService, 'lasnaWalletClient', { configurable: true, value: undefined });
+    context.after(() => {
+      if (descriptor) Object.defineProperty(chainService, 'lasnaWalletClient', descriptor);
+      else Reflect.deleteProperty(chainService, 'lasnaWalletClient');
+    });
+    await assert.rejects(deployerService.deployPipeline(sampleValidGraph), /signer is not configured/);
   });
 });

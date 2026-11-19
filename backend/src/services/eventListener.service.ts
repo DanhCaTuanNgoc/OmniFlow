@@ -1,5 +1,4 @@
-import type { ActivityLogEntry } from '../data/fallbackLogs.js';
-import { FALLBACK_ACTIVITY_LOGS } from '../data/fallbackLogs.js';
+import type { ActivityLogEntry } from '../data/activityLog.js';
 import type { WebSocketGateway } from '../websocket/gateway.js';
 
 export class EventListenerService {
@@ -9,8 +8,6 @@ export class EventListenerService {
 
   constructor(wsGateway?: WebSocketGateway) {
     this.wsGateway = wsGateway;
-    // Khởi tạo buffer với fallback data seed
-    this.logsBuffer = [...FALLBACK_ACTIVITY_LOGS];
   }
 
   public setWebSocketGateway(wsGateway: WebSocketGateway): void {

@@ -1,4 +1,5 @@
-import { parseEther } from 'viem';
+import { ACTION_VAULT_ABI } from '../abis/ActionVault.js';
+import { isAddress, isAddressEqual, parseEther } from 'viem';
 import type { PipelineGraph } from '../schemas/pipeline.schema.js';
 import { chainService } from './chain.service.js';
 import { STOP_LOSS_PIPELINE_ABI, STOP_LOSS_PIPELINE_BYTECODE } from '../abis/StopLossPipeline.js';
@@ -28,7 +29,6 @@ export interface DeploymentResult {
   };
   gasSponsored: {
     amountLReact: string;
-    estimatedCallbacks: number;
   };
   explorerUrls: {
     reactscan: string;
@@ -123,8 +123,10 @@ export class DeployerService {
     const triggerNode = graph.nodes.find(
       (n) => n.type === 'watchDEXPrice' || n.data.pairAddress
     );
-    const pairAddress = (triggerNode?.data.pairAddress ||
-      '0x1234567890123456789012345678901234567890') as `0x${string}`;
+    const pairAddress = triggerNode?.data.pairAddress;
+    if (typeof pairAddress !== 'string' || !isAddress(pairAddress, { strict: false })) {
+      throw new Error('DAG Validation Failed: configure a valid origin pool address.');
+    }
 
     // 2. Tìm Condition Node (Price threshold)
     const priceNode = graph.nodes.find(
@@ -143,8 +145,10 @@ export class DeployerService {
     const actionNode = graph.nodes.find(
       (n) => n.type === 'dexSwap' || n.data.actionVaultAddress
     );
-    const actionVaultAddress = (actionNode?.data.actionVaultAddress ||
-      '0xABCDEF0123456789ABCDEF0123456789ABCDEF01') as `0x${string}`;
+    const actionVaultAddress = actionNode?.data.actionVaultAddress;
+    if (typeof actionVaultAddress !== 'string' || !isAddress(actionVaultAddress, { strict: false })) {
+      throw new Error('DAG Validation Failed: configure a valid ActionVault address.');
+    }
     const percentToSwap = BigInt(actionNode?.data.amountPercentage || 50);
 
     // 5. Tìm Anti-Wick hits (Stateful Anti-Wick)
@@ -185,46 +189,47 @@ export class DeployerService {
       throw new Error(`DAG Validation Failed: ${validation.errors.join('; ')}`);
     }
 
+    const supportedNodes = new Set(['watchDEXPrice', 'priceThresholdGuard', 'cooldownGuard', 'priceVelocityGuard', 'dexSwap']);
+    if (graph.nodes.some(node => !supportedNodes.has(node.type) ||
+      (node.type === 'priceThresholdGuard' && node.data.operator && node.data.operator !== 'LESS_THAN_OR_EQUAL'))) {
+      throw new Error('DAG Validation Failed: this graph contains rules unsupported by the stop-loss deployer.');
+    }
+
     const params = this.extractParams(graph);
     const pipelineId = `omniflow-pipe-${Date.now().toString(36)}`;
 
-    let rscAddress = '0x9bA415C9C985F8f2a58d5F6D90f23bEb5E3Af3f1';
-    let txHash = '0x4a12c8e419b5f8f2a58d5f6d90f23beb5e3af3f123456789abcdef0123456789';
-
-    // Nếu ví Relayer đã được cấu hình trong env, thực hiện deploy thật qua Viem
-    if (chainService.lasnaWalletClient && chainService.relayerAccount) {
-      try {
-        console.log(`🚀 Deploying RSC on Lasna via Viem for ${pipelineId}...`);
-        txHash = await (chainService.lasnaWalletClient as any).deployContract({
-          account: chainService.relayerAccount,
-          abi: STOP_LOSS_PIPELINE_ABI,
-          bytecode: STOP_LOSS_PIPELINE_BYTECODE,
-          args: [
-            params.pairAddress,
-            params.priceThresholdWei,
-            params.cooldownSeconds,
-            params.percentToSwap,
-            params.actionVaultAddress,
-            params.requiredHits,
-            params.velocityThresholdBps,
-            params.windowSeconds,
-            params.originChainId,
-            params.originTopic0,
-          ],
-          value: parseEther('1.0'), // Tự động nạp 1.0 lREACT gas nuôi callback!
-        });
-
-        const receipt = await chainService.lasnaPublicClient.waitForTransactionReceipt({
-          hash: txHash as `0x${string}`,
-        });
-
-        if (receipt.contractAddress) {
-          rscAddress = receipt.contractAddress;
-        }
-      } catch (deployErr) {
-        console.warn('⚠️ Real on-chain deploy fallback (using simulated contract for local test):', deployErr);
-      }
+    if (!chainService.lasnaWalletClient || !chainService.relayerAccount) {
+      throw new Error('Deployment signer is not configured.');
     }
+
+    const owner = await chainService.basePublicClient.readContract({
+      address: params.actionVaultAddress,
+      abi: ACTION_VAULT_ABI,
+      functionName: 'owner',
+    });
+    if (!isAddressEqual(owner, graph.metadata.ownerAddress as `0x${string}`)) {
+      throw new Error('DAG Validation Failed: the selected Vault belongs to another wallet.');
+    }
+
+    const value = parseEther('1.0');
+    const txHash = await chainService.lasnaWalletClient.deployContract({
+      chain: chainService.lasnaWalletClient.chain,
+      account: chainService.relayerAccount,
+      abi: STOP_LOSS_PIPELINE_ABI,
+      bytecode: STOP_LOSS_PIPELINE_BYTECODE,
+      args: [
+        params.pairAddress, params.priceThresholdWei, params.cooldownSeconds, params.percentToSwap,
+        params.actionVaultAddress, params.requiredHits, params.velocityThresholdBps,
+        params.windowSeconds, params.originChainId, BigInt(params.originTopic0),
+      ],
+      value,
+    });
+
+    const receipt = await chainService.lasnaPublicClient.waitForTransactionReceipt({ hash: txHash });
+    if (receipt.status !== 'success' || !receipt.contractAddress) {
+      throw new Error(`Lasna deployment did not succeed: ${txHash}`);
+    }
+    const rscAddress = receipt.contractAddress;
 
     return {
       success: true,
@@ -238,7 +243,6 @@ export class DeployerService {
       },
       gasSponsored: {
         amountLReact: '1.0',
-        estimatedCallbacks: 20,
       },
       explorerUrls: {
         reactscan: `https://lasna.reactscan.net/address/${rscAddress}`,

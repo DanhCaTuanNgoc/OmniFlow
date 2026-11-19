@@ -29,6 +29,4 @@ export const SUPPORTED_CHAINS = [
 
 export const SUPPORTED_PAIRS = [
   { label: 'ETH / USDC', address: CONTRACT_ADDRESSES.DEFAULT_PAIR_ETH_USDC, base: 'ETH', quote: 'USDC' },
-  { label: 'WBTC / USDC', address: '0x2345678901234567890123456789012345678901', base: 'WBTC', quote: 'USDC' },
-  { label: 'REACT / ETH', address: '0x3456789012345678901234567890123456789012', base: 'REACT', quote: 'ETH' },
 ];

@@ -9,7 +9,7 @@ import { truncateAddress } from '@/lib/utils';
 
 function EmergencySafeSweepNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as EmergencySafeSweepData;
-  const safeAddress = nodeData.safeAddress || '0xColdWalletAddress';
+  const safeAddress = nodeData.safeAddress;
   const assetScope = nodeData.assetScope || 'ALL';
 
   return (
@@ -27,7 +27,7 @@ function EmergencySafeSweepNodeComponent({ id, data, selected }: NodeProps) {
       <div className="bg-[#07080d]/80 rounded-xl p-2.5 border border-white/[0.06] space-y-2 text-xs">
         <div className="flex justify-between items-center text-slate-400">
           <span>Safe Backup:</span>
-          <span className="font-mono text-white text-xs font-medium">{truncateAddress(safeAddress)}</span>
+          <span className="font-mono text-white text-xs font-medium">{safeAddress ? truncateAddress(safeAddress) : '?'}</span>
         </div>
         <div className="flex justify-between items-center text-slate-400">
           <span>Evacuation Scope:</span>

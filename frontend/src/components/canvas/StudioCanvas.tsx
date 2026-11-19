@@ -20,9 +20,9 @@ import {
   ReactFlowProvider,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { useAccount } from 'wagmi';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { APP_CONFIG } from '@/lib/constants';
-import { useWebSocket } from '@/components/providers/WebSocketProvider';
 
 import {
   WatchDEXPriceNode,
@@ -48,7 +48,6 @@ import {
   RotateCcw, 
   Sparkles, 
   AlertTriangle,
-  FlaskConical,
   Code2
 } from 'lucide-react';
 
@@ -72,151 +71,22 @@ const edgeTypes: EdgeTypes = {
   custom: CustomEdge,
 };
 
-// Initial Demo Graph: "Flash Crash Stop-Loss" (Ready to run for judges)
-const INITIAL_NODES: Node[] = [
-  {
-    id: 'trigger-1',
-    type: 'watchDEXPrice',
-    position: { x: 40, y: 150 },
-    data: {
-      label: 'Watch DEX Price',
-      category: 'trigger',
-      state: 'LISTENING',
-      pairLabel: 'ETH / USDC',
-      dexRouter: 'Uniswap V2',
-      chainId: 84532,
-      pairAddress: '0x1234567890123456789012345678901234567890',
-    },
-  },
-  {
-    id: 'condition-1',
-    type: 'priceThresholdGuard',
-    position: { x: 380, y: 150 },
-    data: {
-      label: 'Price Threshold Guard',
-      category: 'condition',
-      state: 'CONFIGURED',
-      operator: 'LESS_THAN_OR_EQUAL',
-      thresholdPriceUSD: 1800,
-    },
-  },
-  {
-    id: 'condition-2',
-    type: 'cooldownGuard',
-    position: { x: 720, y: 150 },
-    data: {
-      label: 'Cooldown Rate-Limiter',
-      category: 'condition',
-      state: 'CONFIGURED',
-      cooldownSeconds: 300,
-    },
-  },
-  {
-    id: 'action-1',
-    type: 'dexSwap',
-    position: { x: 1060, y: 150 },
-    data: {
-      label: 'DEX Token Swap',
-      category: 'action',
-      state: 'CONFIGURED',
-      fromToken: 'ETH',
-      toToken: 'USDC',
-      amountPercentage: 50,
-      maxSlippagePercent: 1,
-      actionVaultAddress: '0xABCDEF0123456789ABCDEF0123456789ABCDEF01',
-    },
-  },
-];
-
-const INITIAL_EDGES: Edge[] = [
-  {
-    id: 'e-trigger-cond1',
-    source: 'trigger-1',
-    target: 'condition-1',
-    type: 'custom',
-    data: { isPulsing: true, color: '#38bdf8' },
-  },
-  {
-    id: 'e-cond1-cond2',
-    source: 'condition-1',
-    target: 'condition-2',
-    type: 'custom',
-    data: { isPulsing: true, color: '#fbbf24' },
-  },
-  {
-    id: 'e-cond2-act1',
-    source: 'condition-2',
-    target: 'action-1',
-    type: 'custom',
-    data: { isPulsing: true, color: '#34d399' },
-  },
-];
-
 let idCounter = 10;
 const getId = (prefix: string) => `${prefix}-${idCounter++}`;
 
 function StudioCanvasInner() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
+  const { address, isConnected } = useAccount();
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
   const searchParams = useSearchParams();
-  const [activeRecipeId, setActiveRecipeId] = useState<string>('stop-loss');
+  const [activeRecipeId, setActiveRecipeId] = useState<string>('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isDeployOpen, setIsDeployOpen] = useState(false);
   const [isSolidityOpen, setIsSolidityOpen] = useState(false);
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [simulationStep, setSimulationStep] = useState<number>(0);
-  const [simulationMessage, setSimulationMessage] = useState<string | null>(null);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
-
-  // Global WebSocket Gateway connection from Workspace Layout
-  const { status: wsStatus, addListener } = useWebSocket();
-
-  // Listen for Live Photon Pulses from real-time events
-  useEffect(() => {
-    const unsubscribe = addListener((msg) => {
-      if (msg.type === 'REACTIVE_STEP_UPDATE' && msg.data) {
-        const step = msg.data.step;
-        if (step === 'TRIGGER_DETECTED') {
-          setNodes((nds) =>
-            nds.map((n) =>
-              n.data.category === 'trigger'
-                ? { ...n, data: { ...n.data, state: 'EVENT_CAPTURED' as const } }
-                : n
-            )
-          );
-          setEdges((eds) =>
-            eds.map((e) => ({ ...e, data: { ...e.data, isBurst: true } }))
-          );
-          setTimeout(() => {
-            setEdges((eds) =>
-              eds.map((e) => ({ ...e, data: { ...e.data, isBurst: false } }))
-            );
-          }, 3000);
-        } else if (step === 'CONDITION_EVALUATED') {
-          setNodes((nds) =>
-            nds.map((n) =>
-              n.data.category === 'condition'
-                ? { ...n, data: { ...n.data, state: 'CONDITION_MET' as const } }
-                : n
-            )
-          );
-        } else if (step === 'DESTINATION_EXECUTED') {
-          setNodes((nds) =>
-            nds.map((n) =>
-              n.data.category === 'action'
-                ? { ...n, data: { ...n.data, state: 'SUCCESS' as const } }
-                : n
-            )
-          );
-        }
-      }
-    });
-
-    return unsubscribe;
-  }, [addListener, setNodes, setEdges]);
 
   // Hydrate preset from query parameter ?recipe=...
   useEffect(() => {
@@ -230,73 +100,6 @@ function StudioCanvasInner() {
   }, [searchParams, setNodes, setEdges]);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
-
-  // Simulate Flow (Dry-Run Sandbox)
-  const handleSimulateFlow = useCallback(() => {
-    if (isSimulating) return;
-    setIsSimulating(true);
-    setSimulationStep(1);
-    setSimulationMessage('Step 1/3: Origin DEX Swap event captured on Base Sepolia (ETH Price <= $1,800)');
-
-    // Step 1: Trigger Captured + Fast Photon Burst
-    setNodes((nds) =>
-      nds.map((n) => {
-        if (n.data.category === 'trigger') {
-          return {
-            ...n,
-            data: { ...n.data, state: 'EVENT_CAPTURED' as const, statusMessage: 'Sync: ETH Price $1,500' },
-          };
-        }
-        return n;
-      })
-    );
-    setEdges((eds) => eds.map((e) => ({ ...e, data: { ...e.data, isBurst: true } })));
-
-    // Step 2: Reactive Omni ReactVM Condition Met
-    setTimeout(() => {
-      setSimulationStep(2);
-      setSimulationMessage('Step 2/3: Reactive Omni Lasna RVM evaluated condition: $1,500 <= $1,800 Met • Cooldown OK');
-      setNodes((nds) =>
-        nds.map((n) => {
-          if (n.data.category === 'condition') {
-            return {
-              ...n,
-              data: { ...n.data, state: 'CONDITION_MET' as const, statusMessage: 'Condition Passed (200ms Guard OK)' },
-            };
-          }
-          return n;
-        })
-      );
-    }, 1400);
-
-    // Step 3: Destination Action Callback Executed
-    setTimeout(() => {
-      setSimulationStep(3);
-      setSimulationMessage('Step 3/3: ActionVault callback executed on Base Sepolia • 50% Vault ETH Swapped to USDC');
-      setNodes((nds) =>
-        nds.map((n) => {
-          if (n.data.category === 'action') {
-            return {
-              ...n,
-              data: { ...n.data, state: 'SUCCESS' as const, statusMessage: 'Swap Executed: 0.1 ETH -> 150 USDC' },
-            };
-          }
-          return n;
-        })
-      );
-    }, 2800);
-
-    // Finish Simulation
-    setTimeout(() => {
-      setIsSimulating(false);
-      setSimulationMessage('✅ Simulation Complete (0-Gas Dry Run • 100% Invariants Verified)');
-      setEdges((eds) => eds.map((e) => ({ ...e, data: { ...e.data, isBurst: false } })));
-      setTimeout(() => {
-        setSimulationMessage(null);
-        setSimulationStep(0);
-      }, 4000);
-    }, 4400);
-  }, [isSimulating, setNodes, setEdges]);
 
   // DAG & Port Constraint Enforcement
   const isValidConnection = useCallback(
@@ -459,7 +262,10 @@ function StudioCanvasInner() {
   };
 
   const handleResetGraph = () => {
-    handleSelectPreset(activeRecipeId || 'stop-loss');
+    setNodes([]);
+    setEdges([]);
+    setSelectedNodeId(null);
+    setActiveRecipeId('');
   };
 
   const handleSelectPreset = (recipeKey: string) => {
@@ -472,7 +278,17 @@ function StudioCanvasInner() {
     }
   };
 
+  const handleExportGraph = () => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify({ nodes, edges }, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'omniflow-pipeline.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleOpenDeploy = () => {
+    if (!isConnected) return;
     const hasTrigger = nodes.some((n) => n.data.category === 'trigger');
     const hasAction = nodes.some((n) => n.data.category === 'action');
 
@@ -502,7 +318,7 @@ function StudioCanvasInner() {
                   {RECIPE_PRESETS[activeRecipeId]?.title || 'Custom Pipeline'}
                 </span>
                 <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  AUTOSYNCED
+                  UNSAVED
                 </span>
               </div>
             </div>
@@ -515,6 +331,7 @@ function StudioCanvasInner() {
                 onChange={(e) => handleSelectPreset(e.target.value)}
                 className="bg-[#14151a] hover:bg-[#202126] border border-white/10 rounded-lg px-2.5 py-1 text-xs text-slate-200 font-medium focus:outline-none focus:border-cyan-500/50 transition-colors cursor-pointer"
               >
+                <option value="">Custom pipeline</option>
                 {Object.values(RECIPE_PRESETS).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.title}
@@ -538,28 +355,10 @@ function StudioCanvasInner() {
               <Code2 className="w-3.5 h-3.5 text-violet-400" />
               <span>Solidity Preview</span>
             </button>
-            <button
-              onClick={handleSimulateFlow}
-              disabled={isSimulating}
-              className={`px-3 py-1 font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
-                isSimulating
-                  ? 'bg-cyan-500/20 text-cyan-300 animate-pulse border border-cyan-500/30'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <FlaskConical className={`w-3.5 h-3.5 ${isSimulating ? 'text-cyan-400 animate-spin' : 'text-cyan-400'}`} />
-              <span>{isSimulating ? `Simulating (${simulationStep}/3)...` : 'Simulate Dry-Run'}</span>
-            </button>
           </div>
 
-          {/* Cluster 3: Right (WS Status, Reset, Deploy CTA) */}
+          {/* Graph actions */}
           <div className="flex items-center gap-2.5">
-            {/* Live WebSocket Stream Indicator */}
-            <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#14151a] border border-white/10 text-[11px] font-mono">
-              <span className={`w-2 h-2 rounded-full ${wsStatus === 'CONNECTED' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              <span className="text-slate-300">{wsStatus === 'CONNECTED' ? 'WS Live' : 'WS Standby'}</span>
-            </div>
-
             {validationWarning && (
               <div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800/60 px-3 py-1.5 rounded-lg flex items-center gap-1.5 animate-pulse">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
@@ -570,33 +369,31 @@ function StudioCanvasInner() {
             <button
               onClick={handleResetGraph}
               className="py-1.5 px-3 rounded-lg border border-white/10 bg-[#14151a] hover:bg-[#202126] text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Reset graph to preset default"
+              title="Clear graph"
             >
               <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
-              <span>Reset</span>
+              <span>Clear</span>
+            </button>
+
+            <button type="button" onClick={handleExportGraph} disabled={nodes.length === 0}
+              className="px-3 py-1.5 rounded-lg border border-white/10 text-xs text-slate-300 disabled:opacity-50">
+              Export JSON
             </button>
 
             {/* Primary CTA: Institutional High-Contrast Button */}
             <button
               onClick={handleOpenDeploy}
+              disabled={!isConnected}
               className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-white hover:bg-slate-200 text-black shadow-sm transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
             >
               <Rocket className="w-3.5 h-3.5 fill-black" />
-              <span>Deploy Automation (1-Click)</span>
+              <span>{isConnected ? 'Deploy Automation' : 'Connect Wallet to Deploy'}</span>
             </button>
           </div>
         </div>
 
         {/* Canvas Body (Explicit non-zero dimensions with Radial Spotlight) */}
         <div className="flex-1 w-full h-full relative">
-          {/* Simulation Watermark Banner */}
-          {simulationMessage && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-full bg-[#0d091a]/95 border border-cyan-500/40 text-cyan-300 text-xs font-mono shadow-2xl backdrop-blur-md flex items-center gap-2 animate-fade-in pointer-events-none">
-              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-              <span>{simulationMessage}</span>
-            </div>
-          )}
-
           {/* Lớp hào quang nền nhẹ ở giữa Canvas giúp xóa cảm giác đen đặc */}
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_45%,rgba(56,189,248,0.08),rgba(139,92,246,0.05)_40%,transparent_75%)]" />
 
@@ -654,6 +451,7 @@ function StudioCanvasInner() {
 
       {/* Deploy Modal */}
       <DeployModal
+        key={isConnected ? address : 'guest'}
         isOpen={isDeployOpen}
         onClose={() => setIsDeployOpen(false)}
         graph={{ nodes, edges }}

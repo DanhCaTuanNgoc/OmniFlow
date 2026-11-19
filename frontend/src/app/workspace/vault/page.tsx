@@ -19,30 +19,48 @@ import {
   Coins
 } from 'lucide-react';
 import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
-import { parseEther, formatEther } from 'viem';
+import { parseEther, formatEther, isAddressEqual, type Address } from 'viem';
 import { CONTRACT_ADDRESSES } from '@/lib/constants';
 import { truncateAddress } from '@/lib/utils';
 import { ACTION_VAULT_ABI } from '@omniflow/shared';
-import { MetricRibbon } from '@/components/common/MetricRibbon';
 
 export default function VaultManagerPage() {
-  const { address: userAddress, isConnected, chainId } = useAccount();
+  const { address, isConnected } = useAccount();
+  return <VaultForWallet key={isConnected ? address : 'guest'} userAddress={isConnected ? address : undefined} />;
+}
+
+function VaultForWallet({ userAddress }: { userAddress?: Address }) {
+  const { chainId } = useAccount();
+  const isConnected = Boolean(userAddress);
   const [depositAmount, setDepositAmount] = useState('0.001');
-  const [withdrawAmount, setWithdrawAmount] = useState('0.001');
   const [isPanicConfirmOpen, setIsPanicConfirmOpen] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<{ title: string; txHash?: string } | null>(null);
 
   const vaultAddress = CONTRACT_ADDRESSES.DEFAULT_ACTION_VAULT;
   const isCorrectChain = chainId === 84532;
 
+  // 4. Read Vault Owner
+  const { data: vaultOwner, isError: ownerError, isPending: ownerPending } = useReadContract({
+    address: vaultAddress,
+    abi: ACTION_VAULT_ABI,
+    functionName: 'owner',
+    chainId: 84532,
+    query: { enabled: isConnected },
+  });
+
+  const isOwner = Boolean(userAddress && vaultOwner && !ownerError && isAddressEqual(userAddress, vaultOwner));
+  const canWrite = isOwner && isCorrectChain;
+
   // 1. Read Live On-Chain Vault Balance (Base Sepolia: 84532)
   const { 
-    data: vaultBalance, 
+    data: vaultBalance,
+    isError: vaultBalanceError,
     isLoading: isVaultBalanceLoading, 
     refetch: refetchVaultBalance 
   } = useBalance({
     address: vaultAddress,
     chainId: 84532,
+    query: { enabled: isOwner },
   });
 
   // 2. Read User Wallet Balance (Base Sepolia: 84532)
@@ -53,6 +71,7 @@ export default function VaultManagerPage() {
   } = useBalance({
     address: userAddress,
     chainId: 84532,
+    query: { enabled: isOwner },
   });
 
   // 3. Read Backup Safe Address from ActionVault contract
@@ -61,23 +80,17 @@ export default function VaultManagerPage() {
     abi: ACTION_VAULT_ABI,
     functionName: 'backupSafeAddress',
     chainId: 84532,
-  });
-
-  // 4. Read Vault Owner
-  const { data: vaultOwner } = useReadContract({
-    address: vaultAddress,
-    abi: ACTION_VAULT_ABI,
-    functionName: 'owner',
-    chainId: 84532,
+    query: { enabled: isOwner },
   });
 
   // 5. Read Authorized RSC Status for StopLoss_Pipeline
-  const { data: isRscAuthorized } = useReadContract({
+  const { data: isRscAuthorized, isError: authorizationError, refetch: refetchAuthorization } = useReadContract({
     address: vaultAddress,
     abi: ACTION_VAULT_ABI,
     functionName: 'authorizedRSCs',
     args: [CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS],
     chainId: 84532,
+    query: { enabled: isOwner },
   });
 
   // Deposit Transaction (Direct Native ETH transfer into ActionVault)
@@ -88,8 +101,9 @@ export default function VaultManagerPage() {
     error: depositError 
   } = useSendTransaction();
 
-  const { isLoading: isDepositConfirming, isSuccess: isDepositSuccess } = useWaitForTransactionReceipt({
+  const { isLoading: isDepositConfirming, data: depositReceipt } = useWaitForTransactionReceipt({
     hash: depositTxHash,
+    chainId: 84532,
   });
 
   // Contract Write Actions (emergencyWithdraw & executeSafeSweep)
@@ -100,47 +114,53 @@ export default function VaultManagerPage() {
     error: writeError 
   } = useWriteContract();
 
-  const { isLoading: isWriteConfirming, isSuccess: isWriteSuccess } = useWaitForTransactionReceipt({
+  const { isLoading: isWriteConfirming, data: writeReceipt } = useWaitForTransactionReceipt({
     hash: writeTxHash,
+    chainId: 84532,
   });
 
   // Refetch balances upon transaction confirmation
   useEffect(() => {
-    if (isDepositSuccess && depositTxHash) {
+    if (depositReceipt?.status === 'success' && depositTxHash) {
       refetchVaultBalance();
       refetchUserBalance();
       setActionSuccessMsg({
-        title: `Successfully deposited ${depositAmount} ETH into ActionVault!`,
+        title: 'Vault deposit confirmed on Base Sepolia.',
         txHash: depositTxHash,
       });
       setTimeout(() => setActionSuccessMsg(null), 8000);
     }
-  }, [isDepositSuccess, depositTxHash, depositAmount, refetchVaultBalance, refetchUserBalance]);
+  }, [depositReceipt, depositTxHash, depositAmount, refetchVaultBalance, refetchUserBalance]);
 
   useEffect(() => {
-    if (isWriteSuccess && writeTxHash) {
+    if (writeReceipt?.status === 'success' && writeTxHash) {
       refetchVaultBalance();
       refetchUserBalance();
+      refetchAuthorization();
       setIsPanicConfirmOpen(false);
       setActionSuccessMsg({
-        title: 'Emergency On-Chain Execution Confirmed on Base Sepolia!',
+        title: 'Vault transaction confirmed on Base Sepolia.',
         txHash: writeTxHash,
       });
       setTimeout(() => setActionSuccessMsg(null), 8000);
     }
-  }, [isWriteSuccess, writeTxHash, refetchVaultBalance, refetchUserBalance]);
+  }, [writeReceipt, writeTxHash, refetchVaultBalance, refetchUserBalance, refetchAuthorization]);
 
   const handleDeposit = () => {
-    if (!depositAmount || parseFloat(depositAmount) <= 0) return;
+    if (!canWrite || !userAddress || !/^\d+(\.\d{1,18})?$/.test(depositAmount) || parseEther(depositAmount) <= 0n) return;
     sendTransaction({
       to: vaultAddress,
+      chainId: 84532,
+      account: userAddress,
       value: parseEther(depositAmount),
     });
   };
 
   const handlePanicWithdraw = () => {
+    if (!canWrite || !userAddress) return;
     writeContract({
       address: vaultAddress,
+      account: userAddress,
       abi: ACTION_VAULT_ABI,
       functionName: 'emergencyWithdraw',
       args: [],
@@ -149,9 +169,11 @@ export default function VaultManagerPage() {
   };
 
   const handleToggleAuthorizeRsc = () => {
+    if (!canWrite || !userAddress || isRscAuthorized === undefined || authorizationError) return;
     const nextStatus = !isRscAuthorized;
     writeContract({
       address: vaultAddress,
+      account: userAddress,
       abi: ACTION_VAULT_ABI,
       functionName: 'setAuthorizedRSC',
       args: [CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS, nextStatus],
@@ -159,19 +181,20 @@ export default function VaultManagerPage() {
     });
   };
 
-  const formattedVaultEth = vaultBalance?.value !== undefined 
-    ? parseFloat(formatEther(vaultBalance.value)).toFixed(4)
-    : '0.0020';
-  
-  const formattedVaultUsd = (parseFloat(formattedVaultEth) * 2500).toFixed(2);
+  const formattedVaultEth = vaultBalance && !vaultBalanceError ? formatEther(vaultBalance.value) : undefined;
 
-  const safeAddressDisplay = backupSafeAddress 
-    ? String(backupSafeAddress)
-    : CONTRACT_ADDRESSES.DEFAULT_BACKUP_SAFE_SWEEP;
-
-  const isOwner = userAddress && vaultOwner 
-    ? userAddress.toLowerCase() === String(vaultOwner).toLowerCase()
-    : true;
+  if (!isOwner) {
+    return (
+      <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
+        <h1 className="text-xl font-bold text-white font-display">Vault Manager</h1>
+        <p role="status" className="text-sm text-slate-300">
+          {!isConnected ? 'Connect a wallet to view your Vault.' :
+            ownerError ? 'Unable to verify Vault ownership on Base Sepolia.' :
+            ownerPending ? 'Checking Vault ownership?' : 'No verified Vault is linked to this wallet.'}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6 select-none font-sans">
@@ -263,47 +286,8 @@ export default function VaultManagerPage() {
         </div>
       )}
 
-      {/* Executive Telemetry Ribbon */}
-      <MetricRibbon
-        items={[
-          {
-            label: 'Vault Collateral',
-            value: `${formattedVaultEth} ETH`,
-            hint: `~$${formattedVaultUsd}`,
-            badge: {
-              text: 'VERIFIED',
-              tone: 'good',
-            },
-          },
-          {
-            label: 'Delegated RSC Access',
-            value: isRscAuthorized !== false ? '01 Active' : '00 Active',
-            hint: 'RSC Contracts',
-            badge: {
-              text: isRscAuthorized !== false ? 'AUTHORIZED' : 'REVOKED',
-              tone: isRscAuthorized !== false ? 'good' : 'warn',
-            },
-          },
-          {
-            label: 'Storm Rate-Limiter',
-            value: '300s',
-            hint: 'Cooldown',
-            badge: {
-              text: 'ARMED',
-              tone: 'info',
-            },
-          },
-          {
-            label: 'Anti-Drainer Cold Safe',
-            value: truncateAddress(safeAddressDisplay, 6),
-            hint: 'Target Safe',
-            badge: {
-              text: '100% SWEEP',
-              tone: 'neutral',
-            },
-          },
-        ]}
-      />
+      {vaultBalanceError && <p role="status" className="text-sm text-amber-300">Unable to read the Vault balance.</p>}
+      {backupSafeAddress && <p className="text-xs text-slate-300">Backup wallet {backupSafeAddress}</p>}
 
       {/* Main Operations Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -340,10 +324,7 @@ export default function VaultManagerPage() {
               </div>
               <div className="text-right">
                 <div className="text-base font-semibold text-white font-mono tabular-nums">
-                  {formattedVaultEth} ETH
-                </div>
-                <div className="text-[11px] text-emerald-400 font-mono tabular-nums">
-                  ~${formattedVaultUsd} USD
+                  {formattedVaultEth !== undefined ? `${formattedVaultEth} ETH` : '?'}
                 </div>
               </div>
             </div>
@@ -389,7 +370,7 @@ export default function VaultManagerPage() {
                 />
                 <button
                   onClick={handleDeposit}
-                  disabled={isDepositPending || isDepositConfirming || !isConnected || !isCorrectChain}
+                  disabled={isDepositPending || isDepositConfirming || !canWrite}
                   className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-white hover:bg-white/90 text-black shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isDepositPending || isDepositConfirming ? (
@@ -406,6 +387,7 @@ export default function VaultManagerPage() {
                 </button>
               </div>
 
+              {depositReceipt?.status === 'reverted' && <p role="alert">Vault deposit reverted.</p>}
               {depositError && (
                 <div className="text-[11px] text-rose-400 mt-2 font-mono">
                   {depositError.message.slice(0, 100)}...
@@ -430,9 +412,6 @@ export default function VaultManagerPage() {
                   <span className="text-[11px] text-slate-400">Verified permissions for cross-chain execution</span>
                 </div>
               </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20">
-                1 Delegation
-              </span>
             </div>
 
             {/* Delegation Row */}
@@ -442,11 +421,11 @@ export default function VaultManagerPage() {
                   <div className="text-xs font-semibold text-white flex items-center gap-2">
                     <span>StopLoss_Pipeline</span>
                     <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full border ${
-                      isRscAuthorized !== false
+                      isRscAuthorized === true
                         ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10'
                         : 'text-slate-400 border-white/10 bg-white/[0.04]'
                     }`}>
-                      {isRscAuthorized !== false ? 'ACTIVE' : 'REVOKED'}
+                      {authorizationError ? 'READ FAILED' : isRscAuthorized === undefined ? '?' : isRscAuthorized ? 'AUTHORIZED' : 'NOT AUTHORIZED'}
                     </span>
                   </div>
                   <div className="text-[11px] font-mono text-slate-400 mt-0.5">
@@ -465,21 +444,16 @@ export default function VaultManagerPage() {
                 </a>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-white/[0.04] text-slate-400">
-                <div>Capability: <strong className="text-slate-200">Uniswap V2 Swap</strong></div>
-                <div>Invariant: <strong className="text-cyan-300 font-mono">300s Cooldown</strong></div>
-              </div>
-
               <button
                 onClick={handleToggleAuthorizeRsc}
-                disabled={isWritePending || isWriteConfirming || !isConnected || !isCorrectChain}
+                disabled={isWritePending || isWriteConfirming || !canWrite || authorizationError || isRscAuthorized === undefined}
                 className={`w-full py-2 px-3 text-xs font-semibold rounded-lg border transition-colors cursor-pointer disabled:opacity-50 ${
-                  isRscAuthorized !== false
+                  isRscAuthorized === true
                     ? 'bg-[#121318] hover:bg-rose-500/10 text-slate-300 hover:text-rose-300 border-white/10 hover:border-rose-500/30'
                     : 'bg-emerald-600 hover:bg-emerald-500 text-white border-transparent'
                 }`}
               >
-                {isRscAuthorized !== false ? 'Revoke Contract Authorization' : 'Grant Contract Authorization'}
+                {isRscAuthorized === true ? 'Revoke Contract Authorization' : 'Grant Contract Authorization'}
               </button>
             </div>
           </div>
@@ -509,14 +483,14 @@ export default function VaultManagerPage() {
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <p className="text-xs text-rose-200/80 leading-relaxed max-w-2xl">
-            Unconditionally withdraw 100% of Vault ETH ({formattedVaultEth} ETH) back to your owner wallet in a single emergency transaction. This bypasses all active automations, cooldowns, and Reactive Smart Contracts.
+            Unconditionally withdraw 100% of Vault ETH back to your owner wallet in a single emergency transaction. This bypasses all active automations, cooldowns, and Reactive Smart Contracts.
           </p>
 
           <div className="shrink-0">
             {!isPanicConfirmOpen ? (
               <button
                 onClick={() => setIsPanicConfirmOpen(true)}
-                disabled={isWritePending || isWriteConfirming || !isConnected || !isCorrectChain}
+                disabled={isWritePending || isWriteConfirming || !canWrite}
                 className="px-4 py-2 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
               >
                 Emergency Withdraw All
