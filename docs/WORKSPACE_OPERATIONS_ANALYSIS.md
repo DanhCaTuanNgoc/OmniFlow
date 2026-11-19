@@ -6,7 +6,7 @@ Workspace cho phép thiết kế automation khi chưa kết nối ví và quản
 
 | Màn hình | Chế độ khách | Sau khi kết nối và xác thực ví |
 |---|---|---|
-| **Pipeline Studio** | Canvas trống hoặc recipe đã chọn. Cho kéo thả, nối node, cấu hình, validate, lưu nháp cục bộ và export JSON. Các tham số My Connected Wallet và My ActionVault chưa xác định. Deploy hướng dẫn kết nối ví. | Liệt kê canvas theo ví. Cho mở, sửa, đổi tên, nhân bản và lưu nháp. Cho deploy revision hợp lệ vào Vault của ví. Graph của deployment đã xác nhận mở để xem cấu hình, trạng thái và lịch sử. Chỉnh graph tạo revision nháp mới. |
+| **Pipeline Studio** | Hiện danh sách nháp trên trình duyệt. Tạo pipeline hoặc dùng recipe để mở Visual Board. Cho sửa graph, validate, lưu cục bộ và export JSON. Các tham số My Connected Wallet và My ActionVault chưa xác định. Deploy hướng dẫn kết nối ví. | Liệt kê pipeline theo ví. Cho mở, sửa, đổi tên, nhân bản và lưu nháp. Cho deploy revision hợp lệ vào Vault của ví. Graph của deployment đã xác nhận mở để xem cấu hình, trạng thái và lịch sử. Chỉnh graph tạo revision nháp mới. Xem mục 7. |
 | **Active Automations** | Hiện CTA kết nối và điều hướng đến Studio hoặc thư viện. Ẩn số pipeline, thẻ gas và dữ liệu demo. | Hiện deployment của ví, lọc theo trạng thái. Mỗi thẻ hiện địa chỉ RSC/Vault, mạng, quỹ phí và kết quả gần nhất nếu có. Cho tiếp tục bước thiếu, refuel và dùng các điều khiển vòng đời đã được contract hỗ trợ và ví có quyền. |
 | **Template Library** | Catalog công khai. Cho tìm, lọc, xem chi tiết và Use Recipe để tạo nháp cục bộ. | Vẫn dùng catalog chung. Use Recipe tạo canvas mới theo ví. Các trường phụ thuộc tài khoản điền từ ví/Vault đã xác minh và được kiểm tra trước deploy. Nêu rõ template chỉ dùng thiết kế khi bộ triển khai chưa hỗ trợ. |
 | **Vault Manager** | CTA kết nối. Địa chỉ, số dư và quyền RSC chưa xác định. Khóa nạp, rút, cấp quyền và Panic Button. | Tra cứu Vault trên Base Sepolia và xác minh owner. Nếu chưa có Vault, hiện tạo hoặc liên kết khi được hỗ trợ. Khi có Vault, đọc số dư ETH/token và quyền từng RSC. Nạp, cấp/thu hồi quyền và rút khẩn cấp theo khả năng hợp đồng. Hàm emergencyWithdraw hiện rút ETH. Rút một phần hoặc rút ERC-20 cần khả năng riêng. |
@@ -104,3 +104,41 @@ Lưu nonce và phiên SIWE bằng cơ chế có khả năng xác minh và thu h�
 **Chuyển dữ liệu hiện có.** Chỉ liên kết deployment cũ khi có graph hoặc metadata hợp lệ, địa chỉ RSC/Vault, bằng chứng deployment và quyền sở hữu Vault. Để Workspace trống nếu không có dữ liệu đủ điều kiện. Dữ liệu proof công khai vẫn truy cập qua trang riêng.
 
 **Sự cố và kiểm tra trước rollout.** Khi Supabase lỗi, báo không tải hoặc lưu được Workspace, giữ nháp cục bộ và giữ lịch sử đã tải của đúng ví với thời điểm cập nhật. Tạm ngừng bắt đầu deploy mới nếu chưa ghi được job. Theo dõi lỗi DB, deployment kẹt theo bước và độ trễ indexer. Kiểm tra backup và diễn tập khôi phục sang DB test, sau đó thử khôi phục quan hệ ví–canvas–revision–deployment và tiến trình deploy còn dở.
+
+## 7. Pipeline Studio mở bằng danh sách pipeline
+
+### 7.1 Phù hợp nghiệp vụ và phạm vi
+
+Hiện `/workspace/studio` mở thẳng một canvas khởi tạo từ graph mặc định. Người dùng thiếu nơi tìm lại bản nháp hoặc chọn giữa nhiều canvas. Đề xuất giữ năm mục Workspace và đưa Visual Board thành màn hình con của Pipeline Studio. Danh sách là điểm vào mặc định. Tạo mới, Use Recipe và đường dẫn đến một revision có thể mở thẳng editor. [Studio route](../frontend/src/app/workspace/studio/page.tsx) · [StudioCanvas](../frontend/src/components/canvas/StudioCanvas.tsx)
+
+| Màn hình | Đơn vị hiển thị | Trách nhiệm |
+|---|---|---|
+| **Pipeline Studio** | Một dòng theo Pipeline | Tìm, lọc, mở, đổi tên, nhân bản và lưu trữ pipeline. Tóm tắt bản nháp và revision có deployment. |
+| **Visual Board** | Một Revision thuộc Pipeline | Sửa graph của bản nháp, kiểm tra, lưu và bắt đầu deploy. Xem snapshot đã deploy ở chế độ chỉ đọc, có thể tạo nháp từ snapshot đó. |
+| **Active Automations** | Một Deployment của Revision | Xem RSC, Vault, quỹ phí, lịch sử thực thi và trạng thái đã đối soát. Tiếp tục thiết lập, Refuel, Pause và Resume theo quyền và khả năng deployment. |
+
+Ví dụ, ETH Stop-Loss có **v1 đang chạy** và **v2 đang soạn**. Studio hiển thị một dòng với cả hai thông tin. Mở mặc định vào v2. Thao tác **Xem bản đang chạy** mở snapshot v1 hoặc deployment v1 trong Active. Lưu v2 chỉ cập nhật revision nháp. Studio và Active dùng cùng nguồn trạng thái deployment để hai màn hình hiển thị nhất quán.
+
+### 7.2 Luồng danh sách và Visual Board
+
+- Danh sách MVP hiển thị tên, lần sửa gần nhất, bản nháp và revision đang chạy nếu có. Bộ lọc gồm **Tất cả**, **Có bản nháp**, **Có deployment** và **Đã lưu trữ**. Các bộ lọc có thể giao nhau. Phân biệt đang tải, danh sách rỗng và lỗi đọc.
+- **Khách** có thể tạo, mở, sửa, nhân bản, export và xóa nháp trên trình duyệt. Nếu danh sách rỗng, hiện **Tạo pipeline** và **Dùng template**. Deploy hướng dẫn kết nối và xác thực ví.
+- **Ví đã xác thực** tải danh sách từ API theo ví và môi trường. Cho nhập nháp cục bộ khi người dùng chọn. Khi đổi ví hoặc ngắt kết nối, đóng graph riêng của ví cũ và bỏ phản hồi tải đến muộn.
+- **Mở pipeline** chọn nháp gần nhất nếu có. Nếu chỉ có snapshot đã deploy, mở chế độ xem và hiện **Tạo bản nháp từ phiên bản này**. Editor hiển thị tên, revision, trạng thái lưu và đường quay lại danh sách. Khi tải graph lỗi hoặc thiếu quyền, hiển thị lỗi tương ứng. Khi còn thay đổi chưa lưu, cho lưu hoặc xác nhận trước khi rời editor.
+- **Use Recipe** tạo một pipeline nháp mới trong Workspace hoặc trên trình duyệt, tùy phiên, rồi mở ngay Visual Board. Tải lại URL editor phải mở lại nháp đã tạo, tránh tạo bản sao từ cùng thao tác điều hướng. Khi quay lại danh sách, nháp đã xuất hiện.
+- Xóa nháp chỉ xóa revision nháp theo quyền. Lưu trữ pipeline chỉ thay đổi danh sách. Việc dừng deployment đang chạy được thực hiện trên chain và theo khả năng hợp đồng.
+
+### 7.3 Tác động kỹ thuật và thứ tự thực hiện
+
+1. **Tách route và tái sử dụng canvas.** Giữ `/workspace` chuyển đến `/workspace/studio` và dùng route đó cho danh sách. Đề xuất `/workspace/studio/[pipelineId]` cho editor, kèm `revisionId` khi mở một snapshot cụ thể. Sidebar giữ trạng thái chọn Studio trên cả hai route. `StudioCanvas` nhận graph theo revision và nạp lại khi đổi đối tượng. Tái sử dụng palette, inspector và validation hiện có. [Workspace redirect](../frontend/src/app/workspace/page.tsx) · [Sidebar](../frontend/src/components/common/Sidebar.tsx)
+2. **Hoàn thiện nháp cục bộ và tương thích điều hướng.** Gán ID ổn định cho nháp khách. Đổi Use Recipe và CTA tạo pipeline sang luồng tạo nháp rồi mở editor. Giữ đường dẫn `/workspace/studio?recipe=...` hoạt động trong giai đoạn chuyển đổi. Bước này có thể làm trước Supabase. [Template Library](../frontend/src/app/workspace/templates/page.tsx) · [Active Automations](../frontend/src/app/workspace/active/page.tsx)
+3. **Đồng bộ theo ví với Supabase.** Dùng `pipelines` và `pipeline_revisions` qua Express. API xác thực quyền đọc và ghi theo ví, xử lý ghi đè giữa nhiều tab và cho nhập nháp khách. Chỉ cung cấp đồng bộ đa thiết bị sau khi dữ liệu đã được lưu bền vững theo mục 6.
+4. **Gắn deploy với revision đã lưu.** Truyền ID revision để backend gắn deployment, RSC và receipt vào đúng snapshot. Studio hiển thị trạng thái tóm tắt, Active mở đúng deployment và có liên kết về snapshot. Thay đổi route và mô hình lưu trữ này thực hiện ở frontend/backend.
+
+### 7.4 Nghiệm thu
+
+1. Khách vào Studio thấy danh sách hoặc trạng thái rỗng. Dùng recipe tạo một nháp, sửa graph, quay về danh sách và reload. Mở lại nháp cho đúng node, cạnh và tham số đã lưu.
+2. Đi thẳng từ URL editor, quay lại danh sách và dùng nút Back. URL recipe cũ mở được graph đúng mẫu. Reload editor không tự tạo thêm pipeline.
+3. Ví A lưu nhiều canvas và mở cùng dữ liệu trên thiết bị khác. Khi đổi sang ví B trong editor, graph của A biến mất và đường dẫn riêng của A không tải được bằng phiên B.
+4. Deploy v1 rồi tạo nháp v2. Studio hiện một dòng với v1 đang chạy và v2 đang soạn. Active trỏ đến deployment v1. Mở v1 là chỉ đọc. Sửa hoặc xóa nháp v2 không thay đổi cấu hình v1.
+5. Reload giữa deploy và cấp quyền. Mở lại đúng pipeline và bước còn thiếu. Thử lại không tạo RSC trùng và không mất liên kết với snapshot.
