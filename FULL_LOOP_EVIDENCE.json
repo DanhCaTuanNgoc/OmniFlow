@@ -1,11 +1,53 @@
 {
   "project": "OmniFlow",
   "track": "Set It and Forget It",
-  "buildathon": "Reactive Omni Buildathon (Nov 5 - Dec 5, 2026)",
-  "testExecutionTimestamp": "2026-11-19T07:27:03.000Z",
-  "lastVerifiedAt": "2026-11-19T07:39:16.039Z",
-  "status": "PARTIAL_ONCHAIN_CALLBACK_UNCONFIRMED",
-  "verificationScope": "Real public testnet receipts and RPC reads. The origin is a deployed test pool. Read-only simulations are diagnostic and do not count as execution.",
+  "testExecutionTimestamp": "2026-11-19T13:07:32.000Z",
+  "status": "VERIFIED_FULL_LOOP_ON_TESTNET",
+  "scenario": "Stop-loss executed on public testnets using a deployed test pool and a test token.",
+  "verifiableTransactions": {
+    "step1_originEvent": {
+      "chainId": 84532,
+      "contract": "0x9a796B794999cAbCd10d08F777B24ceb76e34B3E",
+      "event": "Sync",
+      "blockNumber": 60858909,
+      "logIndex": 0,
+      "txHash": "0xbcc9358892705f831b7733cf47c6a707b2b017a6d3a60e5c018821e6713ed31a",
+      "explorerUrl": "https://sepolia.basescan.org/tx/0xbcc9358892705f831b7733cf47c6a707b2b017a6d3a60e5c018821e6713ed31a",
+      "status": "success"
+    },
+    "step2_reactiveExecution": {
+      "chainId": 5318007,
+      "contract": "0x005d4cB896c9e0B07Bbf961FDC26b098D84079d7",
+      "event": "OmniCallbackRequested",
+      "refTx": "0xbcc9358892705f831b7733cf47c6a707b2b017a6d3a60e5c018821e6713ed31a",
+      "blockNumber": 8735587,
+      "txHash": "0xf66b1f9a183811bc9a857027e42a7c3aa8d8f13cef2c6c3156508752a7ffe0eb",
+      "explorerUrl": "https://lasna.reactscan.net/tx/0xf66b1f9a183811bc9a857027e42a7c3aa8d8f13cef2c6c3156508752a7ffe0eb",
+      "status": "success",
+      "refEventIndex": 0,
+      "systemEvent": "CallbackRequest",
+      "systemContract": "0x8888888888888888888888888888888888888888"
+    },
+    "step3_callbackExecution": {
+      "chainId": 84532,
+      "contract": "0x9670EEAdE57d62127f513414d87B0F841A763dd5",
+      "proxy": "0x476F44b11F5C942c58f4c8E3d0300E5710743585",
+      "event": "StopLossExecuted",
+      "status": "success",
+      "blockNumber": 60858916,
+      "txHash": "0x6683e71dfc3fb75e1b103985e79a027a8087217c2e23077d26897584d177d052",
+      "token": "0x8c2D098617102a64925CC683d9B444F938A96082",
+      "recipient": "0xE50dD8e4aE1b1Dd46334eA22C10129Ee4d6736eF",
+      "ethAmountIn": "1000000000000000",
+      "minUsdcOut": "1324689284783071277",
+      "tokenAmountOut": "1394409773455864503",
+      "explorerUrl": "https://sepolia.basescan.org/tx/0x6683e71dfc3fb75e1b103985e79a027a8087217c2e23077d26897584d177d052",
+      "proxyMethod": "deliverCallback(uint8,bytes)",
+      "tokenDecimals": 18,
+      "tokenContract": "MockUSDC"
+    }
+  },
+  "lastVerifiedAt": "2026-11-19T13:13:45.873Z",
   "contracts": {
     "originPair": {
       "network": "Base Sepolia (Chain ID: 84532)",
@@ -17,124 +59,40 @@
     "destinationVault": {
       "network": "Base Sepolia (Chain ID: 84532)",
       "contractName": "ActionVault",
-      "address": "0x005d4cb896c9e0B07Bbf961FDC26b098D84079d7",
-      "deployTxHash": "0xf5632a0c0dd1762a073754de2ac078d5db12032b23977032810fad4ac9e4232d",
-      "explorerUrl": "https://sepolia.basescan.org/address/0x005d4cb896c9e0b07bbf961fdc26b098d84079d7",
+      "address": "0x9670EEAdE57d62127f513414d87B0F841A763dd5",
+      "deployTxHash": "0x9732fa7fd5ec63c0959baff050a8a4047e66b89084aa42de4a39ead16b504a6f",
+      "explorerUrl": "https://sepolia.basescan.org/address/0x9670EEAdE57d62127f513414d87B0F841A763dd5",
       "fundedEth": "0.002 ETH",
-      "authorizedRscTx": "0xdaddfcadfbe4d2afb563ae57aa5f65cce67a281b4d733eb88d9b457ab1df1cc8"
+      "authorizedRscTx": "0x22ee14fd2494e3d043e4893094a712ab0f80e3d3b598ed79b03876fd817046eb"
     },
     "reactiveSmartContract": {
       "network": "Reactive Omni Lasna Testnet (Chain ID: 5318007)",
       "contractName": "StopLoss_Pipeline",
-      "address": "0x8c2d098617102a64925cc683d9b444f938a96082",
-      "deployTxHash": "0xafb6bf9c969f26e42d2ffe97b6d990113a4b8fc1f5445cc1f99dfcb0b7f34bc0",
-      "explorerUrl": "https://lasna.reactscan.net/address/0x8c2d098617102a64925cc683d9b444f938a96082",
+      "address": "0x005d4cB896c9e0B07Bbf961FDC26b098D84079d7",
+      "deployTxHash": "0x43df9857ca8e9303814a3424f3477c862dffcb9bd4ebd25c8f8cab01d1f896fd",
+      "explorerUrl": "https://lasna.reactscan.net/address/0x005d4cB896c9e0B07Bbf961FDC26b098D84079d7",
       "subscribedOrigin": "0x9a796b794999cabcd10d08f777b24ceb76e34b3e (Base Sepolia: 84532)",
       "subscribedTopic": "Sync(uint112,uint112) -> 0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1"
     }
   },
   "funding": {
-    "reactiveExecution": {
-      "chainId": 5318007,
-      "method": "depositTo(address)",
-      "recipient": "0x8c2d098617102a64925cc683d9b444f938a96082",
-      "systemContract": "0x8888888888888888888888888888888888888888",
+    "faucetDepositsBaseSepolia": {
+      "amountEachEth": "0.002",
+      "totalReceivedLReact": "0.4",
+      "txHashes": [
+        "0x3d10048f198975cdfe1e1ff56c3953d16da90be76cd14939492d05129809d588",
+        "0xc6f186600280a61b866e8179e4a39bbf90049b6dd84f51bf85fdfb6d4d01e15a"
+      ]
+    },
+    "rscReserve": {
       "amountLReact": "0.12",
-      "txHash": "0xcafa98974e24de95152dbbe5dc02004704f6e7a81c4f17e4d16f952cb10aa930",
-      "blockNumber": 8716298,
-      "status": "success",
-      "debtAfterDepositLReact": "0",
-      "reservesAfterDepositLReact": "0.1006681",
-      "explorerUrl": "https://lasna.reactscan.net/tx/0xcafa98974e24de95152dbbe5dc02004704f6e7a81c4f17e4d16f952cb10aa930"
+      "txHash": "0x7f36260f6415424dd6390fb22956fc1a9ec6546b94a06a16a3d21206c4d8fd53"
     },
-    "configuredCallbackProxy": {
-      "chain": "Base Sepolia (Chain ID: 84532)",
-      "callbackProxy": "0xa6eA49Ed671B8a4dfCDd34E36b7a75Ac79B8A5a6",
-      "destinationVault": "0x005d4cb896c9e0B07Bbf961FDC26b098D84079d7",
-      "rscAuthorizationTx": "0xdaddfcadfbe4d2afb563ae57aa5f65cce67a281b4d733eb88d9b457ab1df1cc8",
-      "proxyReserveDepositTx": "0x419d8dd4acb00f471f4e40282c473abc4b591e44e695a299281640a5f96b0955",
-      "proxyReserveDepositBlockNumber": 60318443,
-      "proxyReserveDepositExplorerUrl": "https://sepolia.basescan.org/tx/0x419d8dd4acb00f471f4e40282c473abc4b591e44e695a299281640a5f96b0955",
-      "reservesBeforeRunEth": "0.0005",
-      "debtBeforeRunEth": "0"
+    "proxyReserve": {
+      "amountEth": "0.0005",
+      "txHash": "0xbcd1023332507e7c63b75837b14ebec80064b5c1c2cff096bff7513e49b98a95"
     }
   },
-  "verifiableTransactions": {
-    "step1_originEvent": {
-      "chainId": 84532,
-      "contract": "0x9a796b794999cabcd10d08f777b24ceb76e34b3e",
-      "event": "Sync(uint112,uint112)",
-      "blockNumber": 60756774,
-      "logIndex": 1,
-      "status": "success",
-      "txHash": "0x62c5c19a5813ccdb3c6e43177d23a875f693dc0506d623466c89922c276bde38",
-      "explorerUrl": "https://sepolia.basescan.org/tx/0x62c5c19a5813ccdb3c6e43177d23a875f693dc0506d623466c89922c276bde38"
-    },
-    "step2_reactiveExecution": {
-      "chainId": 5318007,
-      "contract": "0x8c2d098617102a64925cc683d9b444f938a96082",
-      "blockNumber": 8716390,
-      "status": "success",
-      "txHash": "0xf99ac1d22943201695226981bed97ea3dbe4adca281086fb70054e01fbef1059",
-      "refChainId": 84532,
-      "refTx": "0x62c5c19a5813ccdb3c6e43177d23a875f693dc0506d623466c89922c276bde38",
-      "refEventIndex": 1,
-      "eventsEmitted": [
-        "ConditionTriggered",
-        "Callback"
-      ],
-      "callbackGasLimit": 350000,
-      "explorerUrl": "https://lasna.reactscan.net/tx/0xf99ac1d22943201695226981bed97ea3dbe4adca281086fb70054e01fbef1059"
-    },
-    "step3_callbackExecution": {
-      "chainId": 84532,
-      "contract": "0x005d4cb896c9e0B07Bbf961FDC26b098D84079d7",
-      "status": "unconfirmed",
-      "txHash": null,
-      "expectedEvent": "StopLossExecuted",
-      "lasnaSystemDeliveryRecords": 0,
-      "vaultLogsFromBlock": 60756774,
-      "vaultLogsThroughBlock": 60760444,
-      "vaultLogCount": 0
-    }
-  },
-  "diagnostics": {
-    "lasnaFundingAfterRun": {
-      "debtLReact": "0",
-      "reservesLReact": "0.0847374"
-    },
-    "callbackProxyAuthorization": {
-      "configuredProxy": "0xa6eA49Ed671B8a4dfCDd34E36b7a75Ac79B8A5a6",
-      "currentDocumentedProxy": "0x476F44b11F5C942c58f4c8E3d0300E5710743585",
-      "source": "https://dev.reactive.network/origins-and-destinations",
-      "method": "eth_call",
-      "configuredProxySimulation": "success",
-      "currentProxySimulation": "reverted: Authorized sender only"
-    }
-  },
-  "previousAttempt": {
-    "testExecutionTimestamp": "2026-11-18T14:04:15.000Z",
-    "status": "PARTIAL_ONCHAIN_CALLBACK_UNCONFIRMED",
-    "originEvent": {
-      "chain": "Base Sepolia (Chain ID: 84532)",
-      "contract": "0x9a796b794999cabcd10d08f777b24ceb76e34b3e",
-      "event": "Sync(reserve0=1 ether, reserve1=1500 ether)",
-      "blockNumber": 60317870,
-      "txHash": "0x29b31cc9e38050c6051d07b76bc27634031159c7523e7706f2ddabddf5e8d457",
-      "explorerUrl": "https://sepolia.basescan.org/tx/0x29b31cc9e38050c6051d07b76bc27634031159c7523e7706f2ddabddf5e8d457"
-    },
-    "reactiveExecution": {
-      "chain": "Reactive Omni Lasna Testnet (Chain ID: 5318007)",
-      "contract": "0x8c2d098617102a64925cc683d9b444f938a96082",
-      "method": "react(LogRecord calldata log)",
-      "blockNumber": 8633526,
-      "txHash": "0xec28373c12498a272027da2b40ade8fa72af3eba8d7569c4b98de2792a2b7ea5",
-      "eventsEmitted": [
-        "ConditionTriggered(currentPrice=1500 ether, blockTime=timestamp)",
-        "Callback(chain_id=84532, _contract=0x005d4cb896c9e0b07bbf961fdc26b098d84079d7, gas_limit=350000, payload)"
-      ],
-      "systemContractCall": "requestCallbackV_1_0 on 0x8888888888888888888888888888888888888888",
-      "explorerUrl": "https://lasna.reactscan.net/tx/0xec28373c12498a272027da2b40ade8fa72af3eba8d7569c4b98de2792a2b7ea5"
-    }
-  }
+  "verificationMethod": "Matched the Lasna receipt origin reference and system CallbackRequest to the official Base Sepolia proxy calldata, including the injected RSC address. Confirmed StopLossExecuted and the test-token Transfer in the same destination receipt. Lasna getCallbacks returned no indexed record when verified.",
+  "originToDestinationSeconds": 2
 }

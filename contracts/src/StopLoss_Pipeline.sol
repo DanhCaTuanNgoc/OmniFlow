@@ -4,6 +4,17 @@ pragma solidity >=0.8.20;
 import '@reactive-network/reactive-lib/src/interfaces/IReactive.sol';
 import '@reactive-network/reactive-lib/src/abstract-base/AbstractReactive.sol';
 
+interface IOmniCallbackSystem {
+    struct Configuration {
+        uint256 chainId;
+        address recipient;
+        uint64 gasLimit;
+        bytes payload;
+    }
+
+    function requestCallbackV_1_0(Configuration calldata configuration) external;
+}
+
 /**
  * @title StopLoss_Pipeline
  * @notice Bộ não điều phối tự động hóa chạy trên Reactive Omni (Lasna Testnet)
@@ -11,6 +22,8 @@ import '@reactive-network/reactive-lib/src/abstract-base/AbstractReactive.sol';
  *      Hỗ trợ Stateful Anti-Wick Counter, Anchored Sliding Window (Price Velocity) và Dynamic Origin Chain.
  */
 contract StopLoss_Pipeline is IReactive, AbstractReactive {
+    address private constant OMNI_SYSTEM = 0x8888888888888888888888888888888888888888;
+    uint64 private constant CALLBACK_GAS = 350000;
     uint256 public constant DEFAULT_ORIGIN_CHAIN_ID = 84532; // Base Sepolia
     uint256 public constant SYNC_TOPIC = 0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1;
 
@@ -36,6 +49,7 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
     uint256 public callbacksEmitted;
     uint256 public lastTriggeredTimestamp;
 
+    event OmniCallbackRequested(uint256 indexed chain_id, address indexed _contract, uint64 indexed gas_limit, bytes payload);
     event ConditionTriggered(uint256 currentPrice, uint256 blockTime);
 
     constructor(
@@ -66,7 +80,11 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
         originTopic0 = _originTopic0 != 0 ? _originTopic0 : SYNC_TOPIC;
 
         // Đăng ký event subscription với Reactive System Contract khi deploy on-chain (!vm)
-        if (!vm && address(service) != address(0)) {
+        if (OMNI_SYSTEM.code.length != 0) {
+            vendor = service = ISystemContract(payable(OMNI_SYSTEM));
+            addAuthorizedSender(OMNI_SYSTEM);
+        }
+        if (address(service).code.length != 0) {
             service.subscribe(
                 originChainId,
                 _pairAddress,
@@ -80,6 +98,11 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
 
     // Tương thích cả Reactive Omni (CometBFT) lẫn Legacy ReactVM
     function react(LogRecord calldata log) external {
+        if (OMNI_SYSTEM.code.length != 0) {
+            require(msg.sender == OMNI_SYSTEM, "Only Omni system");
+        } else {
+            require(vm, "VM only");
+        }
         if (log._contract != pairAddress) return;
         if (log.topic_0 != 0 && log.topic_0 != originTopic0) return;
 
@@ -89,6 +112,7 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
         // Giải mã reserve0 và reserve1 từ event Sync
         (uint112 reserve0, uint112 reserve1) = abi.decode(log.data, (uint112, uint112));
         if (reserve0 == 0) return;
+
 
         // Tỷ giá hiện tại chuẩn 18 decimals: (reserve1 * 1e18) / reserve0
         uint256 currentPrice = (uint256(reserve1) * 1e18) / uint256(reserve0);
@@ -148,35 +172,13 @@ contract StopLoss_Pipeline is IReactive, AbstractReactive {
             passedThreshold
         );
 
-        // Phát ra Callback hướng tới Base Sepolia (Chain ID 84532)
-        // 1. Chuẩn Event (Legacy & Hybrid Relayer)
-        emit Callback(
-            DEFAULT_ORIGIN_CHAIN_ID, // Callback đích luôn thực thi trên ActionVault ở Base Sepolia
-            actionVault,
-            350000, // Gas limit đủ cho Uniswap swap
-            payload
-        );
-
-        // 2. Chuẩn System Contract Call (Reactive Omni Direct System Request)
-        (bool s1, ) = address(0x8888888888888888888888888888888888888888).call(
-            abi.encodeWithSignature(
-                "requestCallbackV_1_0((uint256,address,uint64,bytes))",
-                DEFAULT_ORIGIN_CHAIN_ID,
-                actionVault,
-                uint64(350000),
-                payload
-            )
-        );
-        if (!s1 && address(service) != address(0)) {
-            address(service).call(
-                abi.encodeWithSignature(
-                    "requestCallbackV_1_0((uint256,address,uint64,bytes))",
-                    DEFAULT_ORIGIN_CHAIN_ID,
-                    actionVault,
-                    uint64(350000),
-                    payload
-                )
+        if (OMNI_SYSTEM.code.length != 0) {
+            IOmniCallbackSystem(OMNI_SYSTEM).requestCallbackV_1_0(
+                IOmniCallbackSystem.Configuration(DEFAULT_ORIGIN_CHAIN_ID, actionVault, CALLBACK_GAS, payload)
             );
+            emit OmniCallbackRequested(DEFAULT_ORIGIN_CHAIN_ID, actionVault, CALLBACK_GAS, payload);
+        } else {
+            emit Callback(DEFAULT_ORIGIN_CHAIN_ID, actionVault, CALLBACK_GAS, payload);
         }
     }
 }

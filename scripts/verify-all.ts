@@ -87,16 +87,14 @@ async function main() {
 
   if (hasEvidence) {
     const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
-    assertCheck('Evidence Status is VERIFIED', evidence.status === 'VERIFIED_100%_ONCHAIN_REAL');
+    assertCheck('Evidence Status is VERIFIED', evidence.status === 'VERIFIED_FULL_LOOP_ON_TESTNET');
     assertCheck('Origin Tx Hash recorded', Boolean(evidence.verifiableTransactions?.step1_originEvent?.txHash));
     assertCheck('Reactive Tx Hash recorded', Boolean(evidence.verifiableTransactions?.step2_reactiveExecution?.txHash));
-    assertCheck(
-      'Destination Proxy Config Tx recorded',
-      Boolean(
-        evidence.verifiableTransactions?.step3_callbackConfigAndProxy?.rscAuthorizationTx ||
-        evidence.verifiableTransactions?.step3_destinationCallback?.txHash
-      )
-    );
+    const destination = evidence.verifiableTransactions?.step3_callbackExecution;
+    assertCheck('Destination stop-loss receipt recorded',
+      destination?.status === 'success' && destination?.event === 'StopLossExecuted' &&
+      /^0x[0-9a-f]{64}$/i.test(destination?.txHash ?? '') &&
+      /^[1-9][0-9]*$/.test(destination?.tokenAmountOut ?? ''));
   }
 
   // 4. WCAG 2.1 AA UI Design Tokens Audit

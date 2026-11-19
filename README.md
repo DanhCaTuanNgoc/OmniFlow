@@ -3,7 +3,7 @@
 
 [![Hackathon](https://img.shields.io/badge/Hackathon-Reactive%20Omni%20Buildathon-blue)](https://dev.reactive.network/)
 [![Track](https://img.shields.io/badge/Track-Set%20It%20and%20Forget%20It-green)](#)
-[![License](https://img.shields.io/badge/License-MIT-purple)](#)
+[![License](https://img.shields.io/badge/License-MIT-purple)](LICENSE)
 [![Networks](https://img.shields.io/badge/Chains-Base%20Sepolia%20%7C%20Reactive%20Lasna-orange)](#)
 
 ---
@@ -121,7 +121,23 @@ pnpm dev
 * Agent & Workflow Standards: [AGENTS.md](AGENTS.md)
 * Technical Specifications: [docs/REACTIVEFLOW_DETAILED_FRS.md](docs/REACTIVEFLOW_DETAILED_FRS.md)
 
+## Reactive Omni Buildathon
+
+OmniFlow's Set It and Forget It demo is a personal stop-loss. Once configured, the Lasna reactive contract monitors a Base Sepolia pool and calls the owner's Vault through the official callback proxy. The verified run used a deployed test pool and transferred 1.394409773455864503 test tokens to the Vault owner after swapping 0.001 ETH.
+
+- Deployed addresses and transaction receipts are listed in [FULL_LOOP_EVIDENCE.json](FULL_LOOP_EVIDENCE.json).
+- Watch the 53-second [stop-loss demo](docs/omniflow-reactive-demo.mp4).
+- Follow the same run on the explorers from the [Base Sepolia Sync](https://sepolia.basescan.org/tx/0xbcc9358892705f831b7733cf47c6a707b2b017a6d3a60e5c018821e6713ed31a) through the [Lasna callback request](https://lasna.reactscan.net/tx/0xf66b1f9a183811bc9a857027e42a7c3aa8d8f13cef2c6c3156508752a7ffe0eb) to the [Base Sepolia settlement](https://sepolia.basescan.org/tx/0x6683e71dfc3fb75e1b103985e79a027a8087217c2e23077d26897584d177d052).
+- Replay the receipt verification without sending a transaction. Run this from the repository root after installing dependencies.
+
+```bash
+pnpm --filter backend exec tsx ../scripts/test-full-loop.ts --verify-existing \
+  0xbcc9358892705f831b7733cf47c6a707b2b017a6d3a60e5c018821e6713ed31a \
+  0xf66b1f9a183811bc9a857027e42a7c3aa8d8f13cef2c6c3156508752a7ffe0eb \
+  0x6683e71dfc3fb75e1b103985e79a027a8087217c2e23077d26897584d177d052
+```
+
 ---
 
 ## ⚖️ License
-MIT License. Built for the Reactive Omni Buildathon (2026).
+[MIT License](LICENSE). Built for the Reactive Omni Buildathon (2026).

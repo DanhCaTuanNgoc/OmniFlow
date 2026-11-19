@@ -1,169 +1,55 @@
 "use client";
 
 import React, { useState } from "react";
+import evidence from "../../../../FULL_LOOP_EVIDENCE.json";
 
-interface VerificationLeg {
-  leg: string;
-  chain: string;
-  network: string;
-  contract: string;
-  contractAddress: string;
-  contractExplorerUrl: string;
-  blockNumber: string;
-  txHash: string;
-  txExplorerUrl: string;
-  eventOrMethod: string;
-  status: "VERIFIED_ONCHAIN";
-}
+const { contracts, verifiableTransactions } = evidence;
+const fullLoopVerified = evidence.status.startsWith("VERIFIED_FULL_LOOP");
+const VERIFICATION_COMMAND = "pnpm --filter backend exec tsx ../scripts/test-full-loop.ts --preflight";
 
-const VERIFICATION_LEGS: VerificationLeg[] = [
+const VERIFICATION_LEGS = [
   {
     leg: "1. Origin Event Trigger",
-    chain: "Base Sepolia (Chain 84532)",
-    network: "Uniswap V2 Pair",
-    contract: "MockUniswapV2Pair.sol",
-    contractAddress: "0x9a796b794999cabcd10d08f777b24ceb76e34b3e",
-    contractExplorerUrl: "https://sepolia.basescan.org/address/0x9a796b794999cabcd10d08f777b24ceb76e34b3e",
-    blockNumber: "#60317870",
-    txHash: "0x29b31cc9e38050c6051d07b76bc27634031159c7523e7706f2ddabddf5e8d457",
-    txExplorerUrl: "https://sepolia.basescan.org/tx/0x29b31cc9e38050c6051d07b76bc27634031159c7523e7706f2ddabddf5e8d457",
-    eventOrMethod: "Sync(reserve0: 1 ETH, reserve1: 1,500 USDC) — Price < $1,800 trigger threshold",
-    status: "VERIFIED_ONCHAIN",
+    deployment: contracts.originPair,
+    receipt: verifiableTransactions.step1_originEvent,
+    detail: "Sync from the deployed test pool",
   },
   {
     leg: "2. Reactive Core Processing",
-    chain: "Reactive Omni Lasna (Chain 5318007)",
-    network: "Autonomic RSC Engine",
-    contract: "StopLoss_Pipeline.sol",
-    contractAddress: "0x8c2d098617102a64925cc683d9b444f938a96082",
-    contractExplorerUrl: "https://lasna.reactscan.net/address/0x8c2d098617102a64925cc683d9b444f938a96082",
-    blockNumber: "#8633526",
-    txHash: "0xec28373c12498a272027da2b40ade8fa72af3eba8d7569c4b98de2792a2b7ea5",
-    txExplorerUrl: "https://lasna.reactscan.net/tx/0xec28373c12498a272027da2b40ade8fa72af3eba8d7569c4b98de2792a2b7ea5",
-    eventOrMethod: "react(LogRecord) -> Emitted ConditionTriggered & Callback to Base Sepolia (0x888... System Call)",
-    status: "VERIFIED_ONCHAIN",
+    deployment: contracts.reactiveSmartContract,
+    receipt: verifiableTransactions.step2_reactiveExecution,
+    detail: "Lasna reaction references the origin Sync",
   },
   {
     leg: "3. Destination Callback Vault",
-    chain: "Base Sepolia (Chain 84532)",
-    network: "Non-Custodial Vault",
-    contract: "ActionVault.sol",
-    contractAddress: "0x005d4cb896c9e0B07Bbf961FDC26b098D84079d7",
-    contractExplorerUrl: "https://sepolia.basescan.org/address/0x005d4cb896c9e0B07Bbf961FDC26b098D84079d7",
-    blockNumber: "#60317785 (Auth) / #60318443 (Deposit)",
-    txHash: "0xdaddfcadfbe4d2afb563ae57aa5f65cce67a281b4d733eb88d9b457ab1df1cc8",
-    txExplorerUrl: "https://sepolia.basescan.org/tx/0xdaddfcadfbe4d2afb563ae57aa5f65cce67a281b4d733eb88d9b457ab1df1cc8",
-    eventOrMethod: "RSC Authorized & CallbackProxy reserve funded with 0.0005 ETH (Tx: 0x419d8dd...)",
-    status: "VERIFIED_ONCHAIN",
+    deployment: contracts.destinationVault,
+    receipt: verifiableTransactions.step3_callbackExecution,
+    detail: fullLoopVerified ? "StopLossExecuted and test-token payout to the vault owner" : "Awaiting the matched destination receipt",
   },
 ];
 
-const RAW_EVIDENCE_JSON = JSON.stringify(
-  {
-    project: "OmniFlow",
-    track: "Set It and Forget It",
-    buildathon: "Reactive Omni Buildathon (Nov 5 - Dec 5, 2026)",
-    testExecutionTimestamp: "2026-11-18T14:04:15.000Z",
-    status: "VERIFIED_100%_ONCHAIN_REAL",
-    zeroMockGuarantee: "All transactions, balances, and addresses are 100% verifiable on live block explorers (Base Sepolia & Reactive Lasna). No mocks used.",
-    contracts: {
-      originPair: {
-        network: "Base Sepolia (Chain ID: 84532)",
-        contractName: "MockUniswapV2Pair",
-        address: "0x9a796b794999cabcd10d08f777b24ceb76e34b3e",
-        deployTxHash: "0xc176df9c0cdc71ad14085908840229a8567cebdd04ae0ed79308a37443b1174d",
-        explorerUrl: "https://sepolia.basescan.org/address/0x9a796b794999cabcd10d08f777b24ceb76e34b3e"
-      },
-      destinationVault: {
-        network: "Base Sepolia (Chain ID: 84532)",
-        contractName: "ActionVault",
-        address: "0x005d4cb896c9e0B07Bbf961FDC26b098D84079d7",
-        deployTxHash: "0xf5632a0c0dd1762a073754de2ac078d5db12032b23977032810fad4ac9e4232d",
-        explorerUrl: "https://sepolia.basescan.org/address/0x005d4cb896c9e0B07Bbf961FDC26b098D84079d7",
-        fundedEth: "0.002 ETH",
-        authorizedRscTx: "0xdaddfcadfbe4d2afb563ae57aa5f65cce67a281b4d733eb88d9b457ab1df1cc8"
-      },
-      reactiveSmartContract: {
-        network: "Reactive Omni Lasna Testnet (Chain ID: 5318007)",
-        contractName: "StopLoss_Pipeline",
-        address: "0x8c2d098617102a64925cc683d9b444f938a96082",
-        deployTxHash: "0xafb6bf9c969f26e42d2ffe97b6d990113a4b8fc1f5445cc1f99dfcb0b7f34bc0",
-        explorerUrl: "https://lasna.reactscan.net/address/0x8c2d098617102a64925cc683d9b444f938a96082",
-        subscribedOrigin: "0x9a796b794999cabcd10d08f777b24ceb76e34b3e (Base Sepolia: 84532)",
-        subscribedTopic: "Sync(uint112,uint112) -> 0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1"
-      }
-    },
-    verifiableTransactions: {
-      step1_originEvent: {
-        chain: "Base Sepolia (Chain ID: 84532)",
-        contract: "0x9a796b794999cabcd10d08f777b24ceb76e34b3e",
-        event: "Sync(reserve0=1 ether, reserve1=1500 ether)",
-        blockNumber: 60317870,
-        txHash: "0x29b31cc9e38050c6051d07b76bc27634031159c7523e7706f2ddabddf5e8d457",
-        explorerUrl: "https://sepolia.basescan.org/tx/0x29b31cc9e38050c6051d07b76bc27634031159c7523e7706f2ddabddf5e8d457"
-      },
-      step2_reactiveExecution: {
-        chain: "Reactive Omni Lasna Testnet (Chain ID: 5318007)",
-        contract: "0x8c2d098617102a64925cc683d9b444f938a96082",
-        method: "react(LogRecord calldata log)",
-        blockNumber: 8633526,
-        txHash: "0xec28373c12498a272027da2b40ade8fa72af3eba8d7569c4b98de2792a2b7ea5",
-        eventsEmitted: [
-          "ConditionTriggered(currentPrice=1500 ether, blockTime=timestamp)",
-          "Callback(chain_id=84532, _contract=0x005d4cb896c9e0B07Bbf961FDC26b098D84079d7, gas_limit=350000, payload)"
-        ],
-        systemContractCall: "requestCallbackV_1_0 on 0x8888888888888888888888888888888888888888",
-        explorerUrl: "https://lasna.reactscan.net/tx/0xec28373c12498a272027da2b40ade8fa72af3eba8d7569c4b98de2792a2b7ea5"
-      },
-      step3_callbackConfigAndProxy: {
-        chain: "Base Sepolia (Chain ID: 84532)",
-        callbackProxy: "0xa6eA49Ed671B8a4dfCDd34E36b7a75Ac79B8A5a6",
-        destinationVault: "0x005d4cb896c9e0B07Bbf961FDC26b098D84079d7",
-        rscAuthorizationTx: "0xdaddfcadfbe4d2afb563ae57aa5f65cce67a281b4d733eb88d9b457ab1df1cc8",
-        proxyReserveDepositTx: "0x419d8dd4acb00f471f4e40282c473abc4b591e44e695a299281640a5f96b0955"
-      }
-    }
-  },
-  null,
-  2
-);
+const RAW_EVIDENCE_JSON = JSON.stringify(evidence, null, 2);
 
 const HONESTY_CLAIMS = [
   {
-    claim: "Live Testnet Smart Contracts Deployed",
-    status: "Live & Verifiable On-Chain",
-    badge: "verified",
-    evidence: "Base Sepolia Pair, ActionVault (0x005d... funded 0.002 ETH) & Lasna StopLoss_Pipeline (0x8c2d...)",
+    claim: "Full-loop stop-loss execution",
+    status: fullLoopVerified ? "Confirmed on testnet" : "Callback pending",
+    evidence: "The demo uses an on-chain test pool and test tokens.",
   },
   {
-    claim: "Origin Event -> Reactive react() Triggered",
-    status: "Executed & Verified",
-    badge: "verified",
-    evidence: "Base Sepolia Sync (Tx: 0x29b31cc9...) -> Reactive Omni react() Block #8633526 (Tx: 0xec28373c...)",
+    claim: "26 Foundry tests passing",
+    status: "Passed locally",
+    evidence: "14 ActionVault tests and 12 StopLoss_Pipeline tests.",
   },
   {
-    claim: "18/18 Foundry Unit & Fork Tests Passing",
-    status: "100% Pass",
-    badge: "verified",
-    evidence: "10 tests in ActionVault.t.sol & 8 tests in StopLoss_Pipeline.t.sol passing locally in <20ms",
+    claim: "Timestamp cooldown",
+    status: "Covered by tests",
+    evidence: "The RSC enforces its cooldown using block timestamps.",
   },
   {
-    claim: "Stateless cooldown stops 200ms Denim block storms",
-    status: "Real & Active",
-    badge: "verified",
-    evidence: "block.timestamp - lastTriggeredTimestamp < cooldownSeconds blocks rapid sequential micro-block storms",
-  },
-  {
-    claim: "Non-custodial panic withdrawal for vault deposits",
-    status: "Real & Active",
-    badge: "verified",
-    evidence: "ActionVault.emergencyWithdraw() and executeSafeSweep() grant owner unconditional instant recovery",
-  },
-  {
-    claim: "CallbackProxy Reserve Prepaid & Authorized",
-    status: "Funded & Authorized",
-    badge: "verified",
-    evidence: "CallbackProxy depositTo(vault) funded 0.0005 ETH (Tx: 0x419d8dd...) & authorizedRSCs[0x8c2d...] = true",
+    claim: "Non-custodial vault recovery",
+    status: "Covered by tests",
+    evidence: "The owner can call emergencyWithdraw and executeSafeSweep.",
   },
 ];
 
@@ -173,7 +59,7 @@ export default function OnChainProofLedger() {
   const [copiedJson, setCopiedJson] = useState(false);
 
   const handleCopyCmd = () => {
-    navigator.clipboard.writeText("pnpm --filter backend test:full-loop");
+    navigator.clipboard.writeText(VERIFICATION_COMMAND);
     setCopiedCmd(true);
     setTimeout(() => setCopiedCmd(false), 2000);
   };
@@ -190,12 +76,11 @@ export default function OnChainProofLedger() {
         <span className="motion-coord-tag">0x03 // ONCHAIN_PROOF_LEDGER</span>
         <div className="motion-badge-pill green">
           <span className="motion-badge-dot green" />
-          <span>100% Live On-Chain Verified</span>
+          <span>{fullLoopVerified ? "Full Loop Verified on Testnet" : "Destination Callback Pending"}</span>
         </div>
         <h2 className="motion-section-title">Verifiable On-Chain Proof & Evidence Ledger</h2>
         <p className="motion-section-subhead">
-          Strict Zero-Mock Protocol. All contracts and transactions below have been deployed,
-          executed, and confirmed on <strong>Base Sepolia</strong> and <strong>Reactive Omni Lasna Testnet</strong>.
+          The stop-loss demo uses a deployed test pool on <strong>Base Sepolia</strong> and a reactive contract on <strong>Lasna</strong>.
         </p>
       </div>
 
@@ -205,7 +90,7 @@ export default function OnChainProofLedger() {
           <div className="terminal-header-info">
             <span className="terminal-tag" style={{ color: "#34d399" }}>
               <i className="fa-solid fa-circle-check mr-1.5" />
-              STATUS: CONFIRMED LIVE ON-CHAIN (TASK-106 & TASK-107 COMPLETE)
+              {fullLoopVerified ? "3 of 3 receipts confirmed" : "2 of 3 receipts confirmed"}
             </span>
             <h3 className="terminal-title">The 3-Step Cross-Chain Execution Pipeline</h3>
           </div>
@@ -266,10 +151,10 @@ export default function OnChainProofLedger() {
             <div className="terminal-command-bar">
               <div className="command-text">
                 <span className="prompt-sym">$</span>
-                <span className="prompt-cmd">node scripts/test-full-loop.ts</span>
+                <span className="prompt-cmd">{VERIFICATION_COMMAND}</span>
               </div>
               <span className="command-note" style={{ color: "#34d399" }}>
-                ✓ Generated FULL_LOOP_EVIDENCE.json with real on-chain transaction hashes
+                ✓ Receipt links from FULL_LOOP_EVIDENCE.json
               </span>
             </div>
 
@@ -289,42 +174,41 @@ export default function OnChainProofLedger() {
                     <tr key={i}>
                       <td className="leg-name">{leg.leg}</td>
                       <td className="leg-meta">
-                        <span className="chain-name">{leg.chain}</span>
+                        <span className="chain-name">{leg.deployment.network}</span>
                         <a
-                          href={leg.contractExplorerUrl}
+                          href={leg.deployment.explorerUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="contract-addr-link"
                           title="Open Contract on Explorer"
                         >
-                          {leg.contract} ({leg.contractAddress.slice(0, 6)}...{leg.contractAddress.slice(-4)})
+                          {leg.deployment.contractName} ({leg.deployment.address.slice(0, 6)}...{leg.deployment.address.slice(-4)})
                           <i className="fa-solid fa-arrow-up-right-from-square text-[9px] ml-1 opacity-70" />
                         </a>
                       </td>
                       <td className="leg-block">
                         <span className="block-confirmed">
                           <i className="fa-solid fa-cube text-emerald-400 text-[10px]" />
-                          {leg.blockNumber}
+                          {"blockNumber" in leg.receipt ? leg.receipt.blockNumber : "-"}
                         </span>
                       </td>
                       <td className="leg-evidence">
-                        <a
-                          href={leg.txExplorerUrl}
+                        {leg.receipt.txHash && "explorerUrl" in leg.receipt && <a
+                          href={leg.receipt.explorerUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="tx-link"
                           title="View Transaction on Block Explorer"
                         >
                           <i className="fa-solid fa-link text-[10px]" />
-                          <span>{leg.txHash.slice(0, 14)}...{leg.txHash.slice(-10)}</span>
+                          <span>{leg.receipt.txHash.slice(0, 14)}...{leg.receipt.txHash.slice(-10)}</span>
                           <i className="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-70" />
-                        </a>
-                        <span className="evidence-detail-badge">{leg.eventOrMethod}</span>
+                        </a>}
+                        <span className="evidence-detail-badge">{leg.detail}</span>
                       </td>
                       <td className="text-right">
-                        <span className="status-pill verified">
-                          <span className="pulse-dot green" />
-                          CONFIRMED
+                        <span className={leg.receipt.txHash ? "status-pill verified" : "status-pill"}>
+                          {leg.receipt.txHash ? "Confirmed" : "Pending"}
                         </span>
                       </td>
                     </tr>

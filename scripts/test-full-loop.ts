@@ -3,8 +3,8 @@ import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { config } from '../backend/node_modules/dotenv';
 import {
-  createPublicClient, createWalletClient, decodeFunctionData, defineChain, encodeFunctionData,
-  formatEther, getAddress, http, isAddressEqual, numberToHex, parseAbi, parseEventLogs,
+  createPublicClient, createWalletClient, decodeAbiParameters, decodeFunctionData, defineChain, encodeFunctionData,
+  formatEther, getAddress, http, isAddressEqual, numberToHex, parseAbi, parseAbiItem, parseAbiParameters, parseEventLogs,
   toEventSelector, type Address, type Hash, type Hex, type TransactionReceipt,
 } from '../backend/node_modules/viem';
 import { baseSepolia } from '../backend/node_modules/viem/chains';
@@ -61,16 +61,21 @@ const abi = parseAbi([
   'function getReserves() view returns (uint112, uint112, uint32)',
   'function setReserves(uint112, uint112)',
   'function executeStopLoss(address, address, uint256, uint256)',
+  'function deliverCallback(uint8, bytes)',
   'function callback(address, bytes)',
   'function callbackRnk(uint64, address, bytes)',
   'function getCallbacks(uint256) view returns ((uint256 blockNumber, address requester, uint256 callbackIndex, uint256 chainId, uint256 txHash, bytes err)[])',
   'event Sync(uint112 reserve0, uint112 reserve1)',
+  'event CallbackRequest(uint256 indexed chainId, address indexed sender, address indexed recipient, uint8 version, bytes configuration)',
+  'event OmniCallbackRequested(uint256 indexed chain_id, address indexed _contract, uint64 indexed gas_limit, bytes payload)',
   'event Callback(uint256 indexed chain_id, address indexed _contract, uint64 indexed gas_limit, bytes payload)',
   'event StopLossExecuted(uint256 ethAmountIn, uint256 minUsdcOut, uint256 timestamp)',
   'event OrderSkipped(string reason, uint256 currentPrice)',
   'event CallbackFailure(address indexed target, bytes payload)',
   'event Transfer(address indexed from, address indexed to, uint256 value)',
 ]);
+const stopLossExecuted = parseAbiItem('event StopLossExecuted(uint256 ethAmountIn, uint256 minUsdcOut, uint256 timestamp)');
+const callbackConfiguration = parseAbiParameters('(uint256 chainId, address recipient, uint64 gasLimit, bytes payload)');
 const syncTopic = toEventSelector('Sync(uint112,uint112)');
 
 function requireCheck(ok: unknown, message: string): asserts ok {
@@ -194,10 +199,21 @@ async function waitFor<T>(description: string, read: () => Promise<T | undefined
 
 async function main() {
   const args = process.argv.slice(2);
-  requireCheck(args.length === 0 || (args.length === 1 && ['--preflight', '--execute'].includes(args[0])),
-    'Usage: test-full-loop.ts [--preflight | --execute]');
+  const replay = args[0] === '--verify-existing';
+  requireCheck(args.length === 0 || (args.length === 1 && ['--preflight', '--execute'].includes(args[0])) ||
+    (replay && [3, 4].includes(args.length) && args.slice(1).every(hash => /^0x[0-9a-fA-F]{64}$/.test(hash))),
+  'Usage: test-full-loop.ts [--preflight | --execute | --verify-existing ORIGIN LASNA [DESTINATION]]');
   const execute = args[0] === '--execute';
-  console.log({ pair, vault, rsc, proxy, mode: execute ? 'live execution' : 'read-only preflight' });
+  console.log({ pair, vault, rsc, proxy, mode: execute ? 'live execution' : 'read-only verification' });
+  if (replay) {
+    const vaultRead = { address: vault, abi } as const;
+    const [token, owner] = await Promise.all([
+      base.readContract({ ...vaultRead, functionName: 'usdcToken' }),
+      base.readContract({ ...vaultRead, functionName: 'owner' }),
+    ]);
+    await verifyLoop({ token, owner }, args[1] as Hash, 0n, args[2] as Hash, args[3] as Hash | undefined);
+    return;
+  }
   const setup = await preflight();
   const key = process.env.TESTER_PRIVATE_KEY || process.env.DEPLOYER_PRIVATE_KEY;
   requireCheck(!key || /^0x[0-9a-fA-F]{64}$/.test(key), 'Tester private key has an invalid format.');
@@ -230,62 +246,131 @@ async function main() {
     account, chain: baseSepolia,
     transport: http(process.env.BASE_SEPOLIA_RPC_URL || 'https://base-sepolia-rpc.publicnode.com'),
   });
-  let lasnaCursor = await reactive.getBlockNumber();
+  const lasnaCursor = await reactive.getBlockNumber();
   const originHash = await wallet.writeContract({ ...trigger, account, gas: gasLimit, ...fees });
+  await verifyLoop(setup, originHash, lasnaCursor);
+}
+
+async function verifyLoop(
+  setup: { token: Address; owner: Address; reserve0?: bigint; reserve1?: bigint }, originHash: Hash, lasnaCursor: bigint,
+  knownReaction?: Hash, knownDestination?: Hash,
+) {
   console.log(`Origin: https://sepolia.basescan.org/tx/${originHash}`);
   const origin = await base.waitForTransactionReceipt({ hash: originHash, timeout: 180_000, checkReplacement: false });
-  const [sync] = parseEventLogs({ abi, eventName: 'Sync', logs: origin.logs.filter(log => isAddressEqual(log.address, pair)) });
-  requireCheck(origin.status === 'success' && sync && sync.args.reserve0 === setup.reserve0 &&
-    sync.args.reserve1 === setup.reserve1, 'Origin receipt is missing the expected Sync event.');
+  const syncs = parseEventLogs({ abi, eventName: 'Sync', logs: origin.logs.filter(log => isAddressEqual(log.address, pair)) });
+  requireCheck(origin.status === 'success' && syncs.length === 1, 'Origin receipt must contain exactly one Sync from the test pair.');
+  const [sync] = syncs;
+  if (!knownReaction) {
+    requireCheck(sync.args.reserve0 === setup.reserve0 && sync.args.reserve1 === setup.reserve1,
+      'Origin receipt reserves do not match the submitted trigger.');
+  }
 
-  const reaction = await waitFor('a Lasna receipt referencing the exact origin log', async () => {
-    const head = await reactive.getBlockNumber({ cacheTime: 0 });
-    while (lasnaCursor <= head) {
-      const block = await reactive.getBlock({ blockNumber: lasnaCursor });
-      for (const hash of block.transactions) {
-        const receipt = await reactive.request({ method: 'eth_getTransactionReceipt', params: [hash] }) as LasnaReceipt | null;
-        if (!receipt || receipt.refTx?.toLowerCase() !== originHash.toLowerCase() ||
-            !receipt.refChainId || BigInt(receipt.refChainId) !== BigInt(baseSepolia.id) ||
-            !receipt.refEventIndex || BigInt(receipt.refEventIndex) !== BigInt(sync.logIndex)) continue;
-        const callbacks = parseEventLogs({ abi, eventName: 'Callback',
-          logs: receipt.logs.filter(log => isAddressEqual(log.address, rsc)) });
-        const callback = callbacks.find(log => log.args.chain_id === BigInt(baseSepolia.id) &&
-          isAddressEqual(log.args._contract, vault));
-        if (!callback) continue;
-        requireCheck(receipt.status === '0x1', 'Lasna execution reverted.');
-        const decoded = decodeFunctionData({ abi, data: callback.args.payload });
-        requireCheck(decoded.functionName === 'executeStopLoss' && isAddressEqual(decoded.args[1], rsc) &&
-          callback.args.gas_limit === callbackGas, 'Lasna requested an unexpected callback payload.');
-        return { hash, callback };
-      }
-      lasnaCursor++;
+  async function readReaction(hash: Hash) {
+    const receipt = await reactive.request({ method: 'eth_getTransactionReceipt', params: [hash] }) as LasnaReceipt | null;
+    if (!receipt || receipt.refTx?.toLowerCase() !== originHash.toLowerCase() ||
+        !receipt.refChainId || BigInt(receipt.refChainId) !== BigInt(baseSepolia.id) ||
+        !receipt.refEventIndex || BigInt(receipt.refEventIndex) !== BigInt(sync.logIndex)) return;
+    const callbacks = parseEventLogs({ abi, eventName: ['Callback', 'OmniCallbackRequested'],
+      logs: receipt.logs.filter(log => isAddressEqual(log.address, rsc)) });
+    const callback = callbacks.find(log => log.args.chain_id === BigInt(baseSepolia.id) &&
+      isAddressEqual(log.args._contract, vault));
+    if (!callback) return;
+    requireCheck(receipt.status === '0x1', 'Lasna execution reverted.');
+    const decoded = decodeFunctionData({ abi, data: callback.args.payload });
+    requireCheck(decoded.functionName === 'executeStopLoss' && isAddressEqual(decoded.args[1], rsc) &&
+      callback.args.gas_limit === callbackGas, 'Lasna requested an unexpected callback payload.');
+    if (callback.eventName === 'OmniCallbackRequested') {
+      const requests = parseEventLogs({ abi, eventName: 'CallbackRequest',
+        logs: receipt.logs.filter(log => isAddressEqual(log.address, system)) });
+      const matching = requests.filter(({ args }) => {
+        if (args.version !== 0 || args.chainId !== BigInt(baseSepolia.id) ||
+            !isAddressEqual(args.sender, rsc) || !isAddressEqual(args.recipient, vault)) return false;
+        const [config] = decodeAbiParameters(callbackConfiguration, args.configuration);
+        return config.chainId === BigInt(baseSepolia.id) && isAddressEqual(config.recipient, vault) &&
+          config.gasLimit === callbackGas && config.payload === callback.args.payload;
+      });
+      requireCheck(matching.length === 1, 'Missing a unique Lasna system callback request matching the RSC payload.');
     }
-  });
+    return { hash, callback, blockNumber: Number(receipt.blockNumber) };
+  }
+
+  const reaction = knownReaction ? await readReaction(knownReaction) :
+    await waitFor('a Lasna receipt referencing the exact origin log', async () => {
+      const head = await reactive.getBlockNumber({ cacheTime: 0 });
+      while (lasnaCursor <= head) {
+        const block = await reactive.getBlock({ blockNumber: lasnaCursor });
+        for (const hash of block.transactions) {
+          const match = await readReaction(hash);
+          if (match) return match;
+        }
+        lasnaCursor++;
+      }
+    });
+  requireCheck(reaction, 'Lasna receipt does not reference the exact origin log.');
   console.log(`Reactive: https://lasna.reactscan.net/tx/${reaction.hash}`);
 
-  const callbackRecord = await waitFor('the Lasna system delivery record', async () => {
+  const requestedPayload = reaction.callback.args.payload;
+  async function matchingDelivery(hash: Hash) {
+    const tx = await base.getTransaction({ hash });
+    if (!tx.to || !isAddressEqual(tx.to, proxy)) return false;
+    const decoded = decodeFunctionData({ abi, data: tx.input });
+    if (decoded.functionName === 'deliverCallback') {
+      if (decoded.args[0] !== 0) return false;
+      const [config] = decodeAbiParameters(callbackConfiguration, decoded.args[1]);
+      return config.chainId === BigInt(baseSepolia.id) && config.gasLimit === callbackGas &&
+        isAddressEqual(config.recipient, vault) &&
+        config.payload === `${requestedPayload.slice(0, 10)}${rsc.slice(2).toLowerCase().padStart(64, '0')}${requestedPayload.slice(74)}`;
+    }
+    const delivered = decoded.functionName === 'callbackRnk' ? decoded.args.slice(1) :
+      decoded.functionName === 'callback' ? decoded.args : undefined;
+    return delivered && typeof delivered[0] === 'string' && typeof delivered[1] === 'string' &&
+      isAddressEqual(delivered[0] as Address, vault) &&
+      delivered[1].slice(0, 10) === requestedPayload.slice(0, 10) &&
+      delivered[1].slice(74) === requestedPayload.slice(74);
+  }
+
+  let destinationCursor = origin.blockNumber;
+  const callbackHash = await waitFor('the matching Base Sepolia callback', async () => {
     const records = await reactive.readContract({
       address: system, abi, functionName: 'getCallbacks', args: [BigInt(reaction.hash)],
     });
     const candidates = (records as readonly { requester: Address; chainId: bigint; txHash: bigint; err: Hex }[]).filter(record => record.chainId === BigInt(baseSepolia.id) &&
-      isAddressEqual(record.requester, rsc));
+      isAddressEqual(record.requester, rsc) && (record.txHash !== 0n || record.err !== '0x'));
     requireCheck(candidates.length <= 1, 'Multiple Lasna delivery records match this request.');
-    return candidates.find(record => record.txHash !== 0n || record.err !== '0x');
+    if (candidates.length === 1) {
+      const [record] = candidates;
+      requireCheck(record.err === '0x', `Callback delivery error recorded on Lasna: ${record.err}`);
+      const hash = numberToHex(record.txHash, { size: 32 });
+      requireCheck(!knownDestination || knownDestination.toLowerCase() === hash, 'Delivery record points to another transaction.');
+      return hash;
+    }
+
+    // Omni can deliver on Base before Lasna indexes the delivery record. Match the signed proxy transaction
+    // against the system request within the origin block window.
+    if (reaction.callback.eventName !== 'OmniCallbackRequested') return;
+    if (knownDestination) return knownDestination;
+    const tip = await base.getBlockNumber({ cacheTime: 0 });
+    const toBlock = tip < origin.blockNumber + 500n ? tip : origin.blockNumber + 500n;
+    const matches = new Set<Hash>();
+    while (destinationCursor <= toBlock) {
+      const end = destinationCursor + 9n < toBlock ? destinationCursor + 9n : toBlock;
+      const events = await base.getLogs({
+        address: vault, event: stopLossExecuted, fromBlock: destinationCursor, toBlock: end,
+      });
+      for (const { transactionHash } of events) {
+        if (await matchingDelivery(transactionHash)) matches.add(transactionHash);
+      }
+      destinationCursor = end + 1n;
+    }
+    requireCheck(matches.size <= 1, 'Multiple proxy deliveries match the Lasna request.');
+    return [...matches][0];
   });
-  requireCheck(callbackRecord.err === '0x', `Callback delivery error recorded on Lasna: ${callbackRecord.err}`);
-  const callbackHash = numberToHex(callbackRecord.txHash, { size: 32 });
+  requireCheck(await matchingDelivery(callbackHash), 'Proxy calldata does not match the Lasna callback.');
   console.log(`Destination: https://sepolia.basescan.org/tx/${callbackHash}`);
   const destination = await base.waitForTransactionReceipt({ hash: callbackHash, timeout: 180_000, checkReplacement: false });
   requireCheck(destination.status === 'success' && destination.to && isAddressEqual(destination.to, proxy) &&
-    destination.blockNumber >= origin.blockNumber, 'Destination receipt did not succeed through the configured proxy.');
-  const delivery = await base.getTransaction({ hash: callbackHash });
-  const decodedDelivery = decodeFunctionData({ abi, data: delivery.input });
-  const delivered = decodedDelivery.functionName === 'callbackRnk' ? decodedDelivery.args.slice(1) :
-    decodedDelivery.functionName === 'callback' ? decodedDelivery.args : undefined;
-  requireCheck(delivered && typeof delivered[0] === 'string' && typeof delivered[1] === 'string' &&
-    isAddressEqual(delivered[0] as Address, vault) && delivered[1].slice(0, 10) === reaction.callback.args.payload.slice(0, 10) &&
-    delivered[1].slice(74) === reaction.callback.args.payload.slice(74),
-  'Proxy calldata does not match the Lasna callback (excluding the injected first argument).');
+    destination.blockNumber > origin.blockNumber &&
+    (reaction.callback.eventName !== 'OmniCallbackRequested' || destination.blockNumber <= origin.blockNumber + 500n), 'Destination receipt did not succeed through the configured proxy.');
   const failures = parseEventLogs({ abi, eventName: 'CallbackFailure',
     logs: destination.logs.filter(log => isAddressEqual(log.address, proxy)) });
   requireCheck(!failures.some(log => isAddressEqual(log.args.target, vault)), 'Callback Proxy emitted CallbackFailure.');
@@ -300,19 +385,29 @@ async function main() {
   const payout = payouts.find(log => isAddressEqual(log.args.to, setup.owner) && log.args.value >= execution.args.minUsdcOut);
   requireCheck(payout, 'Destination receipt lacks a token transfer to the Vault owner meeting minUsdcOut.');
 
+  const [originBlock, destinationBlock] = await Promise.all([
+    base.getBlock({ blockNumber: origin.blockNumber }),
+    base.getBlock({ blockNumber: destination.blockNumber }),
+  ]);
+  const deliverySeconds = destinationBlock.timestamp - originBlock.timestamp;
+  requireCheck(deliverySeconds >= 0n && deliverySeconds < 180n,
+    'Destination timestamp is outside the full-loop verification window.');
   const evidence = {
     project: 'OmniFlow',
     track: 'Set It and Forget It',
-    testExecutionTimestamp: new Date().toISOString(),
+    testExecutionTimestamp: new Date(Number(destinationBlock.timestamp) * 1000).toISOString(),
+    lastVerifiedAt: new Date().toISOString(),
+    originToDestinationSeconds: Number(deliverySeconds),
     status: 'VERIFIED_FULL_LOOP_ON_TESTNET',
-    scenario: 'Stop-loss using a deployed test pool. The destination token may be a test token.',
+    scenario: 'Stop-loss executed on public testnets using a deployed test pool and a test token.',
     verifiableTransactions: {
       step1_originEvent: {
         chainId: baseSepolia.id, contract: pair, event: 'Sync', blockNumber: Number(origin.blockNumber),
         logIndex: sync.logIndex, txHash: originHash, explorerUrl: `https://sepolia.basescan.org/tx/${originHash}`,
       },
       step2_reactiveExecution: {
-        chainId: lasna.id, contract: rsc, event: 'Callback', refTx: originHash,
+        chainId: lasna.id, contract: rsc, event: reaction.callback.eventName, refTx: originHash,
+        blockNumber: reaction.blockNumber,
         txHash: reaction.hash, explorerUrl: `https://lasna.reactscan.net/tx/${reaction.hash}`,
       },
       step3_callbackExecution: {

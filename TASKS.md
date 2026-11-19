@@ -855,16 +855,13 @@
 * **Người thực hiện:** Codex.
 * **Trạng thái:** `DONE`.
 
-#### `TASK-326` [TODO] — Bổ sung chứng cứ callback đích và đồng bộ nhãn proof
-* **Module:** Evidence JSON, landing proof ledger.
-* **Chi tiết:** Hai bản evidence ghi giao dịch cấu hình proxy ở bước 3. Bổ sung receipt callback Base Sepolia và event StopLossExecuted cho cùng một vòng lặp. Ghi rõ pool thử nghiệm được triển khai on-chain để phân biệt với pool DEX thật.
-* **Tiến độ:** Đã cập nhật `scripts/test-full-loop.ts` để đọc phí và nợ trực tiếp từ hai mạng, mô phỏng swap qua RPC và đối chiếu receipt theo tham chiếu liên chuỗi. Còn chờ xử lý nợ Lasna và xác nhận callback của lượt chạy mới trước khi cập nhật evidence dự thi.
-* **Kết quả 19/11/2026:** Đã nạp 0.12 lREACT, xóa nợ và xác nhận receipt nguồn cùng receipt Lasna của lượt mới. Hai bản evidence ghi trạng thái một phần vì chưa có receipt callback. Vault từ chối Callback Proxy Base Sepolia hiện hành trong phép gọi chỉ đọc với lỗi `Authorized sender only`.
-* **Khắc phục:** Đã cập nhật proxy chính thức trong script triển khai và preflight. Vault hiện có không có chức năng đổi proxy và RSC giữ địa chỉ Vault bất biến. Cần triển khai cặp Vault/RSC thay thế và chạy lại sau khi ví tester Lasna đủ quỹ triển khai lẫn phí thực thi.
-* **Ngày tạo:** 18/11/2026.
-* **Ngày hoàn thành:** —
-* **Người thực hiện:** Chưa phân công.
-* **Trạng thái:** `TODO`.
+#### `TASK-326` [DONE] — Bổ sung chứng cứ callback đích và đồng bộ nhãn proof
+* Đã triển khai Vault dùng proxy chính thức trên Base Sepolia và RSC gọi `requestCallbackV_1_0` trên Lasna. Một lượt chạy ghi đủ ba receipt đối chiếu được qua tham chiếu log nguồn, yêu cầu system contract và calldata giao dịch đích.
+* Ba bước on-chain gồm [Sync trên Base Sepolia](https://sepolia.basescan.org/tx/0xbcc9358892705f831b7733cf47c6a707b2b017a6d3a60e5c018821e6713ed31a), [CallbackRequest trên Lasna](https://lasna.reactscan.net/tx/0xf66b1f9a183811bc9a857027e42a7c3aa8d8f13cef2c6c3156508752a7ffe0eb) và [StopLossExecuted trên Base Sepolia](https://sepolia.basescan.org/tx/0x6683e71dfc3fb75e1b103985e79a027a8087217c2e23077d26897584d177d052).
+* Vault swap 0.001 ETH trên pool thử nghiệm đã triển khai on-chain. Receipt đích ghi nhận 1.394409773455864503 MockUSDC chuyển về chủ Vault. Hai bản `FULL_LOOP_EVIDENCE.json` đã đồng bộ và landing hiển thị dữ liệu từ bản gốc.
+* Kết quả đáp ứng yêu cầu bằng chứng on-chain của track Set It and Forget It. Địa chỉ triển khai, lệnh kiểm chứng lại và bộ hồ sơ được liên kết trong README.
+* Ngày tạo 18/11/2026. Hoàn thành 19/11/2026.
+* Trạng thái `DONE`.
 
 #### `TASK-327` [TODO] — Loại bỏ dữ liệu mẫu khỏi luồng Activity Logs mặc định
 * **Module:** Backend event listener, Workspace Activity Logs.
