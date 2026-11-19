@@ -1,0 +1,87 @@
+.ws-shell {
+  --ws-bg: #111318;
+  --ws-rail: #15171e;
+  --ws-panel: #191c24;
+  --ws-border: #30343f;
+  --ws-text: #f1f3f7;
+  --ws-muted: #a8b0c1;
+  --ws-accent: #c2b6ff;
+  --ws-accent-bg: #2b2542;
+  background: var(--ws-bg);
+  color: var(--ws-text);
+  color-scheme: dark;
+}
+
+.ws-shell :is(a, button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--ws-accent);
+  outline-offset: 3px;
+}
+
+.ws-page {
+  width: 100%;
+  max-width: 76rem;
+  margin-inline: auto;
+  padding: 2.25rem 2.5rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.ws-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--ws-border);
+}
+
+.ws-page-header h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: -.035em;
+}
+
+.ws-page-header p, .ws-state p {
+  color: var(--ws-muted);
+  font-size: .875rem;
+  line-height: 1.5;
+  margin-top: .4rem;
+}
+
+.ws-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.ws-panel, .ws-state { border: 1px solid var(--ws-border); border-radius: .75rem; background: var(--ws-panel); }
+.ws-state { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 1.25rem; }
+.ws-state h2 { font-size: .9375rem; font-weight: 600; }
+
+.ws-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  min-height: 2.25rem;
+  padding-inline: .75rem;
+  border-radius: .5rem;
+  border: 1px solid var(--ws-border);
+  color: var(--ws-text);
+  font-size: .8125rem;
+  font-weight: 600;
+  transition: background-color 150ms ease;
+}
+
+.ws-button:hover { background: #242834; }
+.ws-button:disabled { opacity: .5; cursor: not-allowed; }
+.ws-button-primary { background: var(--ws-accent); color: #201735; border-color: transparent; }
+.ws-button-primary:hover { background: #d1c8ff; }
+.ws-address { font-family: ui-monospace, monospace; color: var(--ws-accent); overflow-wrap: anywhere; }
+.ws-address:hover { text-decoration: underline; text-underline-offset: .2em; }
+.ws-badge { display: inline-block; border-radius: .375rem; background: #242834; color: #dce0ed; padding: .2rem .45rem; font-size: .75rem; }
+.ws-badge-ok { background: #21342c; color: #b3ead0; }
+
+@media (max-width: 767px) {
+  .ws-page { padding: 1.25rem 1rem; gap: 1rem; }
+  .ws-page-header { padding-bottom: .85rem; }
+  .ws-page-header h1 { font-size: 1.375rem; }
+}

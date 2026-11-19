@@ -1,22 +1,16 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { Sidebar } from '@/components/common/Sidebar';
 import { Header } from '@/components/common/Header';
+import '@/styles/workspace.css';
 
-export default function WorkspaceLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   return (
-      <div className="dark flex h-screen w-screen overflow-hidden bg-[#000000] text-slate-100">
-        {/* Left Navigation Sidebar */}
-        <Sidebar />
-
-        {/* Main Workspace Body */}
-        <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-          <Header />
-          <main className="flex-1 relative overflow-y-auto bg-[#000000]">{children}</main>
-        </div>
+    <div className="ws-shell dark flex h-dvh w-full overflow-hidden font-sans">
+      <Sidebar />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Header />
+        <main className="relative min-h-0 flex-1 overflow-auto">{children}</main>
       </div>
+    </div>
   );
 }

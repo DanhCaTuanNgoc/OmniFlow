@@ -82,6 +82,7 @@ function StudioCanvasInner() {
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
   const searchParams = useSearchParams();
+  const [isPaletteOpen, setPaletteOpen] = useState(false);
   const [activeRecipeId, setActiveRecipeId] = useState<string>('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isDeployOpen, setIsDeployOpen] = useState(false);
@@ -301,102 +302,54 @@ function StudioCanvasInner() {
   };
 
   return (
-    <div className="flex h-full w-full relative overflow-hidden select-none bg-[#07080d]">
-      {/* Left Node Palette */}
-      <NodePalette onAddNode={handleAddNodeFromPalette} />
+    <div className="relative flex h-full min-h-[24rem] w-full overflow-hidden">
+      <div id="studio-node-palette" className={`absolute inset-y-0 left-0 z-30 w-full max-w-[17rem] shrink-0 flex-col bg-[var(--ws-rail)] lg:relative lg:flex ${isPaletteOpen ? 'flex' : 'hidden'}`}>
+        <div className="border-b border-[var(--ws-border)] p-2 lg:hidden">
+          <button type="button" className="ws-button" onClick={() => setPaletteOpen(false)}>Close nodes</button>
+        </div>
+        <NodePalette onAddNode={(type, data) => {
+          handleAddNodeFromPalette(type, data);
+          setPaletteOpen(false);
+        }} />
+      </div>
 
-      {/* Main XYFlow Canvas Area */}
-      <div className="flex-1 flex flex-col h-full relative" ref={reactFlowWrapper}>
-        {/* Studio Top Control Bar */}
-        <div className="h-16 border-b border-white/[0.08] bg-[#000000]/85 backdrop-blur-md px-5 flex items-center justify-between z-10 font-sans transform-gpu">
-          {/* Cluster 1: Left (Breadcrumb, Pipeline Title, Autosave, Preset Selector) */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-xs text-white tracking-tight">
-                  {RECIPE_PRESETS[activeRecipeId]?.title || 'Custom Pipeline'}
-                </span>
-                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  UNSAVED
-                </span>
-              </div>
-            </div>
-
-            {/* Recipe Preset Selector */}
-            <div className="hidden lg:flex items-center gap-1.5 pl-2 border-l border-white/10">
-              <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider">Preset:</span>
-              <select
-                value={activeRecipeId}
-                onChange={(e) => handleSelectPreset(e.target.value)}
-                className="bg-[#14151a] hover:bg-[#202126] border border-white/10 rounded-lg px-2.5 py-1 text-xs text-slate-200 font-medium focus:outline-none focus:border-cyan-500/50 transition-colors cursor-pointer"
-              >
-                <option value="">Custom pipeline</option>
-                {Object.values(RECIPE_PRESETS).map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title}
-                  </option>
-                ))}
-              </select>
-            </div>
+      <div className="relative flex h-full min-w-0 flex-1 flex-col" ref={reactFlowWrapper}>
+        <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--ws-border)] bg-[var(--ws-rail)] px-3 py-2.5 sm:px-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <button type="button" className="ws-button lg:hidden" aria-expanded={isPaletteOpen} aria-controls="studio-node-palette"
+              onClick={() => setPaletteOpen(open => !open)}>Add nodes</button>
+            <h1 className="truncate text-sm font-semibold">{RECIPE_PRESETS[activeRecipeId]?.title || 'Custom pipeline'}</h1>
+            {nodes.length > 0 && <span className="ws-badge shrink-0">Unsaved</span>}
           </div>
 
-          {/* Cluster 2: Center (Segmented View / Execution Switcher) */}
-          <div className="hidden md:flex items-center gap-1 p-1 bg-[#12141c] rounded-xl border border-white/[0.08] text-xs">
-            <button
-              className="px-3 py-1 font-medium rounded-lg bg-white/10 text-white shadow-sm transition-colors cursor-pointer"
-            >
-              Graph Canvas
+          <div className="ws-actions">
+            <select aria-label="Recipe preset" value={activeRecipeId} onChange={(event) => handleSelectPreset(event.target.value)}
+              className="ws-button max-w-[11rem] bg-[var(--ws-panel)]">
+              <option value="">Recipe preset</option>
+              {Object.values(RECIPE_PRESETS).map(preset => <option key={preset.id} value={preset.id}>{preset.title}</option>)}
+            </select>
+            <button type="button" className="ws-button" onClick={() => setIsSolidityOpen(true)} disabled={!nodes.length}>
+              <Code2 size={14} aria-hidden="true" /> Solidity
             </button>
-            <button
-              onClick={() => setIsSolidityOpen(true)}
-              className="px-3 py-1 font-medium rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <Code2 className="w-3.5 h-3.5 text-violet-400" />
-              <span>Solidity Preview</span>
+            <button type="button" className="ws-button" onClick={handleResetGraph} disabled={!nodes.length}>
+              <RotateCcw size={14} aria-hidden="true" /> Clear
             </button>
-          </div>
-
-          {/* Graph actions */}
-          <div className="flex items-center gap-2.5">
-            {validationWarning && (
-              <div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800/60 px-3 py-1.5 rounded-lg flex items-center gap-1.5 animate-pulse">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                <span>{validationWarning}</span>
-              </div>
-            )}
-
-            <button
-              onClick={handleResetGraph}
-              className="py-1.5 px-3 rounded-lg border border-white/10 bg-[#14151a] hover:bg-[#202126] text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Clear graph"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
-              <span>Clear</span>
-            </button>
-
-            <button type="button" onClick={handleExportGraph} disabled={nodes.length === 0}
-              className="px-3 py-1.5 rounded-lg border border-white/10 text-xs text-slate-300 disabled:opacity-50">
-              Export JSON
-            </button>
-
-            {/* Primary CTA: Institutional High-Contrast Button */}
-            <button
-              onClick={handleOpenDeploy}
-              disabled={!isConnected}
-              className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-white hover:bg-slate-200 text-black shadow-sm transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
-            >
-              <Rocket className="w-3.5 h-3.5 fill-black" />
-              <span>{isConnected ? 'Deploy Automation' : 'Connect Wallet to Deploy'}</span>
+            <button type="button" className="ws-button" onClick={handleExportGraph} disabled={!nodes.length}>Export JSON</button>
+            <button type="button" className="ws-button ws-button-primary" onClick={handleOpenDeploy} disabled={!isConnected || !nodes.length}>
+              <Rocket size={14} aria-hidden="true" /> {isConnected ? 'Deploy' : 'Connect wallet to deploy'}
             </button>
           </div>
+          {validationWarning && <p role="alert" className="flex w-full items-center gap-2 text-xs text-amber-200">
+            <AlertTriangle size={14} aria-hidden="true" />{validationWarning}
+          </p>}
         </div>
 
-        {/* Canvas Body (Explicit non-zero dimensions with Radial Spotlight) */}
-        <div className="flex-1 w-full h-full relative">
-          {/* Lớp hào quang nền nhẹ ở giữa Canvas giúp xóa cảm giác đen đặc */}
-          <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_45%,rgba(56,189,248,0.08),rgba(139,92,246,0.05)_40%,transparent_75%)]" />
-
+        <div className="relative min-h-0 flex-1 bg-[var(--ws-bg)]">
+          {nodes.length === 0 && (
+            <p className="pointer-events-none absolute inset-x-5 top-1/2 z-10 -translate-y-1/2 text-center text-sm text-[var(--ws-muted)]">
+              Add a trigger or choose a recipe to start.
+            </p>
+          )}
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -441,12 +394,14 @@ function StudioCanvasInner() {
 
       {/* Right Node Inspector */}
       {selectedNode && (
+        <div className="absolute inset-y-0 right-0 z-30 w-full max-w-[20rem] shrink-0 lg:relative">
         <InspectorPanel
           selectedNode={selectedNode}
           onUpdateNodeData={handleUpdateNodeData}
           onDeleteNode={handleDeleteNode}
           onClose={() => setSelectedNodeId(null)}
         />
+        </div>
       )}
 
       {/* Deploy Modal */}

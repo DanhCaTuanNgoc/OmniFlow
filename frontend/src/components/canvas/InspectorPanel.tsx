@@ -31,7 +31,7 @@ export function InspectorPanel({
   };
 
   return (
-    <div className="w-80 border-l border-white/[0.08] bg-[#0A0B10] flex flex-col h-full z-10 select-none text-xs">
+    <div className="w-full border-l border-[var(--ws-border)] bg-[var(--ws-rail)] flex flex-col h-full text-xs">
       {/* Header */}
       <div className="p-4 border-b border-white/[0.08] bg-[#0D0E15] flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -295,7 +295,7 @@ export function InspectorPanel({
               ))}
             </div>
 
-            <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-[11px] text-slate-300 flex gap-2">
+            <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-[11px] text-violet-100 flex gap-2">
               <Info className="w-4 h-4 shrink-0 text-violet-400 mt-0.5" />
               <span>
                 Protects against rapid Base 200ms multi-callback storms and reverts.

@@ -1,20 +1,16 @@
 'use client';
 
-import { Activity } from 'lucide-react';
+import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import { useAccount } from 'wagmi';
 
 export default function ActivityLogsPage() {
   const { isConnected } = useAccount();
 
   return (
-    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
-      <header className="flex items-center gap-3 pb-4 border-b border-white/10">
-        <Activity aria-hidden="true" className="w-5 h-5 text-slate-300" />
-        <h1 className="text-xl font-bold text-white font-display">Activity Logs</h1>
-      </header>
-      <p role="status" className="text-sm text-slate-300">
-        {isConnected ? 'Activity history for this wallet is not available yet.' : 'Connect a wallet to view your activity.'}
-      </p>
+    <div className="ws-page">
+      <WorkspacePageHeader title="Activity Logs" description="Origin events, Reactive requests and destination receipts." />
+      <WorkspaceState title={isConnected ? 'Activity history for this wallet is not available yet.' : 'Connect a wallet to view your activity.'}
+        action={{ label: 'View public testnet proof', href: '/#proof' }} />
     </div>
   );
 }

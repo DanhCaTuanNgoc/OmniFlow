@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { WorkspacePageHeader } from '@/components/common/WorkspaceUI';
 import Link from 'next/link';
 import { 
   Library, 
@@ -264,39 +265,18 @@ export default function TemplateLibraryPage() {
   }, [activeCategory, searchQuery]);
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6 select-none font-sans">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl font-bold text-white tracking-tight">
-              Template Recipe Store
-            </h1>
-            <span className="px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-[10px] font-mono font-medium">
-              6 VERIFIED RECIPES
-            </span>
-          </div>
-          <p className="text-xs text-[#8e8e8e]">
-            Production-grade cross-chain automations compiled for Reactive Omni Lasna &bull; 1-Click hydration onto Studio Canvas
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs px-3.5 py-1.5 rounded-lg bg-[#14151a] border border-white/10 text-[#c4c2c3] font-mono flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Non-Custodial Architecture</span>
-          </span>
-        </div>
-      </div>
+    <div className="ws-page">
+      <WorkspacePageHeader title="Template Library" description="Start from a recipe and configure it in Pipeline Studio." />
 
       {/* Filter Chips & Search Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 bg-[#0b0c10]/70 rounded-xl border border-white/[0.08]">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 ws-panel">
         {/* Category Pills */}
         <div className="flex items-center gap-1.5 flex-wrap">
           {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
+              aria-pressed={activeCategory === cat.id}
               className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
                 activeCategory === cat.id
                   ? 'bg-white text-black font-semibold shadow-sm'
@@ -341,7 +321,7 @@ export default function TemplateLibraryPage() {
           return (
             <div
               key={recipe.id}
-              className="p-5 rounded-2xl bg-[#0b0c10]/90 backdrop-blur-lg border border-white/[0.08] hover:border-white/[0.18] transition-all duration-150 space-y-4 flex flex-col justify-between shadow-2xl group"
+              className="ws-panel p-4 sm:p-5 space-y-4 flex flex-col justify-between transition-colors hover:border-[#51496b] group"
             >
               <div className="space-y-3.5">
                 {/* Header: Icon, Title, Tags, Nodes Count */}
@@ -351,7 +331,7 @@ export default function TemplateLibraryPage() {
                       <Icon className="w-4 h-4" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-white tracking-tight group-hover:text-cyan-300 transition-colors">
+                      <h3 className="text-sm font-bold text-white tracking-tight group-hover:text-[var(--ws-accent)] transition-colors">
                         {recipe.title}
                       </h3>
                       <div className="flex flex-wrap gap-1.5 mt-1">
@@ -505,13 +485,13 @@ export default function TemplateLibraryPage() {
               </div>
 
               {/* Security Invariants Callout */}
-              <div className="p-3.5 rounded-xl bg-violet-500/5 border border-violet-500/20 space-y-1 text-slate-300">
+              <div className="p-3.5 ws-panel space-y-1">
                 <div className="text-[11px] font-mono font-semibold text-violet-300 flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-violet-400" />
-                  <span>Defensive Security Invariants</span>
+                  <span>Execution checks</span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Includes mandatory callback proxy authentication on Base Sepolia, stateless cooldown timestamp protection against rapid 200ms block storms, and live reserve re-validation at destination execution time.
+                  Check the deployed contract for the callback permissions, cooldown and price checks it supports.
                 </p>
               </div>
             </div>

@@ -247,7 +247,7 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
   };
 
   return (
-    <div className="w-72 border-r border-white/[0.08] bg-[#0E1017]/95 backdrop-blur-md flex flex-col h-full z-10 select-none shadow-xl transform-gpu">
+    <div className="flex min-h-0 w-full flex-1 flex-col border-r border-[var(--ws-border)] bg-[var(--ws-rail)]">
       {/* Palette Header */}
       <div className="p-4 border-b border-white/[0.06] bg-[#07080D]/60 space-y-3">
         <div className="flex items-center justify-between">
