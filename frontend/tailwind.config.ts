@@ -41,8 +41,9 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'Segoe UI', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'IBM Plex Mono', 'monospace'],
+        display: ['"BubbledotICG-FinePos"', '"Geist Pixel Circle"', 'monospace'],
       },
       borderRadius: {
         '2xl': '16px',

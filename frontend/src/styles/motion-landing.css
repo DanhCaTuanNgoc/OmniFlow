@@ -2,6 +2,14 @@
 /* Exact specifications from MOTION_UI_PROMPT.md */
 
 @font-face {
+  font-family: "BubbledotICG-FinePos";
+  src: url("/fonts/BubbledotICG-FinePos.woff2") format("woff2"),
+       url("/fonts/BubbledotICG-FinePos.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
   font-family: "Geist Pixel Circle";
   src: url("/fonts/GeistPixel-Circle.woff2") format("woff2");
   font-weight: 400;
