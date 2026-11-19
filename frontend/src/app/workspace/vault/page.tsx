@@ -19,7 +19,7 @@ import {
   Coins
 } from 'lucide-react';
 import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
-import { parseEther, formatEther, isAddressEqual, type Address } from 'viem';
+import { parseEther, formatEther, isAddress, isAddressEqual, type Address } from 'viem';
 import { CONTRACT_ADDRESSES } from '@/lib/constants';
 import { truncateAddress } from '@/lib/utils';
 import { ACTION_VAULT_ABI } from '@omniflow/shared';
@@ -37,6 +37,7 @@ function VaultForWallet({ userAddress }: { userAddress?: Address }) {
   const [actionSuccessMsg, setActionSuccessMsg] = useState<{ title: string; txHash?: string } | null>(null);
 
   const vaultAddress = CONTRACT_ADDRESSES.DEFAULT_ACTION_VAULT;
+  const vaultConfigured = isAddress(vaultAddress);
   const isCorrectChain = chainId === 84532;
 
   // 4. Read Vault Owner
@@ -45,7 +46,7 @@ function VaultForWallet({ userAddress }: { userAddress?: Address }) {
     abi: ACTION_VAULT_ABI,
     functionName: 'owner',
     chainId: 84532,
-    query: { enabled: isConnected },
+    query: { enabled: isConnected && vaultConfigured },
   });
 
   const isOwner = Boolean(userAddress && vaultOwner && !ownerError && isAddressEqual(userAddress, vaultOwner));
@@ -189,7 +190,8 @@ function VaultForWallet({ userAddress }: { userAddress?: Address }) {
         <h1 className="text-xl font-bold text-white font-display">Vault Manager</h1>
         <p role="status" className="text-sm text-slate-300">
           {!isConnected ? 'Connect a wallet to view your Vault.' :
-            ownerError ? 'Unable to verify Vault ownership on Base Sepolia.' :
+            !vaultConfigured ? 'The configured Vault address is invalid.' :
+            ownerError ? 'Unable to read the configured Vault on Base Sepolia. Check its address and the RPC connection.' :
             ownerPending ? 'Checking Vault ownership?' : 'No verified Vault is linked to this wallet.'}
         </p>
       </div>
