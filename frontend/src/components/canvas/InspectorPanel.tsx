@@ -4,14 +4,17 @@ import React from 'react';
 import { Node } from '@xyflow/react';
 import { X, Sliders, Trash2, Info, Radio, Activity } from 'lucide-react';
 import { SUPPORTED_PAIRS, SUPPORTED_CHAINS } from '@/lib/constants';
-import { toEventSelector } from 'viem';
+import { isAddress, toEventSelector, type Address } from 'viem';
 import { STOP_LOSS_TEMPLATE } from '@omniflow/shared';
+import { VaultSetup } from './VaultSetup';
 
 interface InspectorPanelProps {
   selectedNode: Node | null;
   onUpdateNodeData: (id: string, data: Record<string, any>) => void;
   onDeleteNode: (id: string) => void;
   onClose: () => void;
+  owner?: Address;
+  originPool?: unknown;
 }
 
 export function InspectorPanel({
@@ -19,6 +22,8 @@ export function InspectorPanel({
   onUpdateNodeData,
   onDeleteNode,
   onClose,
+  owner,
+  originPool,
 }: InspectorPanelProps) {
   if (!selectedNode) return null;
 
@@ -26,7 +31,6 @@ export function InspectorPanel({
 
   const handleChange = (field: string, value: any) => {
     onUpdateNodeData(id, {
-      ...data,
       [field]: value,
     });
   };
@@ -372,6 +376,10 @@ export function InspectorPanel({
                 className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 font-mono text-[11px] text-slate-200 focus:outline-none focus:border-violet-500"
               />
             </div>
+            {owner && typeof originPool === 'string' && isAddress(originPool) && (
+              <VaultSetup key={`${id}:${owner}:${originPool}`} owner={owner} pair={originPool}
+                currentVault={String(data.actionVaultAddress || '')} onLinked={vault => handleChange('actionVaultAddress', vault)} />
+            )}
           </div>
         )}
 

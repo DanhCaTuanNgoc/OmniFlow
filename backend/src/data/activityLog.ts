@@ -13,7 +13,11 @@ export interface ActivityLogEntry {
   destinationChainId: number;
   destinationTxHash?: string;
   destinationAction: string;
-  status: 'SUCCESS' | 'SKIPPED' | 'FAILED';
+  status: 'PENDING' | 'UNVERIFIED' | 'REORGED' | 'SUCCESS' | 'SKIPPED' | 'FAILED';
+  originLogIndex: number;
+  originBlockHash: string;
+  reactiveBlockHash: string;
+  destinationBlockHash?: string;
   details: {
     tokenPair?: string;
     triggerPrice?: string;
@@ -21,5 +25,13 @@ export interface ActivityLogEntry {
     amountIn?: string;
     amountOut?: string;
     reason?: string;
+    correlation?: 'system' | 'receipt-window';
   };
 }
+
+export type PendingExecution = {
+  deploymentId: string;
+  reactiveTxHash: `0x${string}`;
+  originTxHash: `0x${string}`;
+  originLogIndex: number;
+};

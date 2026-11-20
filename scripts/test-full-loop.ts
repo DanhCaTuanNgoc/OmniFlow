@@ -199,10 +199,12 @@ async function waitFor<T>(description: string, read: () => Promise<T | undefined
 
 async function main() {
   const args = process.argv.slice(2);
+  const expectSkip = args[0] === '--expect-skipped';
+  if (expectSkip) args.shift();
   const replay = args[0] === '--verify-existing';
-  requireCheck(args.length === 0 || (args.length === 1 && ['--preflight', '--execute'].includes(args[0])) ||
+  requireCheck((!expectSkip && (args.length === 0 || (args.length === 1 && ['--preflight', '--execute'].includes(args[0])))) ||
     (replay && [3, 4].includes(args.length) && args.slice(1).every(hash => /^0x[0-9a-fA-F]{64}$/.test(hash))),
-  'Usage: test-full-loop.ts [--preflight | --execute | --verify-existing ORIGIN LASNA [DESTINATION]]');
+  'Usage: test-full-loop.ts [--preflight | --execute | [--expect-skipped] --verify-existing ORIGIN LASNA [DESTINATION]]');
   const execute = args[0] === '--execute';
   console.log({ pair, vault, rsc, proxy, mode: execute ? 'live execution' : 'read-only verification' });
   if (replay) {
@@ -211,7 +213,7 @@ async function main() {
       base.readContract({ ...vaultRead, functionName: 'usdcToken' }),
       base.readContract({ ...vaultRead, functionName: 'owner' }),
     ]);
-    await verifyLoop({ token, owner }, args[1] as Hash, 0n, args[2] as Hash, args[3] as Hash | undefined);
+    await verifyLoop({ token, owner }, args[1] as Hash, 0n, args[2] as Hash, args[3] as Hash | undefined, expectSkip);
     return;
   }
   const setup = await preflight();
@@ -253,7 +255,7 @@ async function main() {
 
 async function verifyLoop(
   setup: { token: Address; owner: Address; reserve0?: bigint; reserve1?: bigint }, originHash: Hash, lasnaCursor: bigint,
-  knownReaction?: Hash, knownDestination?: Hash,
+  knownReaction?: Hash, knownDestination?: Hash, expectSkip = false,
 ) {
   console.log(`Origin: https://sepolia.basescan.org/tx/${originHash}`);
   const origin = await base.waitForTransactionReceipt({ hash: originHash, timeout: 180_000, checkReplacement: false });
@@ -310,6 +312,9 @@ async function verifyLoop(
   console.log(`Reactive: https://lasna.reactscan.net/tx/${reaction.hash}`);
 
   const requestedPayload = reaction.callback.args.payload;
+  const requestedCall = decodeFunctionData({ abi, data: requestedPayload });
+  requireCheck(requestedCall.functionName === 'executeStopLoss', 'Unexpected stop-loss selector.');
+  const [, , , threshold] = requestedCall.args;
   async function matchingDelivery(hash: Hash) {
     const tx = await base.getTransaction({ hash });
     if (!tx.to || !isAddressEqual(tx.to, proxy)) return false;
@@ -347,7 +352,7 @@ async function verifyLoop(
 
     // Omni can deliver on Base before Lasna indexes the delivery record. Match the signed proxy transaction
     // against the system request within the origin block window.
-    if (reaction.callback.eventName !== 'OmniCallbackRequested') return;
+    if (expectSkip || reaction.callback.eventName !== 'OmniCallbackRequested') return;
     if (knownDestination) return knownDestination;
     const tip = await base.getBlockNumber({ cacheTime: 0 });
     const toBlock = tip < origin.blockNumber + 500n ? tip : origin.blockNumber + 500n;
@@ -375,15 +380,40 @@ async function verifyLoop(
     logs: destination.logs.filter(log => isAddressEqual(log.address, proxy)) });
   requireCheck(!failures.some(log => isAddressEqual(log.args.target, vault)), 'Callback Proxy emitted CallbackFailure.');
   const vaultLogs = destination.logs.filter(log => isAddressEqual(log.address, vault));
-  const [skip] = parseEventLogs({ abi, eventName: 'OrderSkipped', logs: vaultLogs });
-  requireCheck(!skip, `Vault skipped the order: ${skip?.args.reason}`);
-  const [execution] = parseEventLogs({ abi, eventName: 'StopLossExecuted', logs: vaultLogs });
-  requireCheck(execution && execution.args.ethAmountIn > 0n && execution.args.minUsdcOut > 0n,
-    'Destination receipt lacks a valid StopLossExecuted event.');
+  const skips = parseEventLogs({ abi, eventName: 'OrderSkipped', logs: vaultLogs });
+  const executions = parseEventLogs({ abi, eventName: 'StopLossExecuted', logs: vaultLogs });
   const payouts = parseEventLogs({ abi, eventName: 'Transfer',
     logs: destination.logs.filter(log => isAddressEqual(log.address, setup.token)) });
-  const payout = payouts.find(log => isAddressEqual(log.args.to, setup.owner) && log.args.value >= execution.args.minUsdcOut);
-  requireCheck(payout, 'Destination receipt lacks a token transfer to the Vault owner meeting minUsdcOut.');
+  let outcome: { event: string; [key: string]: string };
+  if (expectSkip) {
+    const [skip] = skips;
+    requireCheck(skips.length === 1 && executions.length === 0 &&
+      skip.args.reason === 'Price bounced back above stop threshold' && skip.args.currentPrice > threshold,
+      'Destination receipt does not prove that the Vault skipped because the price rebounded.');
+    requireCheck(sync.args.reserve0 > 0n && sync.args.reserve1 * 10n ** 18n / sync.args.reserve0 <= threshold,
+      'The origin Sync did not meet the callback price threshold.');
+    requireCheck(!payouts.some(log => isAddressEqual(log.args.to, setup.owner) || isAddressEqual(log.args.from, vault)),
+      'A quote-token transfer involving the Vault or owner appeared in the skipped callback receipt.');
+    outcome = {
+      event: 'OrderSkipped',
+      reason: skip.args.reason,
+      currentPrice: skip.args.currentPrice.toString(),
+      threshold: threshold.toString(),
+    };
+  } else {
+    requireCheck(skips.length === 0, `Vault skipped the order: ${skips[0]?.args.reason}`);
+    const [execution] = executions;
+    requireCheck(executions.length === 1 && execution.args.ethAmountIn > 0n && execution.args.minUsdcOut > 0n,
+      'Destination receipt lacks a unique valid StopLossExecuted event.');
+    const payout = payouts.find(log => isAddressEqual(log.args.to, setup.owner) && log.args.value >= execution.args.minUsdcOut);
+    requireCheck(payout, 'Destination receipt lacks a token transfer to the Vault owner meeting minUsdcOut.');
+    outcome = {
+      event: 'StopLossExecuted',
+      ethAmountIn: execution.args.ethAmountIn.toString(),
+      minUsdcOut: execution.args.minUsdcOut.toString(),
+      tokenAmountOut: payout.args.value.toString(),
+    };
+  }
 
   const [originBlock, destinationBlock] = await Promise.all([
     base.getBlock({ blockNumber: origin.blockNumber }),
@@ -399,7 +429,9 @@ async function verifyLoop(
     lastVerifiedAt: new Date().toISOString(),
     originToDestinationSeconds: Number(deliverySeconds),
     status: 'VERIFIED_FULL_LOOP_ON_TESTNET',
-    scenario: 'Stop-loss executed on public testnets using a deployed test pool and a test token.',
+    scenario: expectSkip
+      ? 'Stop-loss skipped on public testnets after the price rebounded above the threshold.'
+      : 'Stop-loss executed on public testnets using a deployed test pool and a test token.',
     verifiableTransactions: {
       step1_originEvent: {
         chainId: baseSepolia.id, contract: pair, event: 'Sync', blockNumber: Number(origin.blockNumber),
@@ -411,10 +443,9 @@ async function verifyLoop(
         txHash: reaction.hash, explorerUrl: `https://lasna.reactscan.net/tx/${reaction.hash}`,
       },
       step3_callbackExecution: {
-        chainId: baseSepolia.id, contract: vault, proxy, event: 'StopLossExecuted',
+        chainId: baseSepolia.id, contract: vault, proxy, ...outcome,
         status: destination.status, blockNumber: Number(destination.blockNumber), txHash: callbackHash,
-        token: setup.token, recipient: setup.owner, ethAmountIn: execution.args.ethAmountIn.toString(),
-        minUsdcOut: execution.args.minUsdcOut.toString(), tokenAmountOut: payout.args.value.toString(),
+        token: setup.token, recipient: setup.owner,
         explorerUrl: `https://sepolia.basescan.org/tx/${callbackHash}`,
       },
     },

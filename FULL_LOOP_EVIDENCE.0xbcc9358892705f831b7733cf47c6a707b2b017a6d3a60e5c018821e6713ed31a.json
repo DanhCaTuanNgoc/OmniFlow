@@ -1,0 +1,44 @@
+{
+  "project": "OmniFlow",
+  "track": "Set It and Forget It",
+  "testExecutionTimestamp": "2026-11-19T13:07:32.000Z",
+  "lastVerifiedAt": "2026-11-20T04:38:13.084Z",
+  "originToDestinationSeconds": 2,
+  "status": "VERIFIED_FULL_LOOP_ON_TESTNET",
+  "scenario": "Stop-loss executed on public testnets using a deployed test pool and a test token.",
+  "verifiableTransactions": {
+    "step1_originEvent": {
+      "chainId": 84532,
+      "contract": "0x9a796B794999cAbCd10d08F777B24ceb76e34B3E",
+      "event": "Sync",
+      "blockNumber": 60858909,
+      "logIndex": 0,
+      "txHash": "0xbcc9358892705f831b7733cf47c6a707b2b017a6d3a60e5c018821e6713ed31a",
+      "explorerUrl": "https://sepolia.basescan.org/tx/0xbcc9358892705f831b7733cf47c6a707b2b017a6d3a60e5c018821e6713ed31a"
+    },
+    "step2_reactiveExecution": {
+      "chainId": 5318007,
+      "contract": "0x005d4cB896c9e0B07Bbf961FDC26b098D84079d7",
+      "event": "OmniCallbackRequested",
+      "refTx": "0xbcc9358892705f831b7733cf47c6a707b2b017a6d3a60e5c018821e6713ed31a",
+      "blockNumber": 8735587,
+      "txHash": "0xf66b1f9a183811bc9a857027e42a7c3aa8d8f13cef2c6c3156508752a7ffe0eb",
+      "explorerUrl": "https://lasna.reactscan.net/tx/0xf66b1f9a183811bc9a857027e42a7c3aa8d8f13cef2c6c3156508752a7ffe0eb"
+    },
+    "step3_callbackExecution": {
+      "chainId": 84532,
+      "contract": "0x9670EEAdE57d62127f513414d87B0F841A763dd5",
+      "proxy": "0x476F44b11F5C942c58f4c8E3d0300E5710743585",
+      "event": "StopLossExecuted",
+      "ethAmountIn": "1000000000000000",
+      "minUsdcOut": "1324689284783071277",
+      "tokenAmountOut": "1394409773455864503",
+      "status": "success",
+      "blockNumber": 60858916,
+      "txHash": "0x6683e71dfc3fb75e1b103985e79a027a8087217c2e23077d26897584d177d052",
+      "token": "0x8c2D098617102a64925CC683d9B444F938A96082",
+      "recipient": "0xE50dD8e4aE1b1Dd46334eA22C10129Ee4d6736eF",
+      "explorerUrl": "https://sepolia.basescan.org/tx/0x6683e71dfc3fb75e1b103985e79a027a8087217c2e23077d26897584d177d052"
+    }
+  }
+}

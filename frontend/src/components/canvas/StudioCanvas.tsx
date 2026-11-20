@@ -24,7 +24,11 @@ import { useAccount } from 'wagmi';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { resolveStopLoss, type StopLossGraph } from '@omniflow/shared';
 import { APP_CONFIG } from '@/lib/constants';
-import { parsePipelineDraft } from '@/lib/pipelineDraft';
+import { parsePipelineDraft, studioGraph } from '@/lib/pipelineDraft';
+import { workspaceRequest } from '@/lib/workspaceSession';
+import { STOP_LOSS_TEMPLATE } from '@omniflow/shared';
+
+const guestDraftKey = 'omniflow.studio.guest.v1';
 
 import {
   WatchDEXPriceNode,
@@ -96,6 +100,11 @@ function StudioCanvasInner() {
   const [isDeployOpen, setIsDeployOpen] = useState(false);
   const [isSolidityOpen, setIsSolidityOpen] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
+  const [savedDraft, setSavedDraft] = useState<{ id: string; updatedAt: number }>();
+  const [draftMessage, setDraftMessage] = useState<string>();
+  const [draftBusy, setDraftBusy] = useState(false);
+  const pipelineParam = searchParams.get('pipeline');
+  const deploymentParam = searchParams.get('deployment');
 
   // Hydrate preset from query parameter ?recipe=...
   useEffect(() => {
@@ -108,6 +117,67 @@ function StudioCanvasInner() {
       setSelectedNodeId(null);
     }
   }, [searchParams, setNodes, setEdges]);
+
+  useEffect(() => {
+    if (searchParams.get('recipe') || pipelineParam || deploymentParam) return;
+    const saved = localStorage.getItem(guestDraftKey);
+    if (!saved) return;
+    try {
+      const restored = parsePipelineDraft(saved, draftNodeTypes);
+      setNodes(restored.nodes);
+      setEdges(restored.edges);
+      setDraftNetworks(restored.networks);
+    } catch {
+      setValidationWarning('The browser draft could not be opened. Import a valid Studio JSON file.');
+    }
+  }, [searchParams, pipelineParam, deploymentParam, setNodes, setEdges]);
+
+  async function openSavedGraph() {
+    if (!address || (!pipelineParam && !deploymentParam)) return;
+    setDraftBusy(true);
+    setValidationWarning(null);
+    try {
+      const path = deploymentParam
+        ? `/pipeline/deployments/${encodeURIComponent(deploymentParam)}`
+        : `/pipeline/drafts/${encodeURIComponent(pipelineParam!)}`;
+      const snapshot = await workspaceRequest<{ graph: unknown; id?: string; updatedAt?: number }>(address, path);
+      const draft = parsePipelineDraft(JSON.stringify(snapshot.graph), draftNodeTypes);
+      setNodes(draft.nodes);
+      setEdges(draft.edges);
+      setDraftNetworks(draft.networks);
+      setSelectedNodeId(null);
+      setSavedDraft(snapshot.id && snapshot.updatedAt !== undefined ? { id: snapshot.id, updatedAt: snapshot.updatedAt } : undefined);
+      setDraftMessage(deploymentParam ? 'Deployment snapshot opened. Save to create an editable draft.' : 'Saved draft opened.');
+    } catch (error) {
+      setValidationWarning(error instanceof Error ? error.message : 'Unable to open the saved graph.');
+    } finally {
+      setDraftBusy(false);
+    }
+  }
+
+  async function saveGraph() {
+    setDraftBusy(true);
+    setValidationWarning(null);
+    try {
+      const graph = studioGraph(nodes, edges, draftNetworks ?? STOP_LOSS_TEMPLATE.networks);
+      if (isConnected && address) {
+        const name = RECIPE_PRESETS[activeRecipeId]?.title || 'Custom pipeline';
+        setSavedDraft(await workspaceRequest(address, '/pipeline/drafts', {
+          method: 'POST', body: JSON.stringify({
+            graph: { ...graph, metadata: { name, ownerAddress: address } }, revision: savedDraft,
+          }),
+        }));
+        setDraftMessage('Draft saved to your wallet workspace.');
+      } else {
+        localStorage.setItem(guestDraftKey, JSON.stringify(graph));
+        setDraftMessage('Draft saved in this browser.');
+      }
+    } catch (error) {
+      setValidationWarning(error instanceof Error ? error.message : 'Unable to save the draft.');
+    } finally {
+      setDraftBusy(false);
+    }
+  }
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
 
@@ -257,7 +327,7 @@ function StudioCanvasInner() {
         if (node.id === id) {
           return {
             ...node,
-            data: updatedData,
+            data: { ...node.data, ...updatedData },
           };
         }
         return node;
@@ -350,10 +420,17 @@ function StudioCanvasInner() {
             <button type="button" className="ws-button lg:hidden" aria-expanded={isPaletteOpen} aria-controls="studio-node-palette"
               onClick={() => setPaletteOpen(open => !open)}>Add nodes</button>
             <h1 className="truncate text-sm font-semibold">{RECIPE_PRESETS[activeRecipeId]?.title || 'Custom pipeline'}</h1>
-            {nodes.length > 0 && <span className="ws-badge shrink-0">Unsaved</span>}
           </div>
 
           <div className="ws-actions">
+            {(pipelineParam || deploymentParam) && (
+              <button type="button" className="ws-button" disabled={!isConnected || draftBusy} onClick={() => void openSavedGraph()}>
+                {deploymentParam ? 'Open snapshot' : 'Open saved draft'}
+              </button>
+            )}
+            <button type="button" className="ws-button" disabled={draftBusy || !nodes.length} onClick={() => void saveGraph()}>
+              Save draft
+            </button>
             <select aria-label="Recipe preset" value={activeRecipeId} onChange={(event) => handleSelectPreset(event.target.value)}
               className="ws-button max-w-[11rem] bg-[var(--ws-panel)]">
               <option value="">Recipe preset</option>
@@ -379,6 +456,7 @@ function StudioCanvasInner() {
           {validationWarning && <p role="alert" className="flex w-full items-center gap-2 text-xs text-amber-200">
             <AlertTriangle size={14} aria-hidden="true" />{validationWarning}
           </p>}
+          {draftMessage && <p role="status" className="w-full text-xs text-[var(--ws-muted)]">{draftMessage}</p>}
         </div>
 
         <div className="relative min-h-0 flex-1 bg-[var(--ws-bg)]">
@@ -434,6 +512,8 @@ function StudioCanvasInner() {
         <div className="absolute inset-y-0 right-0 z-30 w-full max-w-[20rem] shrink-0 lg:relative">
         <InspectorPanel
           selectedNode={selectedNode}
+          owner={isConnected ? address : undefined}
+          originPool={nodes.find(node => node.type === 'watchDEXPrice')?.data.pairAddress}
           onUpdateNodeData={handleUpdateNodeData}
           onDeleteNode={handleDeleteNode}
           onClose={() => setSelectedNodeId(null)}
@@ -446,7 +526,8 @@ function StudioCanvasInner() {
         key={isConnected ? address : 'guest'}
         isOpen={isDeployOpen}
         onClose={() => setIsDeployOpen(false)}
-        graph={{ nodes, edges, networks: draftNetworks }}
+        graph={studioGraph(nodes, edges, draftNetworks)}
+        workspacePipelineId={savedDraft?.id}
       />
 
       {/* Solidity Preview Modal */}
@@ -462,10 +543,11 @@ function StudioCanvasInner() {
 }
 
 export function StudioCanvas() {
+  const { address, isConnected } = useAccount();
   return (
     <ReactFlowProvider>
       <Suspense fallback={<div className="w-full h-full bg-[#07080d]" />}>
-        <StudioCanvasInner />
+        <StudioCanvasInner key={isConnected ? address : 'guest'} />
       </Suspense>
     </ReactFlowProvider>
   );

@@ -8,10 +8,11 @@
     "dev": "pnpm --filter @omniflow/shared build && tsx watch src/index.ts",
     "build": "pnpm --filter @omniflow/shared build && tsc",
     "start": "node dist/index.js",
-    "test": "pnpm --filter @omniflow/shared build && node --import tsx --test test/deployer.test.ts test/nodes.test.ts"
+    "test": "pnpm --filter @omniflow/shared build && node --import tsx --test test/deployer.test.ts test/nodes.test.ts test/workspace.test.ts"
   },
   "dependencies": {
     "@omniflow/shared": "workspace:*",
+    "better-sqlite3": "^11.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
@@ -21,6 +22,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^20.17.6",

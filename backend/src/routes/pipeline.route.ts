@@ -1,11 +1,102 @@
 import { Router, Request, Response } from 'express';
-import { PipelineGraphSchema } from '../schemas/pipeline.schema.js';
+import { PipelineDraftSchema, PipelineGraphSchema } from '../schemas/pipeline.schema.js';
 import { deployerService } from '../services/deployer.service.js';
+import { bearerToken, workspaceSessions } from '../services/workspaceSession.service.js';
+import { DeploymentConflict, DeploymentLimit, deploymentStore, graphSnapshot } from '../data/deployments.js';
+import { vaultRouter } from './vault.route.js';
+import { z } from 'zod';
+import type { Hash } from 'viem';
+import { deploymentSteps, recordDeploymentStep } from '../services/deploymentSteps.js';
+import { readDeploymentRuntime } from '../services/deploymentRuntime.js';
 
 export const pipelineRouter = Router();
 
+pipelineRouter.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  const session = workspaceSessions.getSession(bearerToken(req.get('Authorization')));
+  if (!session) return res.status(401).json({ error: 'Sign in with your wallet to deploy.' });
+  res.locals.workspaceOwner = session.owner;
+  next();
+});
+
+pipelineRouter.use('/vaults', vaultRouter);
+
+pipelineRouter.get('/drafts', (_req, res) => {
+  return res.json({ drafts: deploymentStore().listDrafts(res.locals.workspaceOwner) });
+});
+
+pipelineRouter.get('/drafts/:id', (req, res) => {
+  const draft = deploymentStore().getDraft(res.locals.workspaceOwner, req.params.id);
+  if (!draft) return res.status(404).json({ error: 'Pipeline draft not found.' });
+  return res.json({ id: draft.id, updatedAt: draft.updatedAt, graph: JSON.parse(draft.graphJson) });
+});
+
+const draftSaveSchema = z.object({
+  graph: PipelineDraftSchema,
+  revision: z.object({ id: z.string().uuid(), updatedAt: z.number().int().nonnegative() }).optional(),
+});
+
+pipelineRouter.post('/drafts', (req, res) => {
+  const validation = draftSaveSchema.safeParse(req.body);
+  if (!validation.success) return res.status(400).json({ error: 'Invalid pipeline draft.' });
+  const { graph, revision } = validation.data;
+  const owner = res.locals.workspaceOwner;
+  if (graph.metadata.ownerAddress.toLowerCase() !== owner.toLowerCase()) {
+    return res.status(403).json({ error: 'The draft owner must match the signed-in wallet.' });
+  }
+  const draft = deploymentStore().saveDraft(owner, graphSnapshot(graph), graph.metadata.name, revision);
+  if (!draft) return res.status(409).json({ error: 'The saved draft changed. Reopen it before replacing it.' });
+  return res.json({ id: draft.id, updatedAt: draft.updatedAt });
+});
+
+pipelineRouter.get('/deployments', async (_req, res, next) => {
+  try {
+    return res.json({ deployments: await deployerService.listDeployments(res.locals.workspaceOwner) });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+pipelineRouter.get('/deployments/:id', async (req, res, next) => {
+  try {
+    const deployment = deployerService.getDeployment(res.locals.workspaceOwner, req.params.id);
+    if (!deployment) return res.status(404).json({ error: 'Deployment not found.' });
+    const runtime = await readDeploymentRuntime(deployment, res.locals.workspaceOwner);
+    return res.json({ ...deployment, runtime });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+const stepSchema = z.object({
+  kind: z.enum(deploymentSteps),
+  hash: z.custom<Hash>(value => typeof value === 'string' && /^0x[0-9a-f]{64}$/i.test(value)),
+});
+
+pipelineRouter.post('/deployments/:id/steps', async (req, res) => {
+  const input = stepSchema.safeParse(req.body);
+  if (!input.success) return res.status(400).json({ error: 'A valid deployment step and transaction hash are required.' });
+  try {
+    const result = await recordDeploymentStep(res.locals.workspaceOwner, req.params.id, input.data.kind, input.data.hash);
+    if (result === undefined) return res.status(404).json({ error: 'Deployment not found.' });
+    if (!result) return res.status(409).json({ error: 'The receipt does not match this deployment step.' });
+    return res.json({ recorded: true });
+  } catch {
+    return res.status(502).json({ error: 'Unable to verify the step receipt on its chain.' });
+  }
+});
+
 pipelineRouter.post('/compile-and-deploy', async (req: Request, res: Response) => {
-  // 1. Thẩm định cú pháp Graph JSON
+  const key = req.get('Idempotency-Key');
+  if (!key || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(key)) {
+    return res.status(400).json({ error: 'An Idempotency-Key UUID is required.' });
+  }
+  const owner = res.locals.workspaceOwner;
+  const workspacePipelineId = req.get('Workspace-Pipeline-Id');
+  if (workspacePipelineId && !z.string().uuid().safeParse(workspacePipelineId).success) {
+    return res.status(400).json({ error: 'Invalid workspace pipeline ID.' });
+  }
+
   const validation = PipelineGraphSchema.safeParse(req.body);
 
   if (!validation.success) {
@@ -15,15 +106,20 @@ pipelineRouter.post('/compile-and-deploy', async (req: Request, res: Response) =
       details: validation.error.format(),
     });
   }
+  if (validation.data.metadata.ownerAddress.toLowerCase() !== owner.toLowerCase()) {
+    return res.status(403).json({ error: 'The pipeline owner must match the signed-in wallet.' });
+  }
 
   try {
-    // 2. Trích xuất tham số và deploy lên Reactive Lasna
-    const result = await deployerService.deployPipeline(validation.data);
-    return res.status(200).json(result);
+    const graph = { ...validation.data, metadata: { ...validation.data.metadata, ownerAddress: owner } };
+    const result = await deployerService.deployPipeline(graph, key, workspacePipelineId);
+    return res.status(result.status === 'signed' ? 202 : 200).json(result);
   } catch (error: unknown) {
+    if (error instanceof DeploymentConflict) return res.status(409).json({ error: error.message });
+    if (error instanceof DeploymentLimit) return res.status(429).json({ error: error.message });
     const message = error instanceof Error ? error.message : '';
     const isClientError = message.startsWith('DAG Validation Failed:');
-    const signerUnavailable = message === 'Deployment signer is not configured.';
+    const signerUnavailable = ['Deployment signer is not configured.', 'Deployment signer has insufficient lREACT.'].includes(message);
     console.error('Pipeline deploy failed:', error instanceof Error ? error.name : 'Unknown error');
     return res.status(isClientError ? 400 : signerUnavailable ? 503 : 500).json({
       success: false,

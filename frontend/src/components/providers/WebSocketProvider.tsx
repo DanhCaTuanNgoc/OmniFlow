@@ -66,8 +66,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
             return;
           }
           setStatus('CONNECTED');
-          // Tự động subscribe pipeline all để nhận toàn bộ telemetry
-          ws.send(JSON.stringify({ type: 'SUBSCRIBE_PIPELINE', pipelineId: 'all' }));
         };
 
         ws.onmessage = (event) => {

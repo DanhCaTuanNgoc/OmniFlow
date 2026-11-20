@@ -6,6 +6,7 @@ import { env } from './config/env.js';
 import { healthRouter } from './routes/health.route.js';
 import { logsRouter } from './routes/logs.route.js';
 import { pipelineRouter } from './routes/pipeline.route.js';
+import { sessionRouter } from './routes/session.route.js';
 import { WebSocketGateway } from './websocket/gateway.js';
 import { eventListenerService } from './services/eventListener.service.js';
 
@@ -35,6 +36,7 @@ export function createApp(): {
   // Routes
   app.use('/health', healthRouter);
   app.use('/api/logs', logsRouter);
+  app.use('/api/session', sessionRouter);
   app.use('/api/pipeline', pipelineRouter);
 
   // Root endpoint

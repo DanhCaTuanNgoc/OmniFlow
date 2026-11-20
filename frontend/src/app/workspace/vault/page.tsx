@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import { 
   Vault, 
@@ -24,20 +25,62 @@ import { parseEther, formatEther, isAddress, isAddressEqual, type Address } from
 import { CONTRACT_ADDRESSES } from '@/lib/constants';
 import { truncateAddress } from '@/lib/utils';
 import { ACTION_VAULT_ABI } from '@omniflow/shared';
+import { workspaceRequest } from '@/lib/workspaceSession';
+import type { DeploymentDetail } from '@/lib/deployments';
 
 export default function VaultManagerPage() {
-  const { address, isConnected } = useAccount();
-  return <VaultForWallet key={isConnected ? address : 'guest'} userAddress={isConnected ? address : undefined} />;
+  return <Suspense fallback={<WorkspaceState title="Loading Vault Manager…" />}><VaultRoute /></Suspense>;
 }
 
-function VaultForWallet({ userAddress }: { userAddress?: Address }) {
+function VaultRoute() {
+  const { address, isConnected } = useAccount();
+  const id = useSearchParams().get('deployment');
+  const owner = isConnected ? address : undefined;
+  return id ? <VaultSelection key={`${owner}:${id}`} owner={owner} id={id} />
+    : <VaultForWallet key={owner ?? 'guest'} userAddress={owner}
+      vaultAddress={CONTRACT_ADDRESSES.DEFAULT_ACTION_VAULT} rscAddress={CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS} />;
+}
+
+function VaultSelection({ owner, id }: { owner?: Address; id: string }) {
+  const [deployment, setDeployment] = useState<DeploymentDetail>();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string>();
+  async function open() {
+    if (!owner) return;
+    setPending(true);
+    setError(undefined);
+    try {
+      setDeployment(await workspaceRequest<DeploymentDetail>(owner, `/pipeline/deployments/${encodeURIComponent(id)}`));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Unable to load the Vault.');
+    } finally {
+      setPending(false);
+    }
+  }
+  if (deployment?.contracts.rscAddress) {
+    return <VaultForWallet userAddress={owner} vaultAddress={deployment.contracts.vaultAddress} rscAddress={deployment.contracts.rscAddress} />;
+  }
+  return (
+    <div className="ws-page">
+      <WorkspacePageHeader title="Vault Manager" description="Open the Base Sepolia Vault for this deployment." />
+      {!owner ? <WorkspaceState title="Connect the deployment wallet." /> : <>
+        <button type="button" className="ws-button self-start" disabled={pending} onClick={() => void open()}>
+          {pending ? 'Checking deployment…' : 'Open deployment Vault'}
+        </button>
+        {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}
+        {deployment && <WorkspaceState title="The Lasna deployment receipt is pending." />}
+      </>}
+    </div>
+  );
+}
+
+function VaultForWallet({ userAddress, vaultAddress, rscAddress }: { userAddress?: Address; vaultAddress: Address; rscAddress: Address }) {
   const { chainId } = useAccount();
   const isConnected = Boolean(userAddress);
   const [depositAmount, setDepositAmount] = useState('0.001');
   const [isPanicConfirmOpen, setIsPanicConfirmOpen] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<{ title: string; txHash?: string } | null>(null);
 
-  const vaultAddress = CONTRACT_ADDRESSES.DEFAULT_ACTION_VAULT;
   const vaultConfigured = isAddress(vaultAddress);
   const isCorrectChain = chainId === 84532;
 
@@ -90,7 +133,7 @@ function VaultForWallet({ userAddress }: { userAddress?: Address }) {
     address: vaultAddress,
     abi: ACTION_VAULT_ABI,
     functionName: 'authorizedRSCs',
-    args: [CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS],
+    args: [rscAddress],
     chainId: 84532,
     query: { enabled: isOwner },
   });
@@ -178,7 +221,7 @@ function VaultForWallet({ userAddress }: { userAddress?: Address }) {
       account: userAddress,
       abi: ACTION_VAULT_ABI,
       functionName: 'setAuthorizedRSC',
-      args: [CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS, nextStatus],
+      args: [rscAddress, nextStatus],
       chainId: 84532,
     });
   };
@@ -401,12 +444,12 @@ function VaultForWallet({ userAddress }: { userAddress?: Address }) {
                     </span>
                   </div>
                   <div className="text-[11px] font-mono text-slate-400 mt-0.5">
-                    RSC: {truncateAddress(CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS, 8)} (Lasna #5318007)
+                    RSC: {truncateAddress(rscAddress, 8)} (Lasna #5318007)
                   </div>
                 </div>
 
                 <a
-                  href={`https://lasna.reactscan.net/address/${CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS}`}
+                  href={`https://lasna.reactscan.net/address/${rscAddress}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-1.5 rounded-md hover:bg-white/[0.06] text-slate-400 hover:text-white transition-colors"

@@ -40,3 +40,8 @@ export const PipelineGraphSchema = z.object({
 });
 
 export type PipelineGraph = z.infer<typeof PipelineGraphSchema>;
+
+export const PipelineDraftSchema = PipelineGraphSchema.extend({
+  nodes: z.array(NodeSchema),
+  edges: z.array(EdgeSchema),
+});

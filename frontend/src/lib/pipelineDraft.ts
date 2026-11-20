@@ -1,6 +1,18 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { StopLossGraph } from '@omniflow/shared';
 
+export function studioGraph(nodes: readonly Node[], edges: readonly Edge[], networks?: StopLossGraph['networks']) {
+  return {
+    nodes: nodes.map(({ id, type, position, data }) => {
+      const { state: _state, ...fields } = data;
+      return { id, type, position, data: fields };
+    }),
+    edges: edges.map(({ id, source, target, sourceHandle, targetHandle }) =>
+      ({ id, source, target, sourceHandle: sourceHandle ?? null, targetHandle: targetHandle ?? null })),
+    networks,
+  };
+}
+
 function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

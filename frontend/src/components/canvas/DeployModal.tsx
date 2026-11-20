@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { 
   Rocket, 
   CheckCircle2, 
@@ -11,27 +12,36 @@ import {
   X, 
   KeyRound
 } from 'lucide-react';
-import { useAccount, useConfig, useWriteContract } from 'wagmi';
-import { getAccount, readContract, waitForTransactionReceipt } from 'wagmi/actions';
-import { isAddressEqual, type Address } from 'viem';
+import { useAccount, useConfig } from 'wagmi';
+import { getAccount, readContract } from 'wagmi/actions';
+import { isAddressEqual, keccak256, stringToHex, type Address } from 'viem';
 import { APP_CONFIG } from '@/lib/constants';
 import { ACTION_VAULT_ABI, resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { truncateAddress } from '@/lib/utils';
+import { invalidateWorkspaceSession, signInToWorkspace } from '@/lib/workspaceSession';
+import { runDeploymentAction, type DeploymentSummary } from '@/lib/deployments';
+
+type DeploymentResult = DeploymentSummary & {
+  gasSponsored: { amountLReact: string };
+  explorerUrls: { reactscan: string | null };
+};
 
 interface DeployModalProps {
   isOpen: boolean;
   onClose: () => void;
   graph: StopLossGraph;
+  workspacePipelineId?: string;
+  name?: string;
 }
 
-export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
+export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name }: DeployModalProps) {
   const { address: userAddress, isConnected } = useAccount();
   const config = useConfig();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [deployResult, setDeployResult] = useState<any | null>(null);
+  const [deployResult, setDeployResult] = useState<DeploymentResult | null>(null);
 
-  const { writeContractAsync, isPending: isAuthPending } = useWriteContract();
+  const [isAuthPending, setAuthPending] = useState(false);
   const [deployOwner, setDeployOwner] = useState<Address>();
   const [authSuccess, setAuthSuccess] = useState(false);
 
@@ -55,36 +65,59 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
       if (!current || !isAddressEqual(owner, current) || !isAddressEqual(owner, actualOwner)) {
         throw new Error('The connected wallet must own the selected Vault.');
       }
+      const session = await signInToWorkspace(owner);
+      const signer = getAccount(config);
+      if (!signer.address || !isAddressEqual(owner, signer.address) || signer.chainId !== 84532) {
+        throw new Error('Reconnect the deployment wallet on Base Sepolia.');
+      }
       setDeployOwner(owner);
 
       const payload = {
         pipelineVersion: '1.0.0',
         metadata: {
-          name: 'Flash Crash Stop-Loss',
+          name: name ?? 'Flash Crash Stop-Loss',
           ownerAddress: owner,
-          createdAt: Date.now(),
         },
         networks: STOP_LOSS_TEMPLATE.networks,
         nodes: graph.nodes,
         edges: graph.edges,
       };
 
+      const body = JSON.stringify(payload);
+      const storageKey = `omniflow.deploy.v1.${keccak256(stringToHex(`${workspacePipelineId ?? ''}:${body}`))}`;
+      let attemptKey = localStorage.getItem(storageKey);
+      if (!attemptKey) {
+        attemptKey = crypto.randomUUID();
+        localStorage.setItem(storageKey, attemptKey);
+      }
       const res = await fetch(`${APP_CONFIG.backendUrl}/api/pipeline/compile-and-deploy`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.token}`,
+          'Idempotency-Key': attemptKey,
+          ...(workspacePipelineId ? { 'Workspace-Pipeline-Id': workspacePipelineId } : {}),
+        },
+        body,
       });
 
       if (!res.ok) {
+        if (res.status === 401) invalidateWorkspaceSession(session.token);
         const errJson = await res.json().catch(() => ({}));
         throw new Error(errJson.message || errJson.error || `Deploy failed with status ${res.status}`);
       }
 
-      const data = await res.json();
+      const data: DeploymentResult = await res.json();
+      if (data.status === 'signed') {
+        throw new Error(`Waiting for Lasna receipt ${data.contracts.rscTxHash}. Select Deploy again to check the same transaction.`);
+      }
+      if (data.status === 'reverted') {
+        localStorage.removeItem(storageKey);
+        throw new Error(`Lasna deployment reverted: ${data.contracts.rscTxHash}.`);
+      }
       setDeployResult(data);
-    } catch (err: any) {
-      console.error('Deployment error:', err);
-      setError(err.message || 'Failed to deploy pipeline to Reactive Lasna');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to deploy pipeline to Reactive Lasna');
     } finally {
       setLoading(false);
     }
@@ -92,28 +125,15 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
 
   const handleAuthorizeVault = async () => {
     if (!deployResult?.contracts?.rscAddress || !deployOwner) return;
+    setAuthPending(true);
+    setError(null);
     try {
-      const rscAddress = deployResult.contracts.rscAddress as `0x${string}`;
-      const vaultAddress = deployResult.contracts.vaultAddress as Address;
-      const account = getAccount(config);
-      if (!account.address || !isAddressEqual(account.address, deployOwner) || account.chainId !== 84532) {
-        throw new Error('Reconnect the deployment wallet on Base Sepolia to authorize the RSC.');
-      }
-      const hash = await writeContractAsync({
-        address: vaultAddress,
-        abi: ACTION_VAULT_ABI,
-        functionName: 'setAuthorizedRSC',
-        args: [rscAddress, true],
-        chainId: 84532,
-        account: deployOwner,
-      });
-      const receipt = await waitForTransactionReceipt(config, { hash, chainId: 84532 });
-      if (receipt.status !== 'success') throw new Error(`Vault authorization reverted: ${hash}`);
-
+      await runDeploymentAction(deployOwner, deployResult, 'authorization');
       setAuthSuccess(true);
-    } catch (err: any) {
-      console.error('Vault authorization error:', err);
-      setError(err.message || 'User rejected or transaction failed');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Vault authorization failed.');
+    } finally {
+      setAuthPending(false);
     }
   };
 
@@ -207,7 +227,7 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
                 <div className="flex justify-between">
                   <span className="text-slate-400">RSC Contract:</span>
                   <span className="text-white">
-                    {truncateAddress(deployResult.contracts?.rscAddress)}
+                    {deployResult.contracts.rscAddress && truncateAddress(deployResult.contracts.rscAddress)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -263,12 +283,9 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
               )}
             </div>
 
-            <button
-              onClick={onClose}
-              className="w-full py-2.5 rounded-full bg-white/[0.06] hover:bg-white/[0.10] text-slate-200 hover:text-white border border-white/[0.08] text-xs font-medium transition-colors cursor-pointer"
-            >
-              Done & Return to Studio
-            </button>
+            <Link className="ws-button" href={`/workspace/active?deployment=${deployResult.pipelineId}`}>
+              Open deployment in Active
+            </Link>
           </div>
         )}
       </div>

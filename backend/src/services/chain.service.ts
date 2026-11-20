@@ -5,7 +5,7 @@ import {
   formatEther,
   type PublicClient,
   type WalletClient,
-  type Account,
+  type LocalAccount,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { env } from '../config/env.js';
@@ -14,7 +14,7 @@ import { baseSepoliaChain, reactiveLasnaChain } from '../config/chains.js';
 export class ChainService {
   public readonly basePublicClient: PublicClient;
   public readonly lasnaPublicClient: PublicClient;
-  public readonly relayerAccount?: Account;
+  public readonly relayerAccount?: LocalAccount;
   public readonly lasnaWalletClient?: WalletClient;
 
   constructor() {
