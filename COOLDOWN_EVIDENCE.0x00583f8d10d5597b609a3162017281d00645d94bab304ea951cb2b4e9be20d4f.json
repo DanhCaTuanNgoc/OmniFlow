@@ -1,0 +1,64 @@
+{
+  "acceptance": "BP-11",
+  "status": "VERIFIED_COOLDOWN_ON_TESTNET",
+  "verifiedAt": "2026-11-20T14:08:17.699Z",
+  "pair": "0xB901813B01774b7b3915D8D48e54974bA47C2134",
+  "vault": "0x0dB39b1c06Da72d08CBF5FfEd2C815381e7b38aA",
+  "rsc": "0x1BC254F93D3C66ffeC721c8763f85b2fC4bd51fE",
+  "cooldownSeconds": "300",
+  "priceThreshold": "1800000000000000000000",
+  "sourceFinalizedBlock": "61304307",
+  "reactions": [
+    {
+      "origin": {
+        "chainId": 84532,
+        "txHash": "0x00583f8d10d5597b609a3162017281d00645d94bab304ea951cb2b4e9be20d4f",
+        "blockHash": "0x8f6bd97cd4bbc9abac0ec28e988ca970e7ee00aacc702f2a51c5630cc6781f55",
+        "logIndex": 0,
+        "explorerUrl": "https://sepolia.basescan.org/tx/0x00583f8d10d5597b609a3162017281d00645d94bab304ea951cb2b4e9be20d4f"
+      },
+      "reactive": {
+        "chainId": 5318007,
+        "txHash": "0xa3ae846e4d0c2a570c938f233f9eebaafe05c9ea025e1ce30348463024e68a7c",
+        "blockHash": "0x2cb6b7b666e7f94c5ffc7dbb05ca5d31ae17c684dc60a3d59a0644171126f4c3",
+        "timestamp": "1795181894",
+        "requests": 1,
+        "explorerUrl": "https://lasna.reactscan.net/tx/0xa3ae846e4d0c2a570c938f233f9eebaafe05c9ea025e1ce30348463024e68a7c"
+      }
+    },
+    {
+      "origin": {
+        "chainId": 84532,
+        "txHash": "0x4a0b9fe55692cd6ead9e1d4e5b84c41c41b24e39d3ac38b389e67a6fd27eb836",
+        "blockHash": "0xef090cf962b226f45930f1f92ea28408aad82a4bc0971b144ae09b1492b96d12",
+        "logIndex": 0,
+        "explorerUrl": "https://sepolia.basescan.org/tx/0x4a0b9fe55692cd6ead9e1d4e5b84c41c41b24e39d3ac38b389e67a6fd27eb836"
+      },
+      "reactive": {
+        "chainId": 5318007,
+        "txHash": "0xe9690e6f2b66823cdb046c06e938b9c8a6341a347b15c34a0b6ce575770b33e2",
+        "blockHash": "0x4625ce685b216da3c8eae7ae7a2104ce00cecd7ddb53b187f6253aabbe8e3e2e",
+        "timestamp": "1795181923",
+        "requests": 0,
+        "explorerUrl": "https://lasna.reactscan.net/tx/0xe9690e6f2b66823cdb046c06e938b9c8a6341a347b15c34a0b6ce575770b33e2"
+      }
+    },
+    {
+      "origin": {
+        "chainId": 84532,
+        "txHash": "0x1876c679c51deae2e771e527eb976bbfa9bc0dc07d82c48ed804727df83bd6c4",
+        "blockHash": "0x7b5b7857c24ec75ba58502e5360ca027b6206b4501a65202f859b87424756b8e",
+        "logIndex": 5,
+        "explorerUrl": "https://sepolia.basescan.org/tx/0x1876c679c51deae2e771e527eb976bbfa9bc0dc07d82c48ed804727df83bd6c4"
+      },
+      "reactive": {
+        "chainId": 5318007,
+        "txHash": "0xc5e558a2008aea26898e9cc5a48d0a82d7c59281c4c083648a1f396d1331d37f",
+        "blockHash": "0x78130d324babe2e04b610f3c2f1eb5126797a5ecd78ce0e48643aef84caf57ff",
+        "timestamp": "1795182206",
+        "requests": 1,
+        "explorerUrl": "https://lasna.reactscan.net/tx/0xc5e558a2008aea26898e9cc5a48d0a82d7c59281c4c083648a1f396d1331d37f"
+      }
+    }
+  ]
+}

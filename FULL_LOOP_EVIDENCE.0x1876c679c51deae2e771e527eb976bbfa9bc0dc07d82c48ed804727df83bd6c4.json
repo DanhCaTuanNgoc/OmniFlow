@@ -1,0 +1,45 @@
+{
+  "project": "OmniFlow",
+  "track": "Set It and Forget It",
+  "testExecutionTimestamp": "2026-11-20T13:43:28.000Z",
+  "lastVerifiedAt": "2026-11-20T14:08:08.732Z",
+  "originToDestinationSeconds": 1,
+  "status": "VERIFIED_FULL_LOOP_ON_TESTNET",
+  "scenario": "Stop-loss executed on public testnets using a deployed test pool and a test token.",
+  "verifiableTransactions": {
+    "step1_originEvent": {
+      "chainId": 84532,
+      "contract": "0xB901813B01774b7b3915D8D48e54974bA47C2134",
+      "event": "Sync",
+      "blockNumber": 61301693,
+      "logIndex": 5,
+      "txHash": "0x1876c679c51deae2e771e527eb976bbfa9bc0dc07d82c48ed804727df83bd6c4",
+      "explorerUrl": "https://sepolia.basescan.org/tx/0x1876c679c51deae2e771e527eb976bbfa9bc0dc07d82c48ed804727df83bd6c4"
+    },
+    "step2_reactiveExecution": {
+      "chainId": 5318007,
+      "contract": "0x1BC254F93D3C66ffeC721c8763f85b2fC4bd51fE",
+      "event": "OmniCallbackRequested",
+      "refTx": "0x1876c679c51deae2e771e527eb976bbfa9bc0dc07d82c48ed804727df83bd6c4",
+      "blockNumber": 8815445,
+      "txHash": "0xc5e558a2008aea26898e9cc5a48d0a82d7c59281c4c083648a1f396d1331d37f",
+      "explorerUrl": "https://lasna.reactscan.net/tx/0xc5e558a2008aea26898e9cc5a48d0a82d7c59281c4c083648a1f396d1331d37f"
+    },
+    "step3_callbackExecution": {
+      "chainId": 84532,
+      "contract": "0x0dB39b1c06Da72d08CBF5FfEd2C815381e7b38aA",
+      "proxy": "0x476F44b11F5C942c58f4c8E3d0300E5710743585",
+      "correlation": "receipt-window",
+      "event": "StopLossExecuted",
+      "ethAmountIn": "1000000000000000",
+      "minUsdcOut": "1703171937578234499",
+      "tokenAmountOut": "1792812565871825789",
+      "status": "success",
+      "blockNumber": 61301700,
+      "txHash": "0x43f5ec81177a1e6a2ccd770c119cdace8857345b57a00377c978043145c7214b",
+      "token": "0x8770B09B714E66057C49F6A8f7207674ACD9537a",
+      "recipient": "0x37c5c5465a97E13DEaa5cBD9e04E8399204D0739",
+      "explorerUrl": "https://sepolia.basescan.org/tx/0x43f5ec81177a1e6a2ccd770c119cdace8857345b57a00377c978043145c7214b"
+    }
+  }
+}
