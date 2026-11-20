@@ -217,6 +217,14 @@ Khi đủ quỹ và có bộ địa chỉ riêng, đặt `PAIR_ADDRESS`, `VAULT_
 | Vault compatibility | `PriceOrderVault` là contract đích phiên bản mới. Vault Phase 1 không có registry permission phù hợp cho policy ladder/gate; không thể dùng nguyên bước `setAuthorizedRSC` đơn giao dịch để khai báo policy Phase 2. Cần onboarding có bước configure policy rồi authorize, lưu receipt từng bước và idempotency. |
 | Full-loop và evidence | Chưa chạy RSC Phase 2 trên Lasna, chưa có Base callback/payout thật, chưa thêm verifier Phase 2 vào `FULL_LOOP_EVIDENCE.json`. Không đánh dấu B hoặc toàn Phase 2 là PASS cho tới khi từng mode có receipt nguồn/Lasna/Base và trạng thái Active/Logs đối chiếu được. |
 
+### Bước tiếp theo: bảo mật và quyền policy
+
+Thực hiện theo thứ tự dưới đây trước khi mở Deploy Phase 2:
+
+1. Rà soát bảo mật `PriceOrderVault`, nhất là proxy/RSC authentication, quyền owner, ranh giới policy theo từng RSC, callback replay, ladder principal snapshot, cooldown/episode, min-out, lỗi router và rút khẩn cấp. Bổ sung test cho caller sai, RSC chưa cấp quyền, policy sai mode/tham số, callback lặp và lỗi swap rollback.
+2. Chốt và kiểm thử lifecycle quyền: tạo RSC → owner cấu hình đúng một policy bất biến → owner cấp quyền → có thể thu hồi quyền ngay → xác minh trạng thái qua RPC. Không cho backend tự cấp quyền hoặc chi tiền thay owner.
+3. Nối onboarding theo nhiều giao dịch Base có idempotency và resume sau reload. Ghi từng hash/receipt; chỉ báo sẵn sàng sau khi policy đúng, RSC được authorize và các quỹ đã được đối soát.
+4. Sau khi local security gate pass, mới deploy fixture riêng lên testnet và chạy full-loop cho từng mode. Đưa receipt thật vào `FULL_LOOP_EVIDENCE.json`; không dùng test local làm bằng chứng on-chain.
 ### Điều kiện mở lại để nghiệm thu Phase 2
 
 1. Hoàn thành contract `PriceOrderVault` onboarding an toàn trong Studio, gồm tạo/liên kết Vault đúng runtime, cấu hình immutable policy, cấp quyền RSC và lưu/khôi phục receipt qua reload.
@@ -227,5 +235,6 @@ Khi đủ quỹ và có bộ địa chỉ riêng, đặt `PAIR_ADDRESS`, `VAULT_
 6. Chạy `forge test -vvv`, backend tests/build, frontend build và ABI check sau khi hoàn tất tích hợp full-stack. Sau đó có thể đánh dấu PASS theo từng mode với giới hạn RPC/faucet/testnet ghi rõ.
 
 **Không có vướng mắc nghiệp vụ cần hỏi thêm để tiếp tục.** Các lựa chọn người dùng đã chốt: ladder tính trên vốn ban đầu và gộp các bậc cùng chạm thành một lần bán. AND/OR dùng hai quan sát riêng từ hai pool độc lập, freshness tính tại Lasna. Điểm cần làm tiếp là kỹ thuật tích hợp và có thể tự kiểm tra bằng preflight; chưa cần người dùng cung cấp thêm gì cho phần local.
+
 
 
