@@ -18,10 +18,10 @@
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 24 | 23 | 0 | **95.8%** |
 | **Đánh giá cạnh tranh, bằng chứng và tính năng mở rộng** | 18–19/11/2026 | 8 | 5 | 0 | **62.5%** |
 | **Vận hành Workspace & nghiệm thu dự thi** | Ghi nhận 20/11/2026 | 8 | 0 | 0 | **0%** |
-| **Khả năng deploy của preset & flow theo dõi nâng cấp** | Ghi nhận 20/11/2026 | 9 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **Đối chiếu 20/11/2026** | **85** | **64** | **0** | **75.3%** |
+| **Khả năng deploy của preset, runtime và nghiệm thu toàn bộ flow** | Ghi nhận 20/11/2026 | 13 | 0 | 0 | **0%** |
+| **TỔNG CỘNG** | **Đối chiếu 20/11/2026** | **89** | **64** | **0** | **71.9%** |
 
-Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **16 mục `TODO`** và **5 mục `BACKLOG`**. Mẫu số gồm cả backlog ngoài phạm vi demo.
+Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **25 mục `TODO`**. Điều kiện phát hành cloud tính theo [ma trận nghiệm thu pipeline](docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md), gồm cả những kịch bản chia sẻ runtime.
 
 * **On-chain:** Lượt stop-loss ngày 19/11 dùng pool và token thử nghiệm trên testnet. Đã đọc lại cả ba receipt qua RPC ngày 20/11 và xác nhận đều thành công. [Bằng chứng full loop](FULL_LOOP_EVIDENCE.json)
 * **Workspace:** Commit `155d62f` bỏ dữ liệu mẫu, `872a381` kiểm tra Vault/RSC cấu hình sẵn, và `f8c3410` đồng bộ giao diện năm màn hình. Deployer hiện chỉ hỗ trợ các node của luồng stop-loss. Xác thực theo ví, lưu pipeline và phục hồi deploy nằm ở `TASK-333` đến `TASK-335`.
@@ -542,7 +542,7 @@ Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **16 mục `TODO`** v�
   * Cấu hình `backend/railway.json` chuẩn schema Railway với restart policy và timeout probe.
   * Xây dựng `frontend/Dockerfile` tối ưu và `frontend/vercel.json` thiết lập tiêu chuẩn bảo mật (CSP, X-Frame-Options, X-Content-Type nosniff).
   * Repo có `docker-compose.yml` để chạy frontend và backend cùng nhau.
-  * **Còn lại:** Xác nhận URL Vercel và Railway, kiểm tra `/health` kết nối được cả hai RPC, và kiểm tra REST/WebSocket từ frontend cloud. Chưa có URL demo cloud được xác minh tại lần đối chiếu 20/11.
+  * **Còn lại:** Chỉ triển khai Vercel/Railway sau khi `TASK-353` đạt trên public testnet với web/API chạy local. Sau đó xác nhận URL, `/health`, RPC theo manifest và REST/WebSocket từ frontend cloud.
 * **Ngày tạo:** 14/11/2026 17:35
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công bước xác minh cloud.
@@ -990,13 +990,13 @@ Phạm vi Workspace theo [phân tích vận hành](docs/WORKSPACE_OPERATIONS_ANA
 
 ### KHẢ NĂNG DEPLOY CỦA PRESET & FLOW THEO DÕI NÂNG CẤP
 
-**Thứ tự dự thi:** Chạy `TASK-340` với cấu hình stop-loss đã đối chiếu trên chain. Hoàn thành `TASK-341` và `TASK-342` trước khi nghiệm thu demo công khai ở `TASK-337`. Sau `TASK-340`, chỉ bắt đầu `TASK-343` khi còn khoảng 4–7 ngày công cho hợp đồng, bằng chứng và UI. `TASK-344` bắt đầu sau khi có full loop đạt nghiệm thu. Nếu thiếu thời gian hoặc chưa xác minh được callback, dùng stop-loss cho video và hồ sơ. Copilot, Telegram và năm mục backlog đứng sau phạm vi này.
+**Thứ tự phát hành:** Chạy stop-loss `TASK-340/342` để hoàn thiện một lượt mẫu. Sau đó hoàn thành từng flow theo [ma trận rollout](docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md#3-ma-trận-flow-và-thứ-tự-thực-hiện) cùng phần dùng chung `TASK-329/333–336/341/350–352`. `TASK-344` bắt đầu sau khi `TASK-343` có full loop đạt nghiệm thu. Chỉ triển khai Vercel/Railway khi `TASK-353` đạt cho toàn bộ ma trận. Smoke test bản cloud thuộc `TASK-304/337`.
 
 #### `TASK-341` [TODO] — Giới hạn Deploy theo khả năng thực thi của preset và graph
 * **Module:** Studio, Template Library, schema và deployer.
 * **Mục đích:** Graph người dùng thấy phải khớp với cấu hình được triển khai.
 * **Chi tiết:** Dùng chung thông tin về khả năng thực thi cho catalog, canvas và kiểm tra deploy phía API. Giữ Flash Crash Stop-Loss là preset chính. Giữ Take-Profit và Cross-Chain Hedge ở nhóm cấu hình nâng cao chưa deploy được. Rút Anti-Drainer, Daily Rebalancer và Payday khỏi luồng Deploy dự thi. Giữ khả năng mở nháp và link preset cũ với trạng thái phù hợp. Kiểm tra topology theo template đã hỗ trợ, gồm cổng, cạnh, số node theo loại, nhánh và tham số. Từ chối graph mà deployer hiện sẽ chỉ lấy node đầu tiên hoặc dùng mặc định làm đổi nghĩa.
-* **Nghiệm thu:** Graph stop-loss chuẩn qua kiểm tra. Graph sai cổng, nhiều action, toán tử chưa hỗ trợ hoặc sai chain bị chặn trước khi ký hay broadcast qua cả UI và API. Các preset mở được chỉ ở chế độ phù hợp với khả năng đã xác minh.
+* **Nghiệm thu:** Graph stop-loss chuẩn qua kiểm tra. Graph sai cổng, nhiều action chưa hỗ trợ, toán tử chưa hỗ trợ hoặc sai chain bị chặn trước khi ký hay broadcast qua cả UI và API. Bật lại Deploy cho từng preset khi runtime và bằng chứng testnet của preset đó đạt nghiệm thu.
 * **Ngày tạo:** 20/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
@@ -1031,42 +1031,74 @@ Phạm vi Workspace theo [phân tích vận hành](docs/WORKSPACE_OPERATIONS_ANA
 * **Người thực hiện:** Chưa phân công.
 * **Trạng thái:** `TODO`.
 
-#### `TASK-345` [BACKLOG] — Thêm Take-Profit vào nhóm lệnh theo giá
+#### `TASK-345` [TODO] — Thêm Take-Profit vào nhóm lệnh theo giá
 * **Module:** Price Threshold Guard, deployer, RSC và Vault.
 * **Chi tiết:** Gộp Take-Profit vào nhóm lệnh theo giá. Thực thi và đọc lại giá đích theo đúng chiều `>=`, có test cho giá rơi xuống dưới ngưỡng trước callback. Chỉ bật Deploy khi có bằng chứng hai nhánh.
 * **Ngày tạo:** 20/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
-* **Trạng thái:** `BACKLOG`.
+* **Trạng thái:** `TODO`.
 
-#### `TASK-346` [BACKLOG] — Sửa binding và nghiệm thu Cross-Chain Hedge
+#### `TASK-346` [TODO] — Sửa binding và nghiệm thu Cross-Chain Hedge
 * **Module:** Chain selector, Deploy Modal, schema, deployer và RSC.
 * **Chi tiết:** Thống nhất trường origin chain giữa preset, payload và constructor. Xác minh pool thuộc Unichain Sepolia. Với chế độ velocity-only, biểu diễn rõ ngưỡng tĩnh bị tắt để không tự chèn $1.800. Nghiệm thu giao dịch Unichain → Lasna → Base và lượt đối chứng chỉ chạm ngưỡng tĩnh nhưng không đạt velocity.
 * **Ngày tạo:** 20/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
-* **Trạng thái:** `BACKLOG`.
+* **Trạng thái:** `TODO`.
 
-#### `TASK-347` [BACKLOG] — Thiết kế lại Payday Auto-Splitter
+#### `TASK-347` [TODO] — Thiết kế lại Payday Auto-Splitter
 * **Module:** Transfer watcher, Vault và graph thực thi.
 * **Chi tiết:** Xác định khoản nhận theo từng event và đúng token/địa chỉ nhận, rồi chi từ tài khoản có quyền hợp lệ. Tính tỷ lệ trên khoản vừa nhận, bảo toàn phần giữ lại, thay action `ALL` bằng hành động chia đúng phần và phát thông báo sau receipt. Xử lý log trùng, payout thất bại và thứ tự thực thi.
 * **Ngày tạo:** 20/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
-* **Trạng thái:** `BACKLOG`.
+* **Trạng thái:** `TODO`.
 
-#### `TASK-348` [BACKLOG] — Thiết kế lại Daily Rebalancer theo tỷ trọng
+#### `TASK-348` [TODO] — Thiết kế lại Daily Rebalancer theo tỷ trọng
 * **Module:** Cron, tính tỷ trọng và Vault swap.
 * **Chi tiết:** Xác định tỷ trọng mục tiêu, ngưỡng lệch, giá sử dụng, quy tắc swap theo hai chiều và giới hạn giao dịch. Nghiệm thu danh mục trong biên được bỏ qua, lệch hai phía được đưa về gần mục tiêu và các tick lặp không bán dần một chiều.
 * **Ngày tạo:** 20/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
-* **Trạng thái:** `BACKLOG`.
+* **Trạng thái:** `TODO`.
 
-#### `TASK-349` [BACKLOG] — Xác định lại phạm vi Anti-Drainer SafeSweep
+#### `TASK-349` [TODO] — Xác định lại phạm vi Anti-Drainer SafeSweep
 * **Module:** Watcher và quyền sweep của Vault.
 * **Chi tiết:** Chỉ xem xét đưa preset trở lại sau khi có tín hiệu đáng tin, điều kiện bất thường kiểm chứng được và đích dự phòng do owner cấu hình. Mô tả chính xác tài sản và quyền của Vault. Kiểm thử chuyển tiền hợp lệ, nhầm tín hiệu, log lặp và quyền rút của owner trước khi bật chức năng.
 * **Ngày tạo:** 20/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
-* **Trạng thái:** `BACKLOG`.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-350` [TODO] — Tạo hoặc liên kết Vault tương thích từ ví người dùng
+* **Module:** Studio, Vault Manager, hợp đồng Vault và API Workspace.
+* **Chi tiết:** Cho ví đã xác thực tạo Vault do mình sở hữu hoặc nhập Vault có sẵn. Xác thực chain, owner, proxy, bytecode và capability theo template. Lưu receipt tạo/liên kết và tách cấp quyền, principal, phí callback và lREACT. Nghiệm thu từ ví testnet mới và từ Vault không tương thích.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-351` [TODO] — Hoàn thiện runtime còn thiếu cho các kịch bản Blueprint
+* **Module:** RSC, Vault và resolver của graph.
+* **Chi tiết:** Tách các lượt triển khai cho Transfer alert, one-shot và bậc thang, Logic Gate/Dust Guard/tín hiệu cá voi, Cron rút lãi hằng tuần và cảnh báo Vault. Dùng chung adapter từ `TASK-345–349` khi hợp đồng tương thích. Nghiệm thu mỗi kết quả dương và đối chứng theo ma trận, kể cả giao webhook nếu flow bật tính năng đó.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-352` [TODO] — Lưu manifest bằng chứng on-chain theo flow và revision
+* **Module:** Script testnet, manifest release và dữ liệu đối soát.
+* **Chi tiết:** Giữ hồ sơ stop-loss hiện có. Thêm manifest đối chiếu commit, template/bytecode, chain, địa chỉ, deployment và scenario với origin log, giao dịch Lasna, callback, log nghiệp vụ và hậu điều kiện. Quét cả executed, skipped và failure, giữ kết quả chưa xác minh khi có nhiều ứng viên hoặc thiếu receipt.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-353` [TODO] — Nghiệm thu tất cả flow trước Vercel và Railway
+* **Module:** Studio, API local, testnet, Active, Vault và Logs.
+* **Chi tiết:** Chạy ma trận trên public testnet từ pipeline lắp trong Studio. Xác nhận role, vốn, quỹ phí, đầy đủ receipt và trạng thái hiển thị sau khi đóng/mở app, đổi ví, reload, restart và lỗi RPC. Cổng đạt khi tất cả scenario trong manifest có bằng chứng và Active trỏ đúng deployment. Chỉ sau đó tiếp tục `TASK-304` và smoke test cloud ở `TASK-337`.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
