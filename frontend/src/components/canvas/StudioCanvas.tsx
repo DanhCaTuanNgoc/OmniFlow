@@ -222,6 +222,12 @@ function StudioCanvasInner() {
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
   const phaseTwo = isPhaseTwoGraph({ nodes, edges });
   const crossChain = nodes.some(node => node.type === 'priceVelocityGuard');
+  const priceGate = nodes.find(node => node.type === 'logicGate');
+  const primaryGuard = priceGate && edges.find(edge => edge.target === priceGate.id && edge.targetHandle === 'signal-a');
+  const supportsPriceVault = phaseTwo && nodes.every(node =>
+    ['watchDEXPrice', 'priceThresholdGuard', 'priceVelocityGuard', 'logicGate', 'cooldownGuard', 'dexSwap'].includes(node.type ?? ''));
+  const originPool = nodes.find(node => node.type === 'watchDEXPrice' &&
+    (!priceGate || edges.some(edge => edge.source === node.id && edge.target === primaryGuard?.source)))?.data.pairAddress;
 
   // DAG & Port Constraint Enforcement
   const isValidConnection = useCallback(
@@ -522,8 +528,9 @@ function StudioCanvasInner() {
           selectedNode={selectedNode}
           owner={isConnected ? address : undefined}
           phaseTwo={phaseTwo}
+          supportsPriceVault={supportsPriceVault}
           crossChain={crossChain}
-          originPool={nodes.find(node => node.type === 'watchDEXPrice')?.data.pairAddress}
+          originPool={originPool}
           onUpdateNodeData={handleUpdateNodeData}
           onDeleteNode={handleDeleteNode}
           onClose={() => setSelectedNodeId(null)}

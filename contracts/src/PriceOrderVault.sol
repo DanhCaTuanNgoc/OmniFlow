@@ -111,7 +111,8 @@ contract PriceOrderVault is AbstractCallback {
     }
 
     function registerRSC(address rsc) external onlyOwner {
-        require(rsc.code.length != 0, "RSC has no code");
+        // The RSC runs on Lasna. The destination proxy authenticates its address in callbacks.
+        require(rsc != address(0), "Invalid RSC");
         require(!registeredRSCs[rsc] && permissions[rsc] == Permission.None, "RSC already registered");
         registeredRSCs[rsc] = true;
         emit RSCRegistered(rsc);

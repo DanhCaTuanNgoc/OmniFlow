@@ -1,6 +1,6 @@
 import { BaseError, ContractFunctionRevertedError, isAddressEqual, parseAbi, type Address } from 'viem';
-import { ACTION_VAULT_ABI, STOP_LOSS_TEMPLATE } from '@omniflow/shared';
-import { VAULT_RUNTIME } from '../abis/runtimeFingerprints.js';
+import { ACTION_VAULT_ABI, PRICE_ORDER_VAULT_ABI, STOP_LOSS_TEMPLATE } from '@omniflow/shared';
+import { PRICE_ORDER_VAULT_RUNTIME, VAULT_RUNTIME } from '../abis/runtimeFingerprints.js';
 import { chainService } from './chain.service.js';
 import { matchesRuntime } from './runtimeBytecode.js';
 
@@ -11,9 +11,18 @@ const marketAbi = parseAbi([
   'function decimals() view returns (uint8)',
 ]);
 
-export async function verifyStopLossVault(address: Address, expectedOwner: Address, expectedPair: Address) {
+export function verifyStopLossVault(address: Address, expectedOwner: Address, expectedPair: Address) {
+  return verifyVault(address, expectedOwner, expectedPair, ACTION_VAULT_ABI, VAULT_RUNTIME);
+}
+
+export function verifyPriceOrderVault(address: Address, expectedOwner: Address, expectedPair: Address) {
+  return verifyVault(address, expectedOwner, expectedPair, PRICE_ORDER_VAULT_ABI, PRICE_ORDER_VAULT_RUNTIME);
+}
+
+async function verifyVault(address: Address, expectedOwner: Address, expectedPair: Address,
+  abi: typeof ACTION_VAULT_ABI | typeof PRICE_ORDER_VAULT_ABI, runtime: typeof VAULT_RUNTIME) {
   const base = chainService.basePublicClient;
-  const vault = { address, abi: ACTION_VAULT_ABI } as const;
+  const vault = { address, abi } as const;
   const [chain, vaultCode, proxyCode] = await Promise.all([
     base.getChainId(), base.getCode({ address }),
     base.getCode({ address: STOP_LOSS_TEMPLATE.callbackProxy }),
@@ -21,7 +30,7 @@ export async function verifyStopLossVault(address: Address, expectedOwner: Addre
   if (chain !== STOP_LOSS_TEMPLATE.networks.destinationChainId) {
     throw new Error('Vault RPC must point to Base Sepolia.');
   }
-  if (!matchesRuntime(vaultCode, VAULT_RUNTIME) || !proxyCode || proxyCode === '0x') {
+  if (!matchesRuntime(vaultCode, runtime) || !proxyCode || proxyCode === '0x') {
     throw new Error('DAG Validation Failed: the Vault or callback proxy is incompatible with this template.');
   }
   const [owner, pair, router, quote, slippage] = await Promise.all([

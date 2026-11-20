@@ -3,19 +3,21 @@
 import { useState } from 'react';
 import { encodeDeployData, isAddress, isAddressEqual, zeroAddress, type Address, type Hash } from 'viem';
 import { getAccount, sendTransaction, waitForTransactionReceipt } from 'wagmi/actions';
-import { ACTION_VAULT_ABI, ACTION_VAULT_BYTECODE, STOP_LOSS_TEMPLATE } from '@omniflow/shared';
+import { ACTION_VAULT_ABI, ACTION_VAULT_BYTECODE, PRICE_ORDER_VAULT_ABI, PRICE_ORDER_VAULT_BYTECODE, STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 import { wagmiConfig } from '@/lib/wagmi';
 import { workspaceRequest } from '@/lib/workspaceSession';
 
 const fieldClass = 'w-full rounded-md border border-[var(--ws-border)] bg-[#0d0e15] px-2.5 py-2 font-mono text-xs text-slate-100';
 
-export function VaultSetup({ owner, pair, currentVault, onLinked }: {
+export function VaultSetup({ owner, pair, currentVault, onLinked, kind = 'stop-loss' }: {
   owner: Address;
   pair: Address;
   currentVault: string;
   onLinked: (address: Address) => void;
+  kind?: 'stop-loss' | 'price-order';
 }) {
-  const pendingKey = `omniflow.vault-create.v1.${owner.toLowerCase()}.${pair.toLowerCase()}`;
+  const pendingPrefix = kind === 'price-order' ? 'omniflow.price-order-vault-create.v1' : 'omniflow.vault-create.v1';
+  const pendingKey = `${pendingPrefix}.${owner.toLowerCase()}.${pair.toLowerCase()}`;
   const [creationHash, setCreationHash] = useState(() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem(pendingKey) : null;
     return stored && /^0x[0-9a-f]{64}$/i.test(stored) ? stored as Hash : undefined;
@@ -47,13 +49,11 @@ export function VaultSetup({ owner, pair, currentVault, onLinked }: {
           if (!wallet.address || !isAddressEqual(wallet.address, owner) || wallet.chainId !== 84532) {
             throw new Error('Connect the Vault owner on Base Sepolia.');
           }
-          hash = await sendTransaction(wagmiConfig, {
-            account: owner, chainId: 84532,
-            data: encodeDeployData({
-              abi: ACTION_VAULT_ABI, bytecode: ACTION_VAULT_BYTECODE,
-              args: [STOP_LOSS_TEMPLATE.callbackProxy, backup, router, quote, pair],
-            }),
-          });
+          const args = [STOP_LOSS_TEMPLATE.callbackProxy, backup, router, quote, pair] as const;
+          const data = kind === 'price-order'
+            ? encodeDeployData({ abi: PRICE_ORDER_VAULT_ABI, bytecode: PRICE_ORDER_VAULT_BYTECODE, args })
+            : encodeDeployData({ abi: ACTION_VAULT_ABI, bytecode: ACTION_VAULT_BYTECODE, args });
+          hash = await sendTransaction(wagmiConfig, { account: owner, chainId: 84532, data });
           setCreationHash(hash);
           localStorage.setItem(pendingKey, hash);
         }
@@ -68,7 +68,7 @@ export function VaultSetup({ owner, pair, currentVault, onLinked }: {
       }
       if (!isAddress(vault)) throw new Error('Enter a valid Vault address.');
       const result = await workspaceRequest<{ vault: { address: Address } }>(owner, '/pipeline/vaults/link', {
-        method: 'POST', body: JSON.stringify({ vault, pair, creationTxHash: hash }),
+        method: 'POST', body: JSON.stringify({ vault, pair, creationTxHash: hash, kind }),
       });
       onLinked(result.vault.address);
       setLinked(result.vault.address);
@@ -82,7 +82,9 @@ export function VaultSetup({ owner, pair, currentVault, onLinked }: {
 
   return (
     <details className="border-t border-[var(--ws-border)] pt-3">
-      <summary className="cursor-pointer text-sm font-medium text-slate-100">Create or link a Vault</summary>
+      <summary className="cursor-pointer text-sm font-medium text-slate-100">
+        {kind === 'price-order' ? 'Create or link a Price Order Vault' : 'Create or link a Vault'}
+      </summary>
       <form className="mt-3 space-y-3" onSubmit={submit}>
         <label className="block space-y-1">
           <span>Setup method</span>

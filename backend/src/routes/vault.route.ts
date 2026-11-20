@@ -3,13 +3,14 @@ import { z } from 'zod';
 import { isAddressEqual, zeroAddress, type Address, type Hash } from 'viem';
 import { deploymentStore } from '../data/deployments.js';
 import { chainService } from '../services/chain.service.js';
-import { verifyStopLossMarket, verifyStopLossVault } from '../services/vaultCompatibility.js';
+import { verifyPriceOrderVault, verifyStopLossMarket, verifyStopLossVault } from '../services/vaultCompatibility.js';
 
 const address = z.custom<Address>(value => typeof value === 'string' &&
   /^0x[0-9a-f]{40}$/i.test(value) && value.toLowerCase() !== zeroAddress);
 const marketSchema = z.object({ pair: address, router: address });
 const linkSchema = z.object({
   pair: address, vault: address,
+  kind: z.enum(['stop-loss', 'price-order']).default('stop-loss'),
   creationTxHash: z.custom<Hash>(value => typeof value === 'string' && /^0x[0-9a-f]{64}$/i.test(value)).optional(),
 });
 
@@ -37,10 +38,11 @@ vaultRouter.post('/market', async (req, res) => {
 vaultRouter.post('/link', async (req, res) => {
   const input = linkSchema.safeParse(req.body);
   if (!input.success) return res.status(400).json({ error: 'Valid Vault and pool addresses are required.' });
-  const { vault, pair, creationTxHash } = input.data;
+  const { vault, pair, creationTxHash, kind } = input.data;
   const owner = res.locals.workspaceOwner as Address;
   try {
-    const config = await verifyStopLossVault(vault, owner, pair);
+    const verify = kind === 'price-order' ? verifyPriceOrderVault : verifyStopLossVault;
+    const config = await verify(vault, owner, pair);
     if (creationTxHash) {
       const receipt = await chainService.basePublicClient.getTransactionReceipt({ hash: creationTxHash });
       if (receipt.status !== 'success' || !receipt.contractAddress ||

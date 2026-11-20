@@ -16,6 +16,7 @@ interface InspectorPanelProps {
   owner?: Address;
   originPool?: unknown;
   phaseTwo: boolean;
+  supportsPriceVault: boolean;
   crossChain: boolean;
 }
 
@@ -27,12 +28,14 @@ export function InspectorPanel({
   owner,
   originPool,
   phaseTwo,
+  supportsPriceVault,
   crossChain,
 }: InspectorPanelProps) {
   if (!selectedNode) return null;
 
   const { id, type, data } = selectedNode;
   const ladder = data.executionPolicy === 'LADDER';
+  const vaultPool = crossChain ? data.destinationPoolAddress : originPool;
 
   const handleChange = (field: string, value: any) => {
     onUpdateNodeData(id, {
@@ -409,8 +412,9 @@ export function InspectorPanel({
                 className="w-full rounded-xl border border-white/[0.08] bg-[#07080D] p-2.5 font-mono text-slate-100" />
             </label>}
             {phaseTwo && <p className="text-slate-300">Phase 2 uses a versioned Price Order Vault. Deploy opens after testnet acceptance.</p>}
-            {!phaseTwo && owner && typeof originPool === 'string' && isAddress(originPool) && (
-              <VaultSetup key={`${id}:${owner}:${originPool}`} owner={owner} pair={originPool}
+            {(!phaseTwo || supportsPriceVault) && owner && typeof vaultPool === 'string' && isAddress(vaultPool) && (
+              <VaultSetup key={`${id}:${owner}:${vaultPool}:${phaseTwo}`} owner={owner} pair={vaultPool}
+                kind={phaseTwo ? 'price-order' : 'stop-loss'}
                 currentVault={String(data.actionVaultAddress || '')} onLinked={vault => handleChange('actionVaultAddress', vault)} />
             )}
           </div>

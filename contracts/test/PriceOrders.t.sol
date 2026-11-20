@@ -303,6 +303,34 @@ contract PriceOrdersTest is Test {
         assertFalse(vault.authorizedRSCs(address(rsc)));
     }
 
+    function testRegistersLasnaIdentityWithoutDestinationBytecode() public {
+        address rsc = address(0x123456);
+        assertEq(rsc.code.length, 0);
+
+        vm.expectRevert("Invalid RSC");
+        vault.registerRSC(address(0));
+        vm.expectRevert("Only owner can execute");
+        vm.prank(address(0xBAD));
+        vault.registerRSC(rsc);
+
+        vault.registerRSC(rsc);
+        vm.expectRevert("RSC already registered");
+        vault.registerRSC(rsc);
+        vm.expectRevert("RSC policy not configured");
+        vault.setAuthorizedRSC(rsc, true);
+        vault.configurePriceOrder(rsc, PriceOrderVault.PricePolicy(
+            PriceOrderMode.TakeProfit, 50, 2800 ether));
+        vault.setAuthorizedRSC(rsc, true);
+
+        PriceOrder memory order = PriceOrder(bytes32(uint256(1)), PriceOrderMode.TakeProfit, 2800 ether, 50, 1100);
+        vm.expectRevert("Authorized sender only");
+        vault.executePriceOrder(rsc, order);
+        vault.setAuthorizedRSC(rsc, false);
+        vm.expectRevert("Unauthorized RSC contract");
+        vm.prank(PROXY);
+        vault.executePriceOrder(rsc, order);
+    }
+
     function testPolicyCannotBeReconfiguredOrReauthorizedWithoutPolicy() public {
         PriceOrderPipeline rsc = _pipeline(PriceOrderMode.TakeProfit);
         vault.registerRSC(address(rsc));

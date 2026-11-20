@@ -43,6 +43,8 @@ const files = {
 
 for (const [contract, symbol] of phaseTwoContracts) {
   const artifact = JSON.parse(read(`contracts/out/${contract}.sol/${contract}.json`));
+  files['backend/src/abis/runtimeFingerprints.ts'] +=
+    `export const ${symbol}_RUNTIME = ${JSON.stringify(runtimeFingerprint(artifact), null, 2)};\n`;
   const source = read(`contracts/src/${contract}.sol`).replace(/\r\n/g, '\n');
   files[`packages/shared/src/abis/${contract}.ts`] = [
     `export const ${symbol}_ABI = ${JSON.stringify(artifact.abi, null, 2)} as const;`,
