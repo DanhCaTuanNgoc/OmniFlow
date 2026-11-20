@@ -36,7 +36,13 @@ function source(trigger: GraphNode, chain: number) {
   check([trigger.data.customTopic0, trigger.data.topic0].every(value =>
     value === undefined || typeof value === 'string' && value.toLowerCase() === syncTopic),
   'the watcher must use the Uniswap V2 Sync topic.');
-  return address(trigger.data.pairAddress, 'origin pool');
+  const pool = address(trigger.data.pairAddress, 'origin pool');
+  const token0 = trigger.data.token0Address ?? trigger.data.token0;
+  const token1 = trigger.data.token1Address ?? trigger.data.token1;
+  check(token0 === undefined && token1 === undefined || typeof token0 === 'string' && typeof token1 === 'string'
+    && /^0x[0-9a-f]{40}$/i.test(token0) && /^0x[0-9a-f]{40}$/i.test(token1)
+    && token0.toLowerCase() !== token1.toLowerCase(), 'configure distinct token0 and token1 addresses when pool token metadata is present.');
+  return pool;
 }
 
 function price(node: GraphNode, operator: string) {
@@ -111,6 +117,8 @@ export function resolvePhaseTwo(graph: StopLossGraph) {
       return { pool: source(watcher, networks.originChainId), threshold: price(node, 'LESS_THAN_OR_EQUAL') };
     });
     const [primary, confirmation] = branches;
+    check(watchers.every(watcher => branches.some(branch => branch.pool === source(watcher, networks.originChainId))),
+      'each watcher must feed exactly one Logic Gate input.');
     check(primary.pool !== confirmation.pool, 'the two signals must use different Base Sepolia pools.');
     return {
       type: 'price-gate' as const, vaultPool: primary.pool,
@@ -133,6 +141,8 @@ export function resolvePhaseTwo(graph: StopLossGraph) {
   const originChain = velocity ? unichain : networks.originChainId;
   verifyNetworks(originChain);
   const originPool = source(watcher, originChain);
+  if (velocity) check(originPool !== address(swap.data.destinationPoolAddress, 'Base destination pool'),
+    'the Unichain origin pool and Base settlement pool must be different addresses.');
   const takeProfit = thresholdNode?.data.operator === 'GREATER_THAN_OR_EQUAL';
   const ladder = policy === 'LADDER';
   check(velocity || takeProfit || ladder || policy === 'ONE_SHOT', 'use a supported Phase 2 order.');

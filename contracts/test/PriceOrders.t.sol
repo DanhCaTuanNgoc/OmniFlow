@@ -2,6 +2,7 @@
 pragma solidity >=0.8.20;
 
 import {Test} from 'forge-std/Test.sol';
+import {Vm} from 'forge-std/Vm.sol';
 import {IReactive} from '@reactive-network/reactive-lib/src/interfaces/IReactive.sol';
 import {IOmniCallbackSystem} from '../src/StopLoss_Pipeline.sol';
 import {PriceOrderPipeline} from '../src/PriceOrderPipeline.sol';
@@ -27,6 +28,10 @@ contract OmniRecorder {
         ++requests;
         lastPayload = config.payload;
     }
+}
+
+interface IPriceOrderVaultEvents {
+    event OrderSkipped(string reason, uint256 currentPrice);
 }
 
 contract PriceOrdersTest is Test {
@@ -71,6 +76,7 @@ contract PriceOrdersTest is Test {
     }
 
     function _authorizePriceOrder(PriceOrderPipeline rsc) private {
+        vault.registerRSC(address(rsc));
         vault.configurePriceOrder(address(rsc), PriceOrderVault.PricePolicy(rsc.mode(), uint8(rsc.percent()), rsc.threshold()));
         vault.setAuthorizedRSC(address(rsc), true);
     }
@@ -157,6 +163,7 @@ contract PriceOrdersTest is Test {
         prices[0] = 1800 ether; prices[1] = 1600 ether; prices[2] = 1400 ether;
         uint8[] memory percentages = new uint8[](3);
         percentages[0] = 20; percentages[1] = 30; percentages[2] = 50;
+        vault.registerRSC(address(rsc));
         vault.configureLadder(address(rsc), prices, percentages);
         vault.setAuthorizedRSC(address(rsc), true);
 
@@ -191,6 +198,7 @@ contract PriceOrdersTest is Test {
             primaryThreshold: 1800 ether, confirmationThreshold: 1800 ether,
             freshnessSeconds: 10, cooldownSeconds: 0, requireBoth: requireBoth
         }));
+        vault.registerRSC(address(rsc));
         vault.configurePriceGate(address(rsc), PriceOrderVault.PriceGate(
             address(confirmation), 1800 ether, 1800 ether, 50, requireBoth));
         vault.setAuthorizedRSC(address(rsc), true);
@@ -229,6 +237,40 @@ contract PriceOrdersTest is Test {
         assertEq(omni.requests(), 2);
     }
 
+    function testOrDoesNotRepeatUntilBothSignalsReset() public {
+        PriceGatePipeline rsc = _gate(false);
+        _observe(rsc, address(pool), 84532, 1, 1700 ether);
+        assertEq(omni.requests(), 1);
+        _observe(rsc, address(pool), 84532, 2, 1700 ether);
+        assertEq(omni.requests(), 1);
+        _observe(rsc, address(pool), 84532, 3, 1900 ether);
+        assertEq(omni.requests(), 1);
+        _observe(rsc, address(confirmation), 84532, 1, 1900 ether);
+        _observe(rsc, address(pool), 84532, 4, 1700 ether);
+        assertEq(omni.requests(), 2);
+    }
+
+    function testAndRejectsExpiredWindowAtVault() public {
+        PriceGatePipeline rsc = _gate(true);
+        _observe(rsc, address(pool), 84532, 1, 1700 ether);
+        _observe(rsc, address(confirmation), 84532, 2, 1700 ether);
+        assertEq(omni.requests(), 1);
+        vm.warp(1011);
+        bytes32 reasonHash = keccak256(bytes("Price gate no longer qualifies"));
+        vm.recordLogs();
+        _deliver(address(rsc));
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool skipped;
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].emitter == address(vault) && logs[i].topics[0] == keccak256("OrderSkipped(string,uint256)")) {
+                (string memory reason,) = abi.decode(logs[i].data, (string, uint256));
+                skipped = keccak256(bytes(reason)) == reasonHash;
+            }
+        }
+        assertTrue(skipped);
+        assertEq(address(vault).balance, 1 ether);
+    }
+
     function testProxyIdentityAndOwnerWithdrawal() public {
         PriceOrder memory order = PriceOrder(bytes32(uint256(1)), PriceOrderMode.TakeProfit, 2800 ether, 50, 1100);
         vm.expectRevert("Authorized sender only");
@@ -238,6 +280,62 @@ contract PriceOrdersTest is Test {
         vault.executePriceOrder(address(this), order);
         vault.emergencyWithdraw();
         assertEq(address(vault).balance, 0);
+    }
+
+    function testPolicyConfigurationRequiresRegisteredContractAndOwner() public {
+        PriceOrderPipeline rsc = _pipeline(PriceOrderMode.TakeProfit);
+        vm.expectRevert("RSC not registered");
+        vault.configurePriceOrder(address(rsc), PriceOrderVault.PricePolicy(
+            PriceOrderMode.TakeProfit, 50, 2800 ether));
+        vault.registerRSC(address(rsc));
+        vm.prank(address(0xBAD));
+        vm.expectRevert("Only owner can execute");
+        vault.setAuthorizedRSC(address(rsc), true);
+        vault.configurePriceOrder(address(rsc), PriceOrderVault.PricePolicy(
+            PriceOrderMode.TakeProfit, 50, 2800 ether));
+        vm.expectRevert("Only owner can execute");
+        vm.prank(address(0xBAD));
+        vault.configurePriceOrder(address(rsc), PriceOrderVault.PricePolicy(
+            PriceOrderMode.TakeProfit, 50, 2800 ether));
+        vault.setAuthorizedRSC(address(rsc), true);
+        assertTrue(vault.authorizedRSCs(address(rsc)));
+        vault.setAuthorizedRSC(address(rsc), false);
+        assertFalse(vault.authorizedRSCs(address(rsc)));
+    }
+
+    function testPolicyCannotBeReconfiguredOrReauthorizedWithoutPolicy() public {
+        PriceOrderPipeline rsc = _pipeline(PriceOrderMode.TakeProfit);
+        vault.registerRSC(address(rsc));
+        vault.configurePriceOrder(address(rsc), PriceOrderVault.PricePolicy(
+            PriceOrderMode.TakeProfit, 50, 2800 ether));
+        vm.expectRevert("RSC policy already set or invalid");
+        vault.configurePriceOrder(address(rsc), PriceOrderVault.PricePolicy(
+            PriceOrderMode.TakeProfit, 25, 3000 ether));
+        PriceOrderPipeline unconfigured = _pipeline(PriceOrderMode.TakeProfit);
+        vm.expectRevert("RSC not registered");
+        vault.setAuthorizedRSC(address(unconfigured), true);
+    }
+
+    function testWrongModeAndParametersCannotUseAuthorizedPolicy() public {
+        PriceOrderPipeline rsc = _pipeline(PriceOrderMode.TakeProfit);
+        _authorizePriceOrder(rsc);
+        PriceOrder memory wrongMode = PriceOrder(bytes32(uint256(1)), PriceOrderMode.OneShotStopLoss, 2800 ether, 50, 1100);
+        vm.expectRevert("Order does not match policy");
+        vm.prank(PROXY);
+        vault.executePriceOrder(address(rsc), wrongMode);
+        PriceOrder memory wrongPercent = PriceOrder(bytes32(uint256(2)), PriceOrderMode.TakeProfit, 2800 ether, 49, 1100);
+        vm.expectRevert("Order does not match policy");
+        vm.prank(PROXY);
+        vault.executePriceOrder(address(rsc), wrongPercent);
+    }
+
+    function testCallbackExpiryCannotBeExtendedByRSC() public {
+        PriceOrderPipeline rsc = _pipeline(PriceOrderMode.TakeProfit);
+        _authorizePriceOrder(rsc);
+        PriceOrder memory tooLong = PriceOrder(bytes32(uint256(3)), PriceOrderMode.TakeProfit, 2800 ether, 50, 1181);
+        vm.expectRevert("Invalid order expiry");
+        vm.prank(PROXY);
+        vault.executePriceOrder(address(rsc), tooLong);
     }
 
     receive() external payable {}

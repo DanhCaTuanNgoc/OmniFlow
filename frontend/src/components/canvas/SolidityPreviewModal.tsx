@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { Check, Code2, Copy, Download, X } from 'lucide-react';
-import { formatEther } from 'viem';
+import { encodeAbiParameters, formatEther, keccak256 } from 'viem';
 import {
   resolveStopLoss, stopLossConstructorArgs, STOP_LOSS_PIPELINE_ABI, STOP_LOSS_PIPELINE_SOURCE,
   isPhaseTwoGraph, resolvePhaseTwo, PRICE_ORDER_PIPELINE_SOURCE, PRICE_GATE_PIPELINE_SOURCE,
+  PRICE_ORDER_PIPELINE_ABI, PRICE_ORDER_PIPELINE_BYTECODE, PRICE_GATE_PIPELINE_ABI, PRICE_GATE_PIPELINE_BYTECODE,
   STOP_LOSS_TEMPLATE, type StopLossGraph,
 } from '@omniflow/shared';
 
@@ -21,11 +22,27 @@ function previewGraph(graph: StopLossGraph) {
       const gate = candidate.type === 'price-gate';
       const name = gate ? 'PriceGatePipeline' : 'PriceOrderPipeline';
       const args = Object.entries(candidate.config).map(([key, value]) => `// ${key}: ${value}`);
+      let bytecode: `0x${string}`;
+      let encoded: `0x${string}`;
+      if (candidate.type === 'price-gate') {
+        const constructor = PRICE_GATE_PIPELINE_ABI.find(item => item.type === 'constructor');
+        if (!constructor || constructor.inputs.length !== 1) throw new Error('Phase 2 constructor metadata is invalid.');
+        bytecode = PRICE_GATE_PIPELINE_BYTECODE;
+        encoded = encodeAbiParameters(constructor.inputs, [candidate.config]);
+      } else {
+        const constructor = PRICE_ORDER_PIPELINE_ABI.find(item => item.type === 'constructor');
+        if (!constructor || constructor.inputs.length !== 1) throw new Error('Phase 2 constructor metadata is invalid.');
+        bytecode = PRICE_ORDER_PIPELINE_BYTECODE;
+        encoded = encodeAbiParameters(constructor.inputs, [candidate.config]);
+      }
+      if (bytecode.length < 4 || encoded.length < 66) throw new Error('Phase 2 deployment data is unavailable.');
       return {
         filename: `${name}.sol`,
         text: [
           `// ${name} constructor configuration`,
-          '// Phase 2 candidate. Studio deployment requires verified testnet receipts.',
+          '// Constructor is ABI-encoded from the selected versioned contract artifact.',
+          `// Creation bytecode hash: ${keccak256(bytecode)}`,
+          `// ABI-encoded constructor arguments: ${encoded}`,
           `// Base Vault pool: ${candidate.vaultPool}`,
           ...args,
           '',

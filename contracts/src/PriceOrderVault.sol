@@ -57,6 +57,7 @@ contract PriceOrderVault is AbstractCallback {
     }
 
     uint256 public constant MAX_SLIPPAGE_BPS = 500;
+    uint256 public constant MAX_ORDER_TTL = 180;
     address public immutable owner;
     address public immutable backupSafeAddress;
     address public immutable uniswapRouter;
@@ -64,6 +65,7 @@ contract PriceOrderVault is AbstractCallback {
     address public immutable tokenPair;
 
     mapping(address => bool) public authorizedRSCs;
+    mapping(address => bool) public registeredRSCs;
     mapping(address => Permission) public permissions;
     mapping(address => bool) public oneShotSettled;
     mapping(address => mapping(bytes32 => bool)) public executionSettled;
@@ -72,6 +74,7 @@ contract PriceOrderVault is AbstractCallback {
     mapping(address => PricePolicy) public pricePolicies;
 
     event RSCAuthorized(address indexed rsc, bool status);
+    event RSCRegistered(address indexed rsc);
     event OrderSkipped(string reason, uint256 currentPrice);
     event OrderSettled(address indexed rsc, bytes32 indexed executionId, uint256 ethAmountIn, uint256 minAmountOut);
     event OrderPolicyCompleted(address indexed rsc);
@@ -101,12 +104,21 @@ contract PriceOrderVault is AbstractCallback {
 
     function setAuthorizedRSC(address rsc, bool authorized) external onlyOwner {
         require(rsc != address(0), "Invalid RSC");
+        require(!authorized || registeredRSCs[rsc], "RSC not registered");
         require(!authorized || permissions[rsc] != Permission.None, "RSC policy not configured");
         authorizedRSCs[rsc] = authorized;
         emit RSCAuthorized(rsc, authorized);
     }
 
+    function registerRSC(address rsc) external onlyOwner {
+        require(rsc.code.length != 0, "RSC has no code");
+        require(!registeredRSCs[rsc] && permissions[rsc] == Permission.None, "RSC already registered");
+        registeredRSCs[rsc] = true;
+        emit RSCRegistered(rsc);
+    }
+
     function configurePriceOrder(address rsc, PricePolicy calldata policy) external onlyOwner {
+        require(registeredRSCs[rsc], "RSC not registered");
         _configure(rsc, Permission.PriceOrder);
         require(policy.mode != PriceOrderMode.Ladder && policy.percent > 0 && policy.percent <= 100,
             "Invalid price policy");
@@ -118,6 +130,7 @@ contract PriceOrderVault is AbstractCallback {
     function configureLadder(address rsc, uint256[] calldata thresholds, uint8[] calldata percentages)
         external onlyOwner
     {
+        require(registeredRSCs[rsc], "RSC not registered");
         _configure(rsc, Permission.Ladder);
         Ladder storage ladder = ladders[rsc];
         require(ladder.initialPrincipal == 0 && address(this).balance != 0, "Invalid initial principal");
@@ -138,6 +151,7 @@ contract PriceOrderVault is AbstractCallback {
     }
 
     function configurePriceGate(address rsc, PriceGate calldata gate) external onlyOwner {
+        require(registeredRSCs[rsc], "RSC not registered");
         _configure(rsc, Permission.Gate);
         require(gate.confirmationPool.code.length != 0 && gate.confirmationPool != tokenPair
             && gate.primaryThreshold != 0 && gate.confirmationThreshold != 0
@@ -194,10 +208,14 @@ contract PriceOrderVault is AbstractCallback {
         }
         if (order.mode == PriceOrderMode.Ladder) {
             require(order.percent == 0 && order.threshold != 0, "Invalid ladder order");
+            require(order.expiresAt >= block.timestamp && order.expiresAt <= block.timestamp + MAX_ORDER_TTL,
+                "Invalid order expiry");
             _executeLadder(rsc, order);
             return;
         }
         require(order.percent > 0 && order.percent <= 100, "Invalid percentage");
+        require(order.expiresAt >= block.timestamp && order.expiresAt <= block.timestamp + MAX_ORDER_TTL,
+            "Invalid order expiry");
 
         if (order.mode != PriceOrderMode.CrossChainHedge) {
             require(order.threshold != 0, "Missing threshold");
@@ -281,6 +299,7 @@ contract PriceOrderVault is AbstractCallback {
     }
 
     function configureSafeSweep(address rsc) external onlyOwner {
+        require(registeredRSCs[rsc], "RSC not registered");
         _configure(rsc, Permission.SafeSweep);
     }
 

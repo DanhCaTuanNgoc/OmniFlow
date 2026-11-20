@@ -1,4 +1,4 @@
-﻿# Kế hoạch triển khai và nghiệm thu toàn bộ Pipeline Studio trên testnet
+# Kế hoạch triển khai và nghiệm thu toàn bộ Pipeline Studio trên testnet
 
 ## 1. Hiện trạng và phạm vi
 
@@ -203,17 +203,17 @@ Khi một mục vướng, ghi lý do, phạm vi ảnh hưởng, chứng cứ, ng
 Khi đủ quỹ và có bộ địa chỉ riêng, đặt `PAIR_ADDRESS`, `VAULT_ADDRESS`, `RSC_ADDRESS` cho script. Chạy `pnpm test:full-loop --preflight` trước khi trigger. `pnpm test:full-loop --execute-skip` gửi hai giao dịch giảm và hồi. `--execute` chạy nhánh payout sau khi cooldown kết thúc. Khi chỉ mục callback chưa có, dùng `--verify-existing` với hash nguồn và Lasna sau khi Base finalized. Thêm `--expect-skipped` trước `--verify-existing` cho nhánh bỏ qua. `--verify-cooldown` nhận ba cặp hash Base và Lasna theo thứ tự trước, trong và sau cooldown. Verifier ghi kết quả vào `FULL_LOOP_EVIDENCE.json` theo hash nguồn. Có thể đặt `FULL_LOOP_EVIDENCE_DIR` để ghi hồ sơ vào thư mục riêng khi chạy kiểm tra lại.
 ## 12. Nhật ký Phase 2
 
-**Trạng thái 20/11/2026 · Đã triển khai logic hợp đồng và compiler local, chưa nghiệm thu full-stack hoặc live testnet.** Phạm vi Phase 2 hiện gồm Take-Profit, Cross-Chain Hedge Unichain Sepolia → Lasna → Base Sepolia, one-shot, ladder và Logic Gate AND/OR. Không tính các flow độc lập của Phase 3/4.
+**Trạng thái 20/11/2026 · Đã triển khai và rà soát thêm bảo mật local; chưa nghiệm thu full-stack hoặc live testnet.** Phạm vi Phase 2 hiện gồm Take-Profit, Cross-Chain Hedge Unichain Sepolia → Lasna → Base Sepolia, one-shot, ladder và Logic Gate AND/OR. Không tính các flow độc lập của Phase 3/4.
 
 | Hạng mục | Kết quả và giới hạn |
 |---|---|
-| Price Order RSC/Vault | Đã thêm `PriceOrderPipeline` và `PriceOrderVault` cho các mode. Callback chỉ được nhận từ Reactive proxy/System ACL, RSC phải được owner cấp quyền. Vault kiểm tra lại giá Base cho Take-Profit/Stop-Loss, giới hạn slippage 5%, khóa replay theo execution ID và chỉ hoàn thành one-shot sau settlement. |
+| Price Order RSC/Vault | Đã thêm `PriceOrderPipeline` và `PriceOrderVault` cho các mode. Vault đăng ký RSC có bytecode riêng, chỉ owner được đăng ký/cấu hình/cấp hoặc thu hồi quyền; policy chỉ cấu hình một lần trước authorize. Callback yêu cầu Reactive proxy/System ACL và RSC authorization. TTL callback bị giới hạn tối đa 180 giây tại Vault; giá Base được kiểm tra lại cho Take-Profit/Stop-Loss, slippage tối đa 5%, replay khóa theo execution ID và one-shot chỉ hoàn thành sau settlement. |
 | Cross-Chain Hedge | Hai log Sync có thứ tự trên Unichain Sepolia tạo điều kiện giảm giá theo BPS trong cửa sổ. Callback chỉ bán ETH trong Vault Base Sepolia; giá nguồn không được dùng như giá thực thi Base. Cần pool Unichain thật và gas native Unichain cho signer tạo event. |
 | Ladder | Owner cấu hình sau khi Vault đã nạp principal. Phần trăm tính trên snapshot vốn ban đầu. Một log vượt nhiều ngưỡng gộp thành một swap; mỗi bậc chỉ khóa khi swap thành công. Tổng tỷ lệ không vượt 100%. |
 | AND/OR | Đề xuất chọn hai pool Base Sepolia độc lập làm nguồn A/B, mỗi nguồn là log riêng. Cửa sổ freshness đo theo thời điểm Lasna nhận quan sát, tối đa 180 giây. AND cần cả hai; OR cần một. Episode chống callback trùng và Vault đọc lại reserve hai pool trước khi swap. Đây là quyết định triển khai để có demo cross-pool rõ ràng, chưa phải biểu thức Logic Gate tổng quát cho mọi node. |
-| Foundry | 33/33 pass sau khi thêm các hợp đồng Phase 2. Các test local bao gồm equality/revalidation/replay, ladder gap và rollback, velocity Unichain, AND/OR, freshness và callback authorization. Đây là test harness local, không thay cho xác nhận Reactive system trên Lasna thật. |
-| ABI/bytecode | `forge build` thành công; `node scripts/extract-abis.js --check` xác nhận ABI/bytecode/source artifacts sinh từ Solidity khớp. Shared, backend và frontend production build đã chạy; backend build pass. |
-| Deploy/backend | Deployer, runtime preflight, authorization/configuration transaction sequence, Active và execution indexer hiện vẫn giả định một `StopLoss_Pipeline` và `ActionVault`. Phase 2 chưa mở nút Deploy. Preview hiện là cấu hình/source candidate, chưa encode constructor deployment Phase 2 qua luồng Studio. |
+| Foundry | 39/39 pass. Bao gồm equality/revalidation/replay, ladder gap/rollback, velocity Unichain, AND/OR, freshness/episode reset, owner-only policy lifecycle, revoke, sai mode/tham số, callback TTL và proxy authorization. Đây là harness local, chưa xác nhận Reactive system trên Lasna thật. |
+| ABI/bytecode và compiler preview | `forge build` và `node scripts/extract-abis.js --check` pass. Preview Phase 2 encode constructor arguments bằng ABI thật và hiển thị hash creation bytecode đã chọn. Shared, backend, frontend production build đều pass. Preview chưa phải transaction deploy. |
+| Deploy/backend | Deployer, runtime preflight, authorization/configuration transaction sequence, Active và execution indexer hiện vẫn giả định một `StopLoss_Pipeline` và `ActionVault`. Phase 2 chưa mở nút Deploy. Preview đã ABI-encode constructor theo artifact và hiện hash bytecode; chưa tạo/gửi deploy transaction. Deployer và runtime verification chưa hỗ trợ Phase 2 qua Studio. |
 | Vault compatibility | `PriceOrderVault` là contract đích phiên bản mới. Vault Phase 1 không có registry permission phù hợp cho policy ladder/gate; không thể dùng nguyên bước `setAuthorizedRSC` đơn giao dịch để khai báo policy Phase 2. Cần onboarding có bước configure policy rồi authorize, lưu receipt từng bước và idempotency. |
 | Full-loop và evidence | Chưa chạy RSC Phase 2 trên Lasna, chưa có Base callback/payout thật, chưa thêm verifier Phase 2 vào `FULL_LOOP_EVIDENCE.json`. Không đánh dấu B hoặc toàn Phase 2 là PASS cho tới khi từng mode có receipt nguồn/Lasna/Base và trạng thái Active/Logs đối chiếu được. |
 
@@ -221,10 +221,10 @@ Khi đủ quỹ và có bộ địa chỉ riêng, đặt `PAIR_ADDRESS`, `VAULT_
 
 Thực hiện theo thứ tự dưới đây trước khi mở Deploy Phase 2:
 
-1. Rà soát bảo mật `PriceOrderVault`, nhất là proxy/RSC authentication, quyền owner, ranh giới policy theo từng RSC, callback replay, ladder principal snapshot, cooldown/episode, min-out, lỗi router và rút khẩn cấp. Bổ sung test cho caller sai, RSC chưa cấp quyền, policy sai mode/tham số, callback lặp và lỗi swap rollback.
-2. Chốt và kiểm thử lifecycle quyền: tạo RSC → owner cấu hình đúng một policy bất biến → owner cấp quyền → có thể thu hồi quyền ngay → xác minh trạng thái qua RPC. Không cho backend tự cấp quyền hoặc chi tiền thay owner.
+1. **Đã làm local:** rà soát proxy/RSC authentication, quyền owner, policy theo từng RSC, callback replay/TTL, ladder principal snapshot, cooldown/episode, min-out, lỗi router và rút khẩn cấp. Bổ sung Foundry test caller sai, RSC chưa đăng ký/authorize, policy sai mode/tham số, revoke, callback hết hạn, gate reset và swap rollback.
+2. **Đã làm local:** lifecycle là deploy RSC → owner đăng ký địa chỉ code → cấu hình policy đúng một lần → owner authorize; owner có thể revoke ngay. **Còn mở:** tích hợp chuỗi giao dịch này vào Studio/backend, lưu receipt và xác minh trạng thái qua RPC. Không cho backend tự cấp quyền hoặc chi tiền thay owner.
 3. Nối onboarding theo nhiều giao dịch Base có idempotency và resume sau reload. Ghi từng hash/receipt; chỉ báo sẵn sàng sau khi policy đúng, RSC được authorize và các quỹ đã được đối soát.
-4. Sau khi local security gate pass, mới deploy fixture riêng lên testnet và chạy full-loop cho từng mode. Đưa receipt thật vào `FULL_LOOP_EVIDENCE.json`; không dùng test local làm bằng chứng on-chain.
+4. Local security gate contract hiện pass; trước testnet còn phải hoàn tất các mục registry/deployer/onboarding/indexer bên dưới. Sau đó mới deploy fixture riêng, chạy full-loop và đưa receipt thật vào `FULL_LOOP_EVIDENCE.json`; không dùng test local làm bằng chứng on-chain.
 ### Điều kiện mở lại để nghiệm thu Phase 2
 
 1. Hoàn thành contract `PriceOrderVault` onboarding an toàn trong Studio, gồm tạo/liên kết Vault đúng runtime, cấu hình immutable policy, cấp quyền RSC và lưu/khôi phục receipt qua reload.
@@ -235,6 +235,3 @@ Thực hiện theo thứ tự dưới đây trước khi mở Deploy Phase 2:
 6. Chạy `forge test -vvv`, backend tests/build, frontend build và ABI check sau khi hoàn tất tích hợp full-stack. Sau đó có thể đánh dấu PASS theo từng mode với giới hạn RPC/faucet/testnet ghi rõ.
 
 **Không có vướng mắc nghiệp vụ cần hỏi thêm để tiếp tục.** Các lựa chọn người dùng đã chốt: ladder tính trên vốn ban đầu và gộp các bậc cùng chạm thành một lần bán. AND/OR dùng hai quan sát riêng từ hai pool độc lập, freshness tính tại Lasna. Điểm cần làm tiếp là kỹ thuật tích hợp và có thể tự kiểm tra bằng preflight; chưa cần người dùng cung cấp thêm gì cho phần local.
-
-
-
