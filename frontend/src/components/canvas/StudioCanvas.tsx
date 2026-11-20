@@ -48,9 +48,8 @@ import { InspectorPanel } from './InspectorPanel';
 import { DeployModal } from './DeployModal';
 import { SolidityPreviewModal } from './SolidityPreviewModal';
 import { 
+  ArrowLeft,
   Rocket, 
-  RotateCcw, 
-  Sparkles, 
   AlertTriangle,
   Code2
 } from 'lucide-react';
@@ -135,6 +134,12 @@ function StudioCanvasInner() {
       setValidationWarning('The browser draft could not be opened. Import a valid Studio JSON file.');
     }
   }, [localParam, setNodes, setEdges]);
+
+  // Auto-load wallet draft or deployment snapshot from query parameter
+  useEffect(() => {
+    if (!address || (!pipelineParam && !deploymentParam)) return;
+    void openSavedGraph();
+  }, [address, pipelineParam, deploymentParam]);
 
   async function openSavedGraph() {
     if (!address || (!pipelineParam && !deploymentParam)) return;
@@ -349,54 +354,6 @@ function StudioCanvasInner() {
     if (selectedNodeId === id) setSelectedNodeId(null);
   };
 
-  const handleResetGraph = () => {
-    setNodes([]);
-    setDraftNetworks(undefined);
-    setEdges([]);
-    setSelectedNodeId(null);
-    setActiveRecipeId('');
-  };
-
-  const handleSelectPreset = (recipeKey: string) => {
-    if (RECIPE_PRESETS[recipeKey]) {
-      const preset = RECIPE_PRESETS[recipeKey];
-      setActiveRecipeId(recipeKey);
-      setNodes(preset.nodes);
-      setEdges(preset.edges);
-      setDraftNetworks(undefined);
-      setSelectedNodeId(null);
-    }
-  };
-
-  const handleExportGraph = () => {
-    const url = URL.createObjectURL(new Blob([JSON.stringify({ nodes, edges, networks: draftNetworks }, null, 2)], { type: 'application/json' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'omniflow-pipeline.json';
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImportGraph = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    try {
-      if (file.size > 1_048_576) throw new Error('Choose a Studio JSON file smaller than 1 MB.');
-      const draft = parsePipelineDraft(await file.text(), draftNodeTypes);
-      if ((reactFlowInstance?.getNodes().length ?? nodes.length) &&
-          !window.confirm('Replace the current canvas with this file?')) return;
-      setActiveRecipeId('');
-      setSelectedNodeId(null);
-      setNodes(draft.nodes);
-      setEdges(draft.edges);
-      setDraftNetworks(draft.networks);
-      setValidationWarning(null);
-    } catch (error) {
-      setValidationWarning(error instanceof Error ? error.message : 'Unable to read the Studio JSON file.');
-    }
-  };
-
   const handleOpenDeploy = () => {
     if (!isConnected) return;
     try {
@@ -427,41 +384,49 @@ function StudioCanvasInner() {
           <div className="flex min-w-0 items-center gap-2">
             {!isSnapshot && <button type="button" className="ws-button lg:hidden" aria-expanded={isPaletteOpen} aria-controls="studio-node-palette"
               onClick={() => setPaletteOpen(open => !open)}>Add nodes</button>}
+            <Link className="ws-button inline-flex items-center gap-1.5" href="/workspace/studio" title="Back to pipeline list">
+              <ArrowLeft className="size-3.5" />
+              <span>Pipelines</span>
+            </Link>
             <h1 className="truncate text-sm font-semibold">{draftName}</h1>
           </div>
 
           <div className="ws-actions">
-            <Link className="ws-button" href="/workspace/studio">All pipelines</Link>
-            {(pipelineParam || deploymentParam) && (
-              <button type="button" className="ws-button" disabled={!isConnected || draftBusy} onClick={() => void openSavedGraph()}>
-                {deploymentParam ? 'Open snapshot' : 'Open saved draft'}
-              </button>
+            {!isSnapshot && (
+              <input
+                aria-label="Pipeline name"
+                placeholder="Pipeline name"
+                value={pipelineName}
+                maxLength={120}
+                onChange={(event) => setPipelineName(event.target.value)}
+                className="ws-button max-w-[11rem]"
+              />
             )}
-            <button type="button" className="ws-button" disabled={draftBusy || !nodes.length} onClick={() => void saveGraph()}>
+            <button
+              type="button"
+              className="ws-button"
+              disabled={draftBusy || !nodes.length}
+              onClick={() => void saveGraph()}
+            >
               {isSnapshot ? 'Save a draft copy' : 'Save draft'}
             </button>
-            {!isSnapshot && <input aria-label="Pipeline name" placeholder="Pipeline name" value={pipelineName}
-              maxLength={120} onChange={event => setPipelineName(event.target.value)} className="ws-button max-w-[10rem]" />}
-            <select aria-label="Recipe preset" value={activeRecipeId} disabled={isSnapshot} onChange={(event) => handleSelectPreset(event.target.value)}
-              className="ws-button max-w-[11rem] bg-[var(--ws-panel)]">
-              <option value="">Recipe preset</option>
-              {Object.values(RECIPE_PRESETS).map(preset => (
-                <option key={preset.id} value={preset.id}>{preset.title}{preset.id !== 'stop-loss' ? ' (draft)' : ''}</option>
-              ))}
-            </select>
-            <button type="button" className="ws-button" onClick={() => setIsSolidityOpen(true)} disabled={!nodes.length}>
-              <Code2 size={14} aria-hidden="true" /> Solidity
+            <button
+              type="button"
+              className="ws-button"
+              onClick={() => setIsSolidityOpen(true)}
+              disabled={!nodes.length}
+            >
+              <Code2 size={14} aria-hidden="true" />
+              <span>Solidity</span>
             </button>
-            <button type="button" className="ws-button" onClick={handleResetGraph} disabled={!nodes.length || isSnapshot}>
-              <RotateCcw size={14} aria-hidden="true" /> Clear
-            </button>
-            <button type="button" className="ws-button" onClick={handleExportGraph} disabled={!nodes.length}>Export JSON</button>
-            {!isSnapshot && <label className="ws-button cursor-pointer focus-within:outline focus-within:outline-2">
-              Import JSON
-              <input type="file" className="sr-only" accept=".json,application/json" onChange={handleImportGraph} />
-            </label>}
-            <button type="button" className="ws-button ws-button-primary" onClick={handleOpenDeploy} disabled={!isConnected || !nodes.length || isSnapshot}>
-              <Rocket size={14} aria-hidden="true" /> {isConnected ? 'Deploy' : 'Connect wallet to deploy'}
+            <button
+              type="button"
+              className="ws-button ws-button-primary"
+              onClick={handleOpenDeploy}
+              disabled={!isConnected || !nodes.length || isSnapshot}
+            >
+              <Rocket size={14} aria-hidden="true" />
+              <span>{isConnected ? 'Deploy' : 'Connect wallet to deploy'}</span>
             </button>
           </div>
           {validationWarning && <p role="alert" className="flex w-full items-center gap-2 text-xs text-amber-200">
