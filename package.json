@@ -4,7 +4,7 @@
   "private": true,
   "description": "OmniFlow — The Zapier of Web3: No-Code Cross-Chain Automation Powered by Reactive Omni",
   "scripts": {
-    "dev": "pnpm --parallel --filter backend --filter frontend dev",
+    "dev": "pnpm --filter @omniflow/shared build && pnpm --parallel --filter backend --filter frontend dev",
     "dev:backend": "pnpm --filter backend dev",
     "dev:frontend": "pnpm --filter frontend dev",
     "build:backend": "pnpm --filter backend build",

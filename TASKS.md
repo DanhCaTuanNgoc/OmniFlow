@@ -18,10 +18,10 @@
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 24 | 23 | 0 | **95.8%** |
 | **Đánh giá cạnh tranh, bằng chứng và tính năng mở rộng** | 18–19/11/2026 | 8 | 5 | 0 | **62.5%** |
 | **Vận hành Workspace & nghiệm thu dự thi** | Ghi nhận 20/11/2026 | 8 | 0 | 0 | **0%** |
-| **Khả năng deploy của preset, runtime và nghiệm thu toàn bộ flow** | Ghi nhận 20/11/2026 | 13 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **Đối chiếu 20/11/2026** | **89** | **64** | **0** | **71.9%** |
+| **Khả năng deploy của preset, runtime và nghiệm thu toàn bộ flow** | Ghi nhận 20/11/2026 | 13 | 1 | 0 | **7.7%** |
+| **TỔNG CỘNG** | **Đối chiếu 20/11/2026** | **89** | **65** | **0** | **73.0%** |
 
-Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **25 mục `TODO`**. Điều kiện phát hành cloud tính theo [ma trận nghiệm thu pipeline](docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md), gồm cả những kịch bản chia sẻ runtime.
+Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **24 mục `TODO`**. Điều kiện phát hành cloud tính theo [ma trận nghiệm thu pipeline](docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md), gồm cả những kịch bản chia sẻ runtime.
 
 * **On-chain:** Lượt stop-loss ngày 19/11 dùng pool và token thử nghiệm trên testnet. Đã đọc lại cả ba receipt qua RPC ngày 20/11 và xác nhận đều thành công. [Bằng chứng full loop](FULL_LOOP_EVIDENCE.json)
 * **Workspace:** Commit `155d62f` bỏ dữ liệu mẫu, `872a381` kiểm tra Vault/RSC cấu hình sẵn, và `f8c3410` đồng bộ giao diện năm màn hình. Deployer hiện chỉ hỗ trợ các node của luồng stop-loss. Xác thực theo ví, lưu pipeline và phục hồi deploy nằm ở `TASK-333` đến `TASK-335`.
@@ -992,21 +992,23 @@ Phạm vi Workspace theo [phân tích vận hành](docs/WORKSPACE_OPERATIONS_ANA
 
 **Thứ tự phát hành:** Chạy stop-loss `TASK-340/342` để hoàn thiện một lượt mẫu. Sau đó hoàn thành từng flow theo [ma trận rollout](docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md#3-ma-trận-flow-và-thứ-tự-thực-hiện) cùng phần dùng chung `TASK-329/333–336/341/350–352`. `TASK-344` bắt đầu sau khi `TASK-343` có full loop đạt nghiệm thu. Chỉ triển khai Vercel/Railway khi `TASK-353` đạt cho toàn bộ ma trận. Smoke test bản cloud thuộc `TASK-304/337`.
 
-#### `TASK-341` [TODO] — Giới hạn Deploy theo khả năng thực thi của preset và graph
+#### `TASK-341` [DONE] — Giới hạn Deploy theo khả năng thực thi của preset và graph
 * **Module:** Studio, Template Library, schema và deployer.
 * **Mục đích:** Graph người dùng thấy phải khớp với cấu hình được triển khai.
 * **Chi tiết:** Dùng chung thông tin về khả năng thực thi cho catalog, canvas và kiểm tra deploy phía API. Giữ Flash Crash Stop-Loss là preset chính. Giữ Take-Profit và Cross-Chain Hedge ở nhóm cấu hình nâng cao chưa deploy được. Rút Anti-Drainer, Daily Rebalancer và Payday khỏi luồng Deploy dự thi. Giữ khả năng mở nháp và link preset cũ với trạng thái phù hợp. Kiểm tra topology theo template đã hỗ trợ, gồm cổng, cạnh, số node theo loại, nhánh và tham số. Từ chối graph mà deployer hiện sẽ chỉ lấy node đầu tiên hoặc dùng mặc định làm đổi nghĩa.
 * **Nghiệm thu:** Graph stop-loss chuẩn qua kiểm tra. Graph sai cổng, nhiều action chưa hỗ trợ, toán tử chưa hỗ trợ hoặc sai chain bị chặn trước khi ký hay broadcast qua cả UI và API. Bật lại Deploy cho từng preset khi runtime và bằng chứng testnet của preset đó đạt nghiệm thu.
+* **Kết quả:** Dùng chung resolver và import/export JSON. Kiểm tra hồi quy và smoke local theo [nhật ký Phase 0](docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md#10-nhật-ký-triển-khai-phase-0).
 * **Ngày tạo:** 20/11/2026.
-* **Ngày hoàn thành:** —
-* **Người thực hiện:** Chưa phân công.
-* **Trạng thái:** `TODO`.
+* **Ngày hoàn thành:** 20/11/2026.
+* **Người thực hiện:** Codex.
+* **Trạng thái:** `DONE`.
 
 #### `TASK-342` [TODO] — Đồng bộ thông số stop-loss giữa Studio và Vault
 * **Module:** Inspector, preset, Deploy Modal và ActionVault.
 * **Mục đích:** Người dùng duyệt đúng điều kiện và mức chi trước khi chạy.
 * **Chi tiết:** Đối chiếu tham số với RSC/Vault của deployment. Vault hiện dùng trần slippage cố định 5% từ báo giá router, trong khi preset ghi 1%. Hiển thị theo hợp đồng và khóa cấu hình chưa được hỗ trợ. Giải thích tỷ lệ swap áp vào số dư ETH Vault tại lúc thực thi và cooldown cho phép lượt tiếp theo sau thời gian chờ. One-shot là thay đổi nghiệp vụ riêng.
 * **Nghiệm thu:** So khớp giá trị preview, tham số deploy và dữ liệu on-chain của cùng một lượt. UI thể hiện giá trị thực và trạng thái chưa xác minh nếu RPC lỗi.
+* **Tiến độ:** Giới hạn 5%, ngưỡng, cooldown và thứ tự constructor đã đồng bộ ở Phase 0. Còn đối chiếu receipt và cấu hình của lượt deploy mới từ Studio trong Phase 1.
 * **Ngày tạo:** 20/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.

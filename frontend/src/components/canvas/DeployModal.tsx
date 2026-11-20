@@ -13,15 +13,15 @@ import {
 } from 'lucide-react';
 import { useAccount, useConfig, useWriteContract } from 'wagmi';
 import { getAccount, readContract, waitForTransactionReceipt } from 'wagmi/actions';
-import { isAddress, isAddressEqual, type Address } from 'viem';
+import { isAddressEqual, type Address } from 'viem';
 import { APP_CONFIG } from '@/lib/constants';
-import { ACTION_VAULT_ABI } from '@omniflow/shared';
+import { ACTION_VAULT_ABI, resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { truncateAddress } from '@/lib/utils';
 
 interface DeployModalProps {
   isOpen: boolean;
   onClose: () => void;
-  graph: any;
+  graph: StopLossGraph;
 }
 
 export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
@@ -47,11 +47,7 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
 
       const owner = getAccount(config).address;
       if (!isConnected || !owner) throw new Error('Connect a wallet to deploy.');
-      const vault = graph.nodes.find((node: { type?: string; data: { actionVaultAddress?: string } }) =>
-        node.type === 'dexSwap' || node.data.actionVaultAddress)?.data.actionVaultAddress;
-      if (typeof vault !== 'string' || !isAddress(vault, { strict: false })) {
-        throw new Error('Configure an ActionVault address in the graph.');
-      }
+      const { actionVaultAddress: vault } = resolveStopLoss(graph);
       const actualOwner = await readContract(config, {
         address: vault, abi: ACTION_VAULT_ABI, functionName: 'owner', chainId: 84532,
       });
@@ -68,11 +64,7 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
           ownerAddress: owner,
           createdAt: Date.now(),
         },
-        networks: {
-          originChainId: 84532,
-          reactiveChainId: 5318007,
-          destinationChainId: 84532,
-        },
+        networks: STOP_LOSS_TEMPLATE.networks,
         nodes: graph.nodes,
         edges: graph.edges,
       };
@@ -174,7 +166,7 @@ export function DeployModal({ isOpen, onClose, graph }: DeployModalProps) {
               </div>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-xs text-slate-300 flex gap-2.5">
+            <div className="p-3.5 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-xs text-violet-100 flex gap-2.5">
               <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-violet-400" />
               <span>
                 Deployment requires a confirmed Lasna receipt. Vault authorization is a separate Base Sepolia transaction.

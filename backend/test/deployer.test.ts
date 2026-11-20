@@ -4,8 +4,11 @@ import { chainService } from '../src/services/chain.service.js';
 import { deployerService } from '../src/services/deployer.service.js';
 import type { PipelineGraph } from '../src/schemas/pipeline.schema.js';
 import { STOP_LOSS_PIPELINE_BYTECODE } from '../src/abis/StopLossPipeline.js';
+import { STOP_LOSS_PIPELINE_ABI, stopLossConstructorArgs } from '@omniflow/shared';
+import { PipelineGraphSchema } from '../src/schemas/pipeline.schema.js';
+import { decodeAbiParameters, encodeDeployData, parseEther } from 'viem';
 
-describe('DeployerService & DAG Compiler Suite (10 Test Cases)', () => {
+describe('DeployerService & DAG Compiler Suite', () => {
   const sampleValidGraph: PipelineGraph = {
     pipelineVersion: '1.0.0',
     metadata: {
@@ -140,6 +143,77 @@ describe('DeployerService & DAG Compiler Suite (10 Test Cases)', () => {
     assert.ok(STOP_LOSS_PIPELINE_BYTECODE.length > 100);
     assert.ok(STOP_LOSS_PIPELINE_BYTECODE.startsWith('0x'));
   });
+
+  it('uses identical parameters for the preview and encoded constructor', () => {
+    const graph = structuredClone(sampleValidGraph);
+    graph.nodes[0].data.chainId = 84532;
+    graph.nodes[1].data.thresholdPriceUSD = '1850.125';
+    graph.nodes[2].data.cooldownSeconds = 0;
+    const parameters = deployerService.extractParams(PipelineGraphSchema.parse({
+      ...graph,
+      edges: graph.edges.map(edge => ({ ...edge, sourceHandle: null, targetHandle: null })),
+    }));
+    const args = stopLossConstructorArgs(parameters);
+    const constructor = STOP_LOSS_PIPELINE_ABI.find(entry => entry.type === 'constructor');
+    const payload = encodeDeployData({ abi: STOP_LOSS_PIPELINE_ABI, bytecode: STOP_LOSS_PIPELINE_BYTECODE, args });
+    const decoded = decodeAbiParameters(constructor.inputs, `0x${payload.slice(STOP_LOSS_PIPELINE_BYTECODE.length)}`);
+    assert.deepEqual(decoded.map(value => typeof value === 'string' ? value.toLowerCase() : value), args);
+    assert.equal(parameters.priceThresholdWei, parseEther('1850.125'));
+    assert.equal(parameters.cooldownSeconds, 0n);
+    assert.equal(parameters.velocityThresholdBps, 0n);
+    assert.ok(STOP_LOSS_PIPELINE_ABI.some(entry => entry.type === 'event' && entry.name === 'OmniCallbackRequested'));
+  });
+
+  const rejectedGraphs: {
+    scenario: string;
+    edit: (graph: PipelineGraph) => void;
+    error: RegExp;
+  }[] = [
+    {
+      scenario: 'a second financial action',
+      edit: graph => {
+        graph.nodes.push({ ...graph.nodes[3], id: 'extra-swap' });
+        graph.edges.push({ id: 'extra-edge', source: 'node-cooldown', target: 'extra-swap' });
+      },
+      error: /one DEX swap/,
+    },
+    { scenario: 'a wrong port', edit: graph => { graph.edges[1].targetHandle = 'A'; }, error: /default ports/ },
+    {
+      scenario: 'an acyclic but incorrectly ordered graph',
+      edit: graph => {
+        graph.edges[0].target = 'node-cooldown';
+        graph.edges[1].source = 'node-cooldown';
+        graph.edges[1].target = 'node-price-guard';
+        graph.edges[2].source = 'node-price-guard';
+      },
+      error: /in order/,
+    },
+    { scenario: 'conflicting legacy chain fields', edit: graph => { graph.nodes[0].data.chainId = 1301; }, error: /chain fields disagree/ },
+    {
+      scenario: 'an Unichain graph',
+      edit: graph => {
+        graph.nodes[0].data.originChainId = 1301;
+        graph.networks.originChainId = 1301;
+      },
+      error: /only Base Sepolia/,
+    },
+    {
+      scenario: 'a take-profit threshold',
+      edit: graph => { graph.nodes[1].data.operator = 'GREATER_THAN_OR_EQUAL'; },
+      error: /less-than-or-equal/,
+    },
+    { scenario: 'an invalid cooldown', edit: graph => { graph.nodes[2].data.cooldownSeconds = -1; }, error: /cooldown must/ },
+    { scenario: 'an invalid amount', edit: graph => { graph.nodes[3].data.amountPercentage = 0; }, error: /swap percentage/ },
+    { scenario: 'a legacy 1% slippage draft', edit: graph => { graph.nodes[3].data.maxSlippagePercent = 1; }, error: /fixed 5%/ },
+  ];
+
+  for (const { scenario, edit, error } of rejectedGraphs) {
+    it(`rejects ${scenario} before deployment`, async () => {
+      const graph = structuredClone(sampleValidGraph);
+      edit(graph);
+      await assert.rejects(deployerService.deployPipeline(graph), error);
+    });
+  }
 
   it('rejects deployment with a missing origin pool address', async () => {
     const graph = structuredClone(sampleValidGraph);

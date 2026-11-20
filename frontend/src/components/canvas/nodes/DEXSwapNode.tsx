@@ -5,13 +5,14 @@ import { NodeProps } from '@xyflow/react';
 import { ArrowDownRight, Layers, Sliders } from 'lucide-react';
 import { NodeCard } from './NodeCard';
 import { DEXSwapData } from '@/types/canvas';
+import { STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 
 function DEXSwapNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as DEXSwapData;
   const fromToken = nodeData.fromToken || 'ETH';
   const toToken = nodeData.toToken || 'USDC';
   const percent = nodeData.amountPercentage || 50;
-  const slippage = nodeData.maxSlippagePercent || 1;
+  const slippage = nodeData.maxSlippagePercent ?? STOP_LOSS_TEMPLATE.maxSlippageBps / 100;
 
   return (
     <NodeCard
@@ -47,7 +48,7 @@ function DEXSwapNodeComponent({ id, data, selected }: NodeProps) {
             <Sliders className="w-3 h-3 text-emerald-400" />
             Max Slippage:
           </span>
-          <span className="font-medium text-emerald-300 tabular-nums">{slippage}% (MEV Guarded)</span>
+          <span className="font-medium text-emerald-300 tabular-nums">{slippage}% requested</span>
         </div>
       </div>
       <div className="flex items-center gap-1.5 text-[11px] text-emerald-400/80 font-mono">

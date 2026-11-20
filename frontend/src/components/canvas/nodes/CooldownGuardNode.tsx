@@ -8,7 +8,7 @@ import { CooldownGuardData } from '@/types/canvas';
 
 function CooldownGuardNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as CooldownGuardData;
-  const cooldownSec = nodeData.cooldownSeconds || 300;
+  const cooldownSec = nodeData.cooldownSeconds ?? 300;
 
   return (
     <NodeCard
@@ -34,7 +34,7 @@ function CooldownGuardNodeComponent({ id, data, selected }: NodeProps) {
       </div>
       <div className="flex items-center gap-1.5 text-[11px] text-amber-400/80 font-mono">
         <ShieldCheck className="w-3.5 h-3.5" />
-        <span>now - lastTriggered &gt; cooldown</span>
+        <span>now - lastTriggered &gt;= cooldown</span>
       </div>
     </NodeCard>
   );

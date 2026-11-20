@@ -30,7 +30,7 @@ interface PaletteItem {
   defaultData: Record<string, any>;
 }
 
-const PALETTE_ITEMS: PaletteItem[] = [
+export const PALETTE_ITEMS: PaletteItem[] = [
   // 1. Triggers
   {
     type: 'watchDEXPrice',
@@ -168,7 +168,7 @@ const PALETTE_ITEMS: PaletteItem[] = [
       fromToken: 'ETH',
       toToken: 'USDC',
       amountPercentage: 50,
-      maxSlippagePercent: 1,
+      maxSlippagePercent: 5,
       actionVaultAddress: '',
     },
   },

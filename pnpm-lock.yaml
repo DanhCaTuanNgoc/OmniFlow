@@ -10,6 +10,9 @@ importers:
 
   backend:
     dependencies:
+      '@omniflow/shared':
+        specifier: workspace:*
+        version: link:../packages/shared
       cors:
         specifier: ^2.8.5
         version: 2.8.6

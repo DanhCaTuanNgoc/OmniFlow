@@ -22,7 +22,9 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useAccount } from 'wagmi';
 import { RECIPE_PRESETS } from '@/lib/recipes';
+import { resolveStopLoss, type StopLossGraph } from '@omniflow/shared';
 import { APP_CONFIG } from '@/lib/constants';
+import { parsePipelineDraft } from '@/lib/pipelineDraft';
 
 import {
   WatchDEXPriceNode,
@@ -39,7 +41,7 @@ import {
   PriceVelocityGuardNode,
 } from './nodes';
 import { CustomEdge } from './CustomEdge';
-import { NodePalette } from './NodePalette';
+import { NodePalette, PALETTE_ITEMS } from './NodePalette';
 import { InspectorPanel } from './InspectorPanel';
 import { DeployModal } from './DeployModal';
 import { SolidityPreviewModal } from './SolidityPreviewModal';
@@ -70,15 +72,21 @@ const nodeTypes: NodeTypes = {
 const edgeTypes: EdgeTypes = {
   custom: CustomEdge,
 };
+const draftNodeTypes = new Map(PALETTE_ITEMS.map(item => [item.type, item.category]));
 
 let idCounter = 10;
-const getId = (prefix: string) => `${prefix}-${idCounter++}`;
+function getId(prefix: string, nodes: readonly Node[]) {
+  let id = `${prefix}-${idCounter++}`;
+  while (nodes.some(node => node.id === id)) id = `${prefix}-${idCounter++}`;
+  return id;
+}
 
 function StudioCanvasInner() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { address, isConnected } = useAccount();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [draftNetworks, setDraftNetworks] = useState<StopLossGraph['networks']>();
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
   const searchParams = useSearchParams();
@@ -96,6 +104,7 @@ function StudioCanvasInner() {
       setActiveRecipeId(rId);
       setNodes(RECIPE_PRESETS[rId].nodes);
       setEdges(RECIPE_PRESETS[rId].edges);
+      setDraftNetworks(undefined);
       setSelectedNodeId(null);
     }
   }, [searchParams, setNodes, setEdges]);
@@ -215,7 +224,7 @@ function StudioCanvasInner() {
       const parsedData = dataStr ? JSON.parse(dataStr) : {};
 
       const newNode: Node = {
-        id: getId(parsedData.category || 'node'),
+        id: getId(parsedData.category || 'node', nodes),
         type,
         position,
         data: parsedData,
@@ -224,7 +233,7 @@ function StudioCanvasInner() {
       setNodes((nds) => nds.concat(newNode));
       setSelectedNodeId(newNode.id);
     },
-    [reactFlowInstance, setNodes]
+    [nodes, reactFlowInstance, setNodes]
   );
 
   const handleAddNodeFromPalette = (type: string, defaultData: Record<string, any>) => {
@@ -233,7 +242,7 @@ function StudioCanvasInner() {
       y: 200 + Math.random() * 120,
     };
     const newNode: Node = {
-      id: getId(defaultData.category || 'node'),
+      id: getId(defaultData.category || 'node', nodes),
       type,
       position,
       data: defaultData,
@@ -264,6 +273,7 @@ function StudioCanvasInner() {
 
   const handleResetGraph = () => {
     setNodes([]);
+    setDraftNetworks(undefined);
     setEdges([]);
     setSelectedNodeId(null);
     setActiveRecipeId('');
@@ -275,12 +285,13 @@ function StudioCanvasInner() {
       setActiveRecipeId(recipeKey);
       setNodes(preset.nodes);
       setEdges(preset.edges);
+      setDraftNetworks(undefined);
       setSelectedNodeId(null);
     }
   };
 
   const handleExportGraph = () => {
-    const url = URL.createObjectURL(new Blob([JSON.stringify({ nodes, edges }, null, 2)], { type: 'application/json' }));
+    const url = URL.createObjectURL(new Blob([JSON.stringify({ nodes, edges, networks: draftNetworks }, null, 2)], { type: 'application/json' }));
     const link = document.createElement('a');
     link.href = url;
     link.download = 'omniflow-pipeline.json';
@@ -288,16 +299,36 @@ function StudioCanvasInner() {
     URL.revokeObjectURL(url);
   };
 
+  const handleImportGraph = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      if (file.size > 1_048_576) throw new Error('Choose a Studio JSON file smaller than 1 MB.');
+      const draft = parsePipelineDraft(await file.text(), draftNodeTypes);
+      if ((reactFlowInstance?.getNodes().length ?? nodes.length) &&
+          !window.confirm('Replace the current canvas with this file?')) return;
+      setActiveRecipeId('');
+      setSelectedNodeId(null);
+      setNodes(draft.nodes);
+      setEdges(draft.edges);
+      setDraftNetworks(draft.networks);
+      setValidationWarning(null);
+    } catch (error) {
+      setValidationWarning(error instanceof Error ? error.message : 'Unable to read the Studio JSON file.');
+    }
+  };
+
   const handleOpenDeploy = () => {
     if (!isConnected) return;
-    const hasTrigger = nodes.some((n) => n.data.category === 'trigger');
-    const hasAction = nodes.some((n) => n.data.category === 'action');
-
-    if (!hasTrigger || !hasAction) {
-      setValidationWarning('Pipeline must contain at least 1 Trigger and 1 Action node.');
+    try {
+      resolveStopLoss({ nodes, edges, networks: draftNetworks });
+    } catch (error) {
+      setValidationWarning(error instanceof Error ? error.message : 'Unable to validate this graph.');
       setTimeout(() => setValidationWarning(null), 4000);
       return;
     }
+    setValidationWarning(null);
     setIsDeployOpen(true);
   };
 
@@ -326,7 +357,9 @@ function StudioCanvasInner() {
             <select aria-label="Recipe preset" value={activeRecipeId} onChange={(event) => handleSelectPreset(event.target.value)}
               className="ws-button max-w-[11rem] bg-[var(--ws-panel)]">
               <option value="">Recipe preset</option>
-              {Object.values(RECIPE_PRESETS).map(preset => <option key={preset.id} value={preset.id}>{preset.title}</option>)}
+              {Object.values(RECIPE_PRESETS).map(preset => (
+                <option key={preset.id} value={preset.id}>{preset.title}{preset.id !== 'stop-loss' ? ' (draft)' : ''}</option>
+              ))}
             </select>
             <button type="button" className="ws-button" onClick={() => setIsSolidityOpen(true)} disabled={!nodes.length}>
               <Code2 size={14} aria-hidden="true" /> Solidity
@@ -335,6 +368,10 @@ function StudioCanvasInner() {
               <RotateCcw size={14} aria-hidden="true" /> Clear
             </button>
             <button type="button" className="ws-button" onClick={handleExportGraph} disabled={!nodes.length}>Export JSON</button>
+            <label className="ws-button cursor-pointer focus-within:outline focus-within:outline-2">
+              Import JSON
+              <input type="file" className="sr-only" accept=".json,application/json" onChange={handleImportGraph} />
+            </label>
             <button type="button" className="ws-button ws-button-primary" onClick={handleOpenDeploy} disabled={!isConnected || !nodes.length}>
               <Rocket size={14} aria-hidden="true" /> {isConnected ? 'Deploy' : 'Connect wallet to deploy'}
             </button>
@@ -409,7 +446,7 @@ function StudioCanvasInner() {
         key={isConnected ? address : 'guest'}
         isOpen={isDeployOpen}
         onClose={() => setIsDeployOpen(false)}
-        graph={{ nodes, edges }}
+        graph={{ nodes, edges, networks: draftNetworks }}
       />
 
       {/* Solidity Preview Modal */}
@@ -418,6 +455,7 @@ function StudioCanvasInner() {
         onClose={() => setIsSolidityOpen(false)}
         nodes={nodes}
         edges={edges}
+        networks={draftNetworks}
       />
     </div>
   );

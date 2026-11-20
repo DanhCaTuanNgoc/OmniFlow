@@ -1,21 +1,17 @@
-import { ACTION_VAULT_ABI } from '../abis/ActionVault.js';
-import { isAddress, isAddressEqual, parseEther } from 'viem';
+import { isAddressEqual, parseAbi } from 'viem';
 import type { PipelineGraph } from '../schemas/pipeline.schema.js';
 import { chainService } from './chain.service.js';
-import { STOP_LOSS_PIPELINE_ABI, STOP_LOSS_PIPELINE_BYTECODE } from '../abis/StopLossPipeline.js';
+import {
+  ACTION_VAULT_ABI, STOP_LOSS_PIPELINE_ABI, STOP_LOSS_PIPELINE_BYTECODE,
+  STOP_LOSS_TEMPLATE, resolveStopLoss, stopLossConstructorArgs,
+} from '@omniflow/shared';
 
-export interface ExtractedPipelineParams {
-  pairAddress: `0x${string}`;
-  priceThresholdWei: bigint;
-  cooldownSeconds: bigint;
-  percentToSwap: bigint;
-  actionVaultAddress: `0x${string}`;
-  requiredHits: bigint;
-  velocityThresholdBps: bigint;
-  windowSeconds: bigint;
-  originChainId: bigint;
-  originTopic0: `0x${string}`;
-}
+const marketAbi = parseAbi([
+  'function WETH() view returns (address)',
+  'function token0() view returns (address)',
+  'function token1() view returns (address)',
+  'function decimals() view returns (uint8)',
+]);
 
 export interface DeploymentResult {
   success: boolean;
@@ -115,84 +111,14 @@ export class DeployerService {
     };
   }
 
-  /**
-   * Thẩm định đồ thị DAG và trích xuất tham số cho Smart Contract
-   */
-  public extractParams(graph: PipelineGraph): ExtractedPipelineParams {
-    // 1. Tìm Trigger Node
-    const triggerNode = graph.nodes.find(
-      (n) => n.type === 'watchDEXPrice' || n.data.pairAddress
-    );
-    const pairAddress = triggerNode?.data.pairAddress;
-    if (typeof pairAddress !== 'string' || !isAddress(pairAddress, { strict: false })) {
-      throw new Error('DAG Validation Failed: configure a valid origin pool address.');
-    }
-
-    // 2. Tìm Condition Node (Price threshold)
-    const priceNode = graph.nodes.find(
-      (n) => n.type === 'priceThresholdGuard' || n.data.thresholdPriceUSD !== undefined
-    );
-    const thresholdUSD = priceNode?.data.thresholdPriceUSD || 1800;
-    const priceThresholdWei = BigInt(Math.floor(thresholdUSD)) * 10n ** 18n;
-
-    // 3. Tìm Cooldown Node
-    const cooldownNode = graph.nodes.find(
-      (n) => n.type === 'cooldownGuard' || n.data.cooldownSeconds !== undefined
-    );
-    const cooldownSeconds = BigInt(cooldownNode?.data.cooldownSeconds || 300);
-
-    // 4. Tìm Action Node (DEX Swap / Vault)
-    const actionNode = graph.nodes.find(
-      (n) => n.type === 'dexSwap' || n.data.actionVaultAddress
-    );
-    const actionVaultAddress = actionNode?.data.actionVaultAddress;
-    if (typeof actionVaultAddress !== 'string' || !isAddress(actionVaultAddress, { strict: false })) {
-      throw new Error('DAG Validation Failed: configure a valid ActionVault address.');
-    }
-    const percentToSwap = BigInt(actionNode?.data.amountPercentage || 50);
-
-    // 5. Tìm Anti-Wick hits (Stateful Anti-Wick)
-    const requiredHits = BigInt(priceNode?.data.confirmationHits || 1);
-
-    // 6. Tìm Price Velocity Guard
-    const velocityNode = graph.nodes.find(
-      (n) => n.type === 'priceVelocityGuard' || n.data.velocityThresholdBps !== undefined
-    );
-    const velocityThresholdBps = BigInt(velocityNode?.data.velocityThresholdBps || 0);
-    const windowSeconds = BigInt(velocityNode?.data.windowSeconds || 0);
-
-    // 7. Multi-chain Origin & Topic
-    const originChainId = BigInt(triggerNode?.data.originChainId || 84532);
-    const originTopic0 = (triggerNode?.data.customTopic0 ||
-      '0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1') as `0x${string}`;
-
-    return {
-      pairAddress,
-      priceThresholdWei,
-      cooldownSeconds,
-      percentToSwap,
-      actionVaultAddress,
-      requiredHits,
-      velocityThresholdBps,
-      windowSeconds,
-      originChainId,
-      originTopic0,
-    };
+  public extractParams(graph: PipelineGraph) {
+    return resolveStopLoss(graph);
   }
 
-  /**
-   * Deploy RSC lên Reactive Lasna và tự động tài trợ 1.0 lREACT gas
-   */
   public async deployPipeline(graph: PipelineGraph): Promise<DeploymentResult> {
     const validation = this.validateDAG(graph);
     if (!validation.valid) {
       throw new Error(`DAG Validation Failed: ${validation.errors.join('; ')}`);
-    }
-
-    const supportedNodes = new Set(['watchDEXPrice', 'priceThresholdGuard', 'cooldownGuard', 'priceVelocityGuard', 'dexSwap']);
-    if (graph.nodes.some(node => !supportedNodes.has(node.type) ||
-      (node.type === 'priceThresholdGuard' && node.data.operator && node.data.operator !== 'LESS_THAN_OR_EQUAL'))) {
-      throw new Error('DAG Validation Failed: this graph contains rules unsupported by the stop-loss deployer.');
     }
 
     const params = this.extractParams(graph);
@@ -202,26 +128,54 @@ export class DeployerService {
       throw new Error('Deployment signer is not configured.');
     }
 
-    const owner = await chainService.basePublicClient.readContract({
-      address: params.actionVaultAddress,
-      abi: ACTION_VAULT_ABI,
-      functionName: 'owner',
-    });
-    if (!isAddressEqual(owner, graph.metadata.ownerAddress as `0x${string}`)) {
+    const base = chainService.basePublicClient;
+    const vault = { address: params.actionVaultAddress, abi: ACTION_VAULT_ABI } as const;
+    const [baseChain, reactiveChain, omniCode] = await Promise.all([
+      base.getChainId(), chainService.lasnaPublicClient.getChainId(),
+      chainService.lasnaPublicClient.getCode({ address: STOP_LOSS_TEMPLATE.omniSystem }),
+    ]);
+    if (baseChain !== STOP_LOSS_TEMPLATE.networks.destinationChainId ||
+        reactiveChain !== STOP_LOSS_TEMPLATE.networks.reactiveChainId) {
+      throw new Error('Deployment RPCs must point to Base Sepolia and Lasna.');
+    }
+    if (!omniCode || omniCode === '0x') {
+      throw new Error('The Reactive Omni system contract is unavailable on the configured Lasna RPC.');
+    }
+    const [owner, pair, router, quote, slippage] = await Promise.all([
+      base.readContract({ ...vault, functionName: 'owner' }),
+      base.readContract({ ...vault, functionName: 'tokenPair' }),
+      base.readContract({ ...vault, functionName: 'uniswapRouter' }),
+      base.readContract({ ...vault, functionName: 'usdcToken' }),
+      base.readContract({ ...vault, functionName: 'MAX_SLIPPAGE_BPS' }),
+    ]);
+    if (owner.toLowerCase() !== graph.metadata.ownerAddress.toLowerCase()) {
       throw new Error('DAG Validation Failed: the selected Vault belongs to another wallet.');
     }
+    if (!isAddressEqual(pair, params.pairAddress) || slippage !== BigInt(STOP_LOSS_TEMPLATE.maxSlippageBps)) {
+      throw new Error('DAG Validation Failed: the Vault must use the selected pool and supported slippage limit.');
+    }
+    // A read-only call verifies that the configured callback proxy is authorized by the Vault.
+    await base.simulateContract({
+      ...vault, functionName: 'pay', args: [0n], account: STOP_LOSS_TEMPLATE.callbackProxy,
+    });
+    const [token0, token1, weth, quoteDecimals] = await Promise.all([
+      base.readContract({ address: pair, abi: marketAbi, functionName: 'token0' }),
+      base.readContract({ address: pair, abi: marketAbi, functionName: 'token1' }),
+      base.readContract({ address: router, abi: marketAbi, functionName: 'WETH' }),
+      base.readContract({ address: quote, abi: marketAbi, functionName: 'decimals' }),
+    ]);
+    if (!isAddressEqual(token0, weth) || !isAddressEqual(token1, quote) || quoteDecimals !== 18 ||
+        await base.readContract({ address: weth, abi: marketAbi, functionName: 'decimals' }) !== 18) {
+      throw new Error('DAG Validation Failed: stop-loss requires WETH as token0 and the Vault quote token as token1, both with 18 decimals.');
+    }
 
-    const value = parseEther('1.0');
+    const value = STOP_LOSS_TEMPLATE.fundingWei;
     const txHash = await chainService.lasnaWalletClient.deployContract({
       chain: chainService.lasnaWalletClient.chain,
       account: chainService.relayerAccount,
       abi: STOP_LOSS_PIPELINE_ABI,
       bytecode: STOP_LOSS_PIPELINE_BYTECODE,
-      args: [
-        params.pairAddress, params.priceThresholdWei, params.cooldownSeconds, params.percentToSwap,
-        params.actionVaultAddress, params.requiredHits, params.velocityThresholdBps,
-        params.windowSeconds, params.originChainId, BigInt(params.originTopic0),
-      ],
+      args: stopLossConstructorArgs(params),
       value,
     });
 

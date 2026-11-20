@@ -16,8 +16,8 @@ export const EdgeSchema = z.object({
   id: z.string(),
   source: z.string(),
   target: z.string(),
-  sourceHandle: z.string().optional(),
-  targetHandle: z.string().optional(),
+  sourceHandle: z.string().nullish(),
+  targetHandle: z.string().nullish(),
 });
 
 export const PipelineMetadataSchema = z.object({

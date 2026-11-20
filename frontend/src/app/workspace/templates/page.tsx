@@ -74,7 +74,7 @@ const RECIPES: Recipe[] = [
       { name: 'DEX Sync Event Listener', type: 'trigger', summary: 'Subscribes to Base Sepolia Uniswap pair topic0 0x1c411e9a...' },
       { name: 'Price Threshold Filter', type: 'condition', summary: 'Computes reserve0 / reserve1 in fixed-point 18 decimals against $1800 target' },
       { name: 'Stateless Cooldown Guard', type: 'condition', summary: 'Rejects rapid flurry events within 300s window to protect against 200ms block storms' },
-      { name: 'ActionVault Stop-Loss', type: 'action', summary: 'Calls executeStopLoss() with 1% slippage protection re-validation' }
+      { name: 'ActionVault Stop-Loss', type: 'action', summary: 'Rechecks the pool price and applies the Vault’s fixed 5% slippage cap to its router quote' }
     ],
     rscSnippet: `// Reactive Smart Contract (Lasna #5318007)
 function react(LogRecord calldata record) external vmOnly {
@@ -378,7 +378,7 @@ export default function TemplateLibraryPage() {
                 </div>
 
                 {/* Template defaults */}
-                <p className="text-[10px] text-slate-400">{recipe.id === 'stop-loss' ? 'Configure a Vault before deploying.' : 'Review deploy compatibility in Studio.'}</p>
+                <p className="text-[10px] text-slate-400">{recipe.id === 'stop-loss' ? 'Configure a compatible Vault before deploying.' : 'Draft preset. Deployment is unavailable.'}</p>
                 <div className="text-[10px] font-mono text-slate-400 pt-1">
                   <div className="flex items-center gap-1">
                     <ShieldAlert className="w-3 h-3 text-amber-500" />

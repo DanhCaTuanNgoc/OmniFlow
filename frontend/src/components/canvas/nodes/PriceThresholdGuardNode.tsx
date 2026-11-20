@@ -10,7 +10,7 @@ import { formatUSD } from '@/lib/utils';
 function PriceThresholdGuardNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as PriceThresholdGuardData;
   const operator = nodeData.operator || 'LESS_THAN_OR_EQUAL';
-  const thresholdPrice = nodeData.thresholdPriceUSD || 1800;
+  const thresholdPrice = nodeData.thresholdPriceUSD ?? 1800;
   const isStopLoss = operator === 'LESS_THAN_OR_EQUAL';
 
   return (

@@ -5,6 +5,7 @@ import { Node } from '@xyflow/react';
 import { X, Sliders, Trash2, Info, Radio, Activity } from 'lucide-react';
 import { SUPPORTED_PAIRS, SUPPORTED_CHAINS } from '@/lib/constants';
 import { toEventSelector } from 'viem';
+import { STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 
 interface InspectorPanelProps {
   selectedNode: Node | null;
@@ -183,7 +184,7 @@ export function InspectorPanel({
                 <span className="absolute left-3 top-2.5 text-slate-500 font-mono">$</span>
                 <input
                   type="number"
-                  value={Number(data.thresholdPriceUSD || 1800)}
+                  value={Number(data.thresholdPriceUSD ?? 1800)}
                   onChange={(e) => handleChange('thresholdPriceUSD', parseFloat(e.target.value))}
                   className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl pl-8 pr-3 py-2.5 font-bold text-white text-sm focus:outline-none focus:border-violet-500 tabular-nums font-mono"
                 />
@@ -271,7 +272,7 @@ export function InspectorPanel({
               <label className="block text-slate-400 mb-1 font-medium">Cooldown Duration (Seconds)</label>
               <input
                 type="number"
-                value={Number(data.cooldownSeconds || 300)}
+                value={Number(data.cooldownSeconds ?? 300)}
                 onChange={(e) => handleChange('cooldownSeconds', parseInt(e.target.value))}
                 className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 font-bold text-white text-sm focus:outline-none focus:border-violet-500 tabular-nums font-mono"
               />
@@ -298,7 +299,7 @@ export function InspectorPanel({
             <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-[11px] text-violet-100 flex gap-2">
               <Info className="w-4 h-4 shrink-0 text-violet-400 mt-0.5" />
               <span>
-                Protects against rapid Base 200ms multi-callback storms and reverts.
+                Limits repeat callbacks. Once the cooldown ends, a qualifying event can trigger another swap.
               </span>
             </div>
           </div>
@@ -350,18 +351,16 @@ export function InspectorPanel({
               <div className="flex justify-between items-center mb-1">
                 <label className="text-slate-400 font-medium">Max Slippage Tolerance</label>
                 <span className="font-bold text-emerald-400 tabular-nums font-mono">
-                  {Number(data.maxSlippagePercent || 1)}%
+                  {STOP_LOSS_TEMPLATE.maxSlippageBps / 100}%
                 </span>
               </div>
-              <input
-                type="range"
-                min="0.5"
-                max="5"
-                step="0.5"
-                value={Number(data.maxSlippagePercent || 1)}
-                onChange={(e) => handleChange('maxSlippagePercent', parseFloat(e.target.value))}
-                className="w-full accent-emerald-400 cursor-pointer"
-              />
+              <p className="text-slate-400">The supported stop-loss Vault uses a fixed limit based on its router quote.</p>
+              {data.maxSlippagePercent !== undefined && data.maxSlippagePercent !== STOP_LOSS_TEMPLATE.maxSlippageBps / 100 && (
+                <button type="button" className="ws-button mt-2"
+                  onClick={() => handleChange('maxSlippagePercent', STOP_LOSS_TEMPLATE.maxSlippageBps / 100)}>
+                  Apply Vault limit
+                </button>
+              )}
             </div>
 
             <div>
