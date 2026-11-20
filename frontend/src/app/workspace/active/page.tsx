@@ -22,7 +22,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
-import { runDeploymentAction, type DeploymentDetail, type DeploymentSummary } from '@/lib/deployments';
+import { runDeploymentAction, setVaultRscAuthorization, type DeploymentDetail, type DeploymentSummary } from '@/lib/deployments';
 import { workspaceRequest } from '@/lib/workspaceSession';
 
 const runtimeLabel = {
@@ -38,7 +38,6 @@ const stepLabels = {
   principal: 'Deposit principal',
   'callback-reserve': 'Fund callback reserve',
   'reactive-reserve': 'Fund Reactive reserve',
-  pause: 'Pause Automation',
 };
 
 export default function ActiveAutomationsPage() {
@@ -397,16 +396,104 @@ function DeploymentPanel({
     }
   }
 
-  const label = runtime ? runtimeLabel[runtime.status] : status === 'reverted' ? 'Lasna deployment reverted' : 'Waiting for Lasna receipt';
-
+  const hasAuthorizedBefore = deployment.steps.some((s) => s.kind === 'authorization');
+  const isBaseRpcAvailable = runtime?.base !== null && runtime?.status !== 'unverified';
   const isAuthorized = Boolean(runtime?.base?.authorized);
-  const baseDebt = BigInt(runtime?.base?.callback?.debt ?? 0);
-  const lasnaDebt = BigInt(runtime?.lasna?.reactive?.debt ?? 0);
-  const baseReserves = BigInt(runtime?.base?.callback?.reserves ?? 0);
-  const lasnaReserves = BigInt(runtime?.lasna?.reactive?.reserves ?? 0);
+  const isPaused = hasAuthorizedBefore && !isAuthorized && isBaseRpcAvailable;
 
-  const hasDebt = baseDebt > 0n || lasnaDebt > 0n;
-  const isLowReserve = baseReserves < parseEther('0.002') || lasnaReserves < parseEther('0.005');
+  const label = isPaused
+    ? 'Automation paused by owner'
+    : runtime
+    ? runtimeLabel[runtime.status]
+    : status === 'reverted'
+    ? 'Lasna deployment reverted'
+    : 'Waiting for Lasna receipt';
+
+  const getHealthBadge = () => {
+    if (!runtime || runtime.status === 'unverified') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded bg-zinc-500/10 border border-zinc-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400">
+          <AlertTriangle className="size-2.5" />
+          <span>RPC UNAVAILABLE</span>
+        </span>
+      );
+    }
+    const hasDebt = BigInt(runtime.base?.callback?.debt ?? 0) > 0n || BigInt(runtime.lasna?.reactive?.debt ?? 0) > 0n;
+    if (hasDebt) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded bg-rose-500/10 border border-rose-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-rose-300">
+          <AlertTriangle className="size-2.5" />
+          <span>DEBT OUTSTANDING</span>
+        </span>
+      );
+    }
+    if (runtime.status === 'ready') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+          <ShieldCheck className="size-2.5" />
+          <span>HEALTHY</span>
+        </span>
+      );
+    }
+    if (runtime.status === 'awaiting-fees') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
+          <Clock className="size-2.5" />
+          <span>LOW RESERVE</span>
+        </span>
+      );
+    }
+    if (runtime.status === 'awaiting-principal') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
+          <Clock className="size-2.5" />
+          <span>AWAITING PRINCIPAL</span>
+        </span>
+      );
+    }
+    if (isPaused) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
+          <Clock className="size-2.5" />
+          <span>PAUSED</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
+        <Clock className="size-2.5" />
+        <span>AWAITING SETUP</span>
+      </span>
+    );
+  };
+
+  async function handleTogglePauseResume() {
+    if (!isBaseRpcAvailable) {
+      setMessage({ text: 'Base Sepolia RPC connection is currently unavailable. Please verify network.', error: true });
+      return;
+    }
+    const willAuthorize = !isAuthorized;
+    if (willAuthorize && runtime?.status === 'awaiting-fees') {
+      const confirmed = window.confirm(
+        'Warning: Callback or Reactive gas reserves are below recommended budget. Automation may fail or incur debt upon trigger. Do you still wish to resume?'
+      );
+      if (!confirmed) return;
+    }
+    setBusy(willAuthorize ? 'resume' : 'pause');
+    setMessage(undefined);
+    try {
+      await setVaultRscAuthorization(owner, deployment, willAuthorize);
+      setMessage({
+        text: willAuthorize ? 'Automation resumed. Vault execution permission restored.' : 'Automation paused. Vault execution permission revoked.',
+        error: false,
+      });
+      await reload();
+    } catch (err) {
+      setMessage({ text: err instanceof Error ? err.message : 'Failed to update automation status.', error: true });
+    } finally {
+      setBusy(undefined);
+    }
+  }
 
   return (
     <section className="rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-5 space-y-5 animate-in fade-in duration-150" aria-label="Selected deployment">
@@ -532,28 +619,27 @@ function DeploymentPanel({
         </div>
       )}
 
+      {/* Paused Warning Banner (Section 2 & FRS) */}
+      {isPaused && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-300 space-y-1">
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertTriangle className="size-4 text-amber-400 shrink-0" />
+            <span>Automation is Paused (Vault Execution Disabled)</span>
+          </div>
+          <p className="text-[11px] text-amber-200/80 leading-relaxed pl-6">
+            The ActionVault on Base Sepolia has revoked execution permissions for this RSC.
+            <strong> Note:</strong> The RSC contract on Reactive Omni Lasna remains deployed and active, continuing to consume gas for event listening and evaluating until refueled or unsubscribed.
+          </p>
+        </div>
+      )}
+
       {/* Runtime Telemetry & Health Metrics (Section 2 & 7.1) */}
       {runtime && (
         <div className="space-y-3 rounded-lg border border-[var(--ws-border)] bg-[#111318] p-4">
           <div className="flex flex-wrap items-center justify-between text-xs text-[var(--ws-muted)] border-b border-[var(--ws-border)] pb-2 font-mono gap-2">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-zinc-300">On-Chain Runtime Telemetry</span>
-              {hasDebt ? (
-                <span className="inline-flex items-center gap-1 rounded bg-rose-500/10 border border-rose-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-rose-300">
-                  <AlertTriangle className="size-2.5" />
-                  <span>DEBT OUTSTANDING</span>
-                </span>
-              ) : isLowReserve ? (
-                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
-                  <Clock className="size-2.5" />
-                  <span>LOW RESERVE</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
-                  <ShieldCheck className="size-2.5" />
-                  <span>HEALTHY</span>
-                </span>
-              )}
+              {getHealthBadge()}
             </div>
             <span>Checked: {new Date(runtime.readAt).toLocaleTimeString()}</span>
           </div>
@@ -562,7 +648,17 @@ function DeploymentPanel({
             <div>
               <dt className="text-zinc-500 text-[11px]">Vault Permission</dt>
               <dd className="text-white font-medium mt-0.5">
-                {runtime.base ? (runtime.base.authorized ? 'Granted (Authorized)' : 'Awaiting Owner Approval') : 'RPC Unavailable'}
+                {runtime.base ? (
+                  runtime.base.authorized ? (
+                    <span className="text-emerald-400 font-semibold">Granted (Authorized)</span>
+                  ) : isPaused ? (
+                    <span className="text-amber-400 font-semibold">Paused (Permission Revoked)</span>
+                  ) : (
+                    <span className="text-zinc-400">Awaiting Owner Approval</span>
+                  )
+                ) : (
+                  <span className="text-rose-400">RPC Unavailable</span>
+                )}
               </dd>
             </div>
             <div>
@@ -607,34 +703,44 @@ function DeploymentPanel({
 
               <div className="flex flex-wrap items-center gap-2">
                 {/* Pause / Resume Automation Lifecycle Button (Section 2 & 7.1) */}
-                <button
-                  type="button"
-                  onClick={() => void doStep(isAuthorized ? 'pause' : 'authorization')}
-                  disabled={Boolean(busy)}
-                  className={`ws-button text-xs inline-flex items-center gap-1 font-semibold ${
-                    isAuthorized
-                      ? 'border-amber-500/30 bg-amber-950/20 text-amber-300 hover:bg-amber-950/40'
-                      : 'border-emerald-500/30 bg-emerald-950/20 text-emerald-300 hover:bg-emerald-950/40'
-                  }`}
-                  title={isAuthorized ? 'Revoke RSC Vault authorization to temporarily halt destination executions' : 'Grant RSC Vault authorization to resume executions'}
-                >
-                  {busy === 'pause' || busy === 'authorization' ? (
-                    'Confirming on Base…'
-                  ) : isAuthorized ? (
-                    'Pause Automation'
-                  ) : (
-                    'Resume Automation'
-                  )}
-                </button>
+                {hasAuthorizedBefore && (
+                  <button
+                    type="button"
+                    onClick={() => void handleTogglePauseResume()}
+                    disabled={Boolean(busy) || !isBaseRpcAvailable}
+                    className={`ws-button text-xs inline-flex items-center gap-1 font-semibold ${
+                      !isBaseRpcAvailable
+                        ? 'opacity-50 cursor-not-allowed'
+                        : isAuthorized
+                        ? 'border-amber-500/30 bg-amber-950/20 text-amber-300 hover:bg-amber-950/40'
+                        : 'border-emerald-500/30 bg-emerald-950/20 text-emerald-300 hover:bg-emerald-950/40'
+                    }`}
+                    title={
+                      !isBaseRpcAvailable
+                        ? 'Base Sepolia RPC connection unavailable'
+                        : isAuthorized
+                        ? 'Revoke RSC Vault authorization to temporarily halt destination executions'
+                        : 'Grant RSC Vault authorization to resume executions'
+                    }
+                  >
+                    {busy === 'pause' || busy === 'resume' ? (
+                      'Confirming on Base…'
+                    ) : isAuthorized ? (
+                      'Pause Automation'
+                    ) : (
+                      'Resume Automation'
+                    )}
+                  </button>
+                )}
 
                 {(Object.keys(stepLabels) as (keyof typeof stepLabels)[]).map((kind) => {
-                  if (kind === 'authorization' || kind === 'pause') return null; // Managed by Pause/Resume toggle
+                  if (kind === 'authorization' && hasAuthorizedBefore) return null; // Managed by Pause/Resume toggle
                   return (
                     <button
                       type="button"
                       key={kind}
                       onClick={() => void doStep(kind)}
-                      disabled={Boolean(busy)}
+                      disabled={Boolean(busy) || (kind === 'authorization' && !isBaseRpcAvailable)}
                       className="ws-button text-xs"
                     >
                       {busy === kind ? 'Confirming…' : stepLabels[kind]}

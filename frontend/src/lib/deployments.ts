@@ -4,7 +4,7 @@ import { ACTION_VAULT_ABI, STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 import { wagmiConfig } from './wagmi';
 import { signInToWorkspace, workspaceRequest } from './workspaceSession';
 
-type DeploymentStep = 'authorization' | 'principal' | 'callback-reserve' | 'reactive-reserve' | 'pause';
+type DeploymentStep = 'authorization' | 'principal' | 'callback-reserve' | 'reactive-reserve';
 const reserveAbi = parseAbi(['function depositTo(address) payable']);
 
 export type DeploymentSummary = {
@@ -54,10 +54,10 @@ export async function runDeploymentAction(owner: Address, deployment: Deployment
     if (!account.address || !isAddressEqual(account.address, owner) || account.chainId !== chainId) {
       throw new Error(`Switch the deployment wallet to ${reactive ? 'Reactive Lasna' : 'Base Sepolia'}.`);
     }
-    if (kind === 'authorization' || kind === 'pause') {
+    if (kind === 'authorization') {
       hash = await writeContract(wagmiConfig, {
         account: owner, chainId: 84532, address: vaultAddress, abi: ACTION_VAULT_ABI,
-        functionName: 'setAuthorizedRSC', args: [rscAddress, kind === 'authorization'],
+        functionName: 'setAuthorizedRSC', args: [rscAddress, true],
       });
     } else {
       if (value === undefined || value <= 0n) throw new Error('Enter an amount greater than zero.');
@@ -77,13 +77,37 @@ export async function runDeploymentAction(owner: Address, deployment: Deployment
     throw new Error(`Transaction reverted: ${receipt.transactionHash}.`);
   }
   if (receipt.transactionHash !== hash) localStorage.setItem(key, receipt.transactionHash);
-  try {
-    await workspaceRequest(owner, `/pipeline/deployments/${deployment.pipelineId}/steps`, {
-      method: 'POST', body: JSON.stringify({ kind, hash: receipt.transactionHash }),
-    });
-  } catch {
-    // Backend may ignore non-initial steps
-  }
+  await workspaceRequest(owner, `/pipeline/deployments/${deployment.pipelineId}/steps`, {
+    method: 'POST', body: JSON.stringify({ kind, hash: receipt.transactionHash }),
+  });
   localStorage.removeItem(key);
+  return receipt.transactionHash;
+}
+
+export async function setVaultRscAuthorization(owner: Address, deployment: DeploymentSummary, authorized: boolean) {
+  const { rscAddress, vaultAddress } = deployment.contracts;
+  if (!rscAddress) throw new Error('Wait for the Lasna deployment receipt.');
+  await signInToWorkspace(owner);
+  const account = getAccount(wagmiConfig);
+  if (!account.address || !isAddressEqual(account.address, owner) || account.chainId !== 84532) {
+    throw new Error('Switch the deployment wallet to Base Sepolia (84532).');
+  }
+  const hash = await writeContract(wagmiConfig, {
+    account: owner, chainId: 84532, address: vaultAddress, abi: ACTION_VAULT_ABI,
+    functionName: 'setAuthorizedRSC', args: [rscAddress, authorized],
+  });
+  const receipt = await waitForTransactionReceipt(wagmiConfig, { hash, chainId: 84532, confirmations: 2 });
+  if (receipt.status === 'reverted') {
+    throw new Error(`Transaction reverted: ${receipt.transactionHash}.`);
+  }
+  if (authorized) {
+    try {
+      await workspaceRequest(owner, `/pipeline/deployments/${deployment.pipelineId}/steps`, {
+        method: 'POST', body: JSON.stringify({ kind: 'authorization', hash: receipt.transactionHash }),
+      });
+    } catch {
+      // Step already registered
+    }
+  }
   return receipt.transactionHash;
 }

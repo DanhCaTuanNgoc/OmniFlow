@@ -105,6 +105,9 @@ function StudioCanvasInner() {
   const [draftMessage, setDraftMessage] = useState<string>();
   const [draftBusy, setDraftBusy] = useState(false);
   const [pipelineName, setPipelineName] = useState('');
+  const [isDirty, setIsDirty] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
+
   const pipelineParam = searchParams.get('pipeline');
   const deploymentParam = searchParams.get('deployment');
   const localParam = searchParams.get('local');
@@ -115,6 +118,7 @@ function StudioCanvasInner() {
 
   const handleRenameFromHeader = useCallback((newName: string) => {
     setPipelineName(newName);
+    setIsDirty(true);
     if (localParam) {
       renameBrowserDraft(localParam, newName);
     }
@@ -132,6 +136,18 @@ function StudioCanvasInner() {
     };
   }, [draftName, isSnapshot, handleRenameFromHeader, setStudioHeader, clearStudioHeader]);
 
+  // Warn user before closing window/tab if there are unsaved edits
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty && !isSnapshot) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty, isSnapshot]);
+
   // Hydrate preset from query parameter ?recipe=...
   useEffect(() => {
     const rId = searchParams?.get('recipe');
@@ -141,6 +157,7 @@ function StudioCanvasInner() {
       setEdges(RECIPE_PRESETS[rId].edges);
       setDraftNetworks(undefined);
       setSelectedNodeId(null);
+      setIsDirty(false);
     }
   }, [searchParams, setNodes, setEdges]);
 
@@ -154,6 +171,7 @@ function StudioCanvasInner() {
       setEdges(restored.edges);
       setDraftNetworks(restored.networks);
       setPipelineName(saved.name);
+      setIsDirty(false);
     } catch {
       setValidationWarning('The browser draft could not be opened. Import a valid Studio JSON file.');
     }
@@ -182,6 +200,7 @@ function StudioCanvasInner() {
       setPipelineName(snapshot.graph.metadata.name);
       setSavedDraft(snapshot.id && snapshot.updatedAt !== undefined ? { id: snapshot.id, updatedAt: snapshot.updatedAt } : undefined);
       setDraftMessage(deploymentParam ? 'Deployment snapshot opened. Save to create an editable draft.' : 'Saved draft opened.');
+      setIsDirty(false);
     } catch (error) {
       setValidationWarning(error instanceof Error ? error.message : 'Unable to open the saved graph.');
     } finally {
@@ -206,11 +225,13 @@ function StudioCanvasInner() {
           }),
         });
         setSavedDraft(result);
+        setIsDirty(false);
         router.replace(`/workspace/studio?pipeline=${result.id}`, { scroll: false });
         setDraftMessage('Draft saved to your wallet workspace.');
       } else {
         const id = localParam ?? crypto.randomUUID();
         saveBrowserDraft(id, draftName, graph);
+        setIsDirty(false);
         router.replace(`/workspace/studio?local=${id}`, { scroll: false });
         setDraftMessage('Draft saved in this browser.');
       }
@@ -221,11 +242,32 @@ function StudioCanvasInner() {
     }
   }
 
-  const handleCreateDraftFromSnapshot = () => {
-    const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
-    const v2Name = `${draftName} (Draft v2)`;
-    saveBrowserDraft(newId, v2Name, studioGraph(nodes, edges, draftNetworks));
-    router.push(`/workspace/studio?local=${encodeURIComponent(newId)}`);
+  const handleCreateDraftFromSnapshot = async () => {
+    if (draftBusy || nodes.length === 0) return;
+    setDraftBusy(true);
+    try {
+      const v2Name = `${draftName} (Draft v2)`;
+      const graph = studioGraph(nodes, edges, draftNetworks ?? {
+        ...STOP_LOSS_TEMPLATE.networks,
+      });
+      if (isConnected && address) {
+        const result = await workspaceRequest<{ id: string; updatedAt: number }>(address, '/pipeline/drafts', {
+          method: 'POST',
+          body: JSON.stringify({
+            graph: { ...graph, metadata: { name: v2Name, ownerAddress: address } },
+          }),
+        });
+        router.push(`/workspace/studio?pipeline=${result.id}`);
+      } else {
+        const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
+        saveBrowserDraft(newId, v2Name, graph);
+        router.push(`/workspace/studio?local=${encodeURIComponent(newId)}`);
+      }
+    } catch (err) {
+      setValidationWarning(err instanceof Error ? err.message : 'Unable to create editable draft.');
+    } finally {
+      setDraftBusy(false);
+    }
   };
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
@@ -237,6 +279,24 @@ function StudioCanvasInner() {
     ['watchDEXPrice', 'priceThresholdGuard', 'priceVelocityGuard', 'logicGate', 'cooldownGuard', 'dexSwap'].includes(node.type ?? ''));
   const originPool = nodes.find(node => node.type === 'watchDEXPrice' &&
     (!priceGate || edges.some(edge => edge.source === node.id && edge.target === primaryGuard?.source)))?.data.pairAddress;
+
+  const handleNodesChange = useCallback(
+    (changes: any) => {
+      onNodesChange(changes);
+      const hasMeaningfulChanges = changes.some((c: any) => c.type !== 'select' && c.type !== 'dimensions');
+      if (hasMeaningfulChanges && !isSnapshot) setIsDirty(true);
+    },
+    [onNodesChange, isSnapshot]
+  );
+
+  const handleEdgesChange = useCallback(
+    (changes: any) => {
+      onEdgesChange(changes);
+      const hasMeaningfulChanges = changes.some((c: any) => c.type !== 'select');
+      if (hasMeaningfulChanges && !isSnapshot) setIsDirty(true);
+    },
+    [onEdgesChange, isSnapshot]
+  );
 
   // DAG & Port Constraint Enforcement
   const isValidConnection = useCallback(
@@ -315,9 +375,10 @@ function StudioCanvasInner() {
             eds
           )
         );
+        if (!isSnapshot) setIsDirty(true);
       }
     },
-    [isValidConnection, setEdges, nodes]
+    [isValidConnection, setEdges, nodes, isSnapshot]
   );
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
@@ -359,8 +420,9 @@ function StudioCanvasInner() {
 
       setNodes((nds) => nds.concat(newNode));
       setSelectedNodeId(newNode.id);
+      if (!isSnapshot) setIsDirty(true);
     },
-    [nodes, reactFlowInstance, setNodes]
+    [nodes, reactFlowInstance, setNodes, isSnapshot]
   );
 
   const handleAddNodeFromPalette = (type: string, defaultData: Record<string, any>) => {
@@ -376,6 +438,7 @@ function StudioCanvasInner() {
     };
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(newNode.id);
+    if (!isSnapshot) setIsDirty(true);
   };
 
   const handleUpdateNodeData = (id: string, updatedData: Record<string, any>) => {
@@ -395,12 +458,14 @@ function StudioCanvasInner() {
         return node;
       })
     );
+    if (!isSnapshot) setIsDirty(true);
   };
 
   const handleDeleteNode = (id: string) => {
     setNodes((nds) => nds.filter((n) => n.id !== id));
     setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
     if (selectedNodeId === id) setSelectedNodeId(null);
+    if (!isSnapshot) setIsDirty(true);
   };
 
   const handleOpenDeploy = () => {
@@ -438,10 +503,21 @@ function StudioCanvasInner() {
       <div className="relative flex h-full min-w-0 flex-1 flex-col" ref={reactFlowWrapper}>
         <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--ws-border)] bg-[var(--ws-rail)] px-3 py-2.5 sm:px-4">
           <div className="flex min-w-0 items-center">
-            <Link className="ws-button inline-flex items-center gap-1.5" href="/workspace/studio" title="Back to pipeline list">
+            <button
+              type="button"
+              className="ws-button inline-flex items-center gap-1.5 cursor-pointer"
+              onClick={() => {
+                if (isDirty && !isSnapshot) {
+                  setShowExitModal(true);
+                } else {
+                  router.push('/workspace/studio');
+                }
+              }}
+              title="Back to pipeline list"
+            >
               <ArrowLeft className="size-3.5" />
               <span>Back</span>
-            </Link>
+            </button>
           </div>
 
           <div className="ws-actions">
@@ -489,8 +565,9 @@ function StudioCanvasInner() {
             </div>
             <button
               type="button"
-              onClick={handleCreateDraftFromSnapshot}
-              className="ws-button ws-button-primary text-xs inline-flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
+              onClick={() => void handleCreateDraftFromSnapshot()}
+              disabled={draftBusy || !nodes.length}
+              className="ws-button ws-button-primary text-xs inline-flex items-center gap-1.5 shrink-0 self-start sm:self-auto disabled:opacity-50"
             >
               <Plus className="size-3.5" />
               <span>Create Editable Draft (v2)</span>
@@ -509,8 +586,8 @@ function StudioCanvasInner() {
             edges={edges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={handleEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
@@ -585,6 +662,57 @@ function StudioCanvasInner() {
         edges={edges}
         networks={draftNetworks}
       />
+
+      {/* Unsaved Changes Confirmation Modal */}
+      {showExitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                <AlertTriangle className="size-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-white">Unsaved Changes</h3>
+                <p className="text-xs text-[var(--ws-muted)]">You have unsaved edits in this pipeline.</p>
+              </div>
+            </div>
+            <p className="text-xs text-zinc-300 leading-relaxed">
+              If you leave now without saving, any newly placed nodes, modified parameters, or updated wiring will be lost.
+            </p>
+            <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowExitModal(false)}
+                className="ws-button w-full sm:w-auto"
+              >
+                Keep Editing
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExitModal(false);
+                  router.push('/workspace/studio');
+                }}
+                className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3.5 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 transition-colors w-full sm:w-auto cursor-pointer"
+              >
+                Discard & Leave
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await saveGraph();
+                  setShowExitModal(false);
+                  router.push('/workspace/studio');
+                }}
+                disabled={draftBusy}
+                className="ws-button ws-button-primary w-full sm:w-auto"
+              >
+                Save & Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -594,12 +722,12 @@ export function StudioCanvas() {
   const owner = isConnected ? address : undefined;
   const [identity, setIdentity] = useState({ owner, version: 0 });
   if (identity.owner !== owner) {
-    setIdentity({ owner, version: identity.version + (identity.owner ? 1 : 0) });
+    setIdentity({ owner, version: identity.version + 1 });
   }
   return (
     <ReactFlowProvider>
       <Suspense fallback={<div className="w-full h-full bg-[#07080d]" />}>
-        <StudioCanvasInner key={identity.version} />
+        <StudioCanvasInner key={`${owner ?? 'guest'}:${identity.version}`} />
       </Suspense>
     </ReactFlowProvider>
   );

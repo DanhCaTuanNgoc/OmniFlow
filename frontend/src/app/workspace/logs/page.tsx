@@ -74,7 +74,7 @@ function LogsRoute() {
         actions={
           <div className="flex items-center gap-2">
             <a
-              href="/#proofs"
+              href="/#proof"
               target="_blank"
               rel="noopener noreferrer"
               className="ws-button inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white"
@@ -182,6 +182,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
           logs: [update, ...current.logs.filter((entry) => entry.id !== update.id)]
             .sort((left, right) => right.timestamp.localeCompare(left.timestamp)),
         });
+        setLastSyncedAt(new Date());
       }
     });
     sendMessage({ type: 'AUTHENTICATE', data: { token } });
@@ -190,6 +191,18 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
       sendMessage({ type: 'UNSUBSCRIBE_PIPELINE', pipelineId: deploymentId });
     };
   }, [addListener, deploymentId, hasHistory, load, owner, sendMessage, status]);
+
+  // Periodic polling when not live-subscribed to WebSocket
+  useEffect(() => {
+    if (!isCorrectChain || !hasHistory) return;
+    const isLive = status === 'CONNECTED' && Boolean(deploymentId);
+    if (!isLive) {
+      const interval = setInterval(() => {
+        void load();
+      }, 15000);
+      return () => clearInterval(interval);
+    }
+  }, [status, deploymentId, isCorrectChain, hasHistory, load]);
 
   const filteredLogs = useMemo(() => {
     if (!history?.logs) return [];
@@ -252,13 +265,13 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
 
           <div className="h-4 w-px bg-[var(--ws-border)] mx-1" />
 
-          {status === 'CONNECTED' ? (
+          {status === 'CONNECTED' && Boolean(deploymentId) ? (
             <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 px-2 py-1 text-[11px] text-emerald-300 font-mono">
               <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>Live WS</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-zinc-500/10 border border-zinc-500/30 px-2 py-1 text-[11px] text-zinc-400 font-mono">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-zinc-500/10 border border-zinc-500/30 px-2 py-1 text-[11px] text-zinc-400 font-mono" title="Auto-polling receipts every 15s">
               <WifiOff className="size-3" />
               <span>Polling</span>
             </span>

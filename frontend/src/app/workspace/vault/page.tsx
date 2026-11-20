@@ -27,7 +27,7 @@ import { CONTRACT_ADDRESSES } from '@/lib/constants';
 import { truncateAddress } from '@/lib/utils';
 import { ACTION_VAULT_ABI } from '@omniflow/shared';
 import { workspaceRequest } from '@/lib/workspaceSession';
-import type { DeploymentDetail } from '@/lib/deployments';
+import { fetchDeployments, type DeploymentDetail } from '@/lib/deployments';
 
 export default function VaultManagerPage() {
   return <Suspense fallback={<WorkspaceState title="Loading Vault Manager…" />}><VaultRoute /></Suspense>;
@@ -44,15 +44,27 @@ function VaultRoute() {
       const saved = localStorage.getItem(`omniflow.vault.link.${owner.toLowerCase()}`);
       if (saved && isAddress(saved)) {
         setCustomVault(saved as Address);
+        return;
       }
     }
+    setCustomVault(null);
   }, [owner]);
 
   const handleLink = (addr: Address) => {
+    setCustomVault(addr);
+  };
+
+  const handleConfirmVerifiedLink = (addr: Address) => {
     if (owner && typeof window !== 'undefined') {
       localStorage.setItem(`omniflow.vault.link.${owner.toLowerCase()}`, addr);
     }
-    setCustomVault(addr);
+  };
+
+  const handleUnlink = () => {
+    if (owner && typeof window !== 'undefined') {
+      localStorage.removeItem(`omniflow.vault.link.${owner.toLowerCase()}`);
+    }
+    setCustomVault(null);
   };
 
   return id ? (
@@ -62,8 +74,10 @@ function VaultRoute() {
       key={`${owner ?? 'guest'}:${customVault ?? 'default'}`}
       userAddress={owner}
       vaultAddress={customVault ?? CONTRACT_ADDRESSES.DEFAULT_ACTION_VAULT}
-      rscAddress={CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS}
+      isCustomVaultLinked={Boolean(customVault)}
       onLinkVault={handleLink}
+      onConfirmVerifiedLink={handleConfirmVerifiedLink}
+      onUnlinkVault={handleUnlink}
     />
   );
 }
@@ -124,13 +138,19 @@ function VaultSelection({ owner, id }: { owner?: Address; id: string }) {
 function VaultForWallet({ 
   userAddress, 
   vaultAddress, 
-  rscAddress,
-  onLinkVault
+  rscAddress: initialRscAddress,
+  isCustomVaultLinked,
+  onLinkVault,
+  onConfirmVerifiedLink,
+  onUnlinkVault,
 }: { 
   userAddress?: Address; 
   vaultAddress: Address; 
-  rscAddress: Address;
+  rscAddress?: Address;
+  isCustomVaultLinked?: boolean;
   onLinkVault?: (address: Address) => void;
+  onConfirmVerifiedLink?: (address: Address) => void;
+  onUnlinkVault?: () => void;
 }) {
   const { chainId } = useAccount();
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
@@ -142,6 +162,24 @@ function VaultForWallet({
   // Link existing Vault input
   const [inputVault, setInputVault] = useState('');
   const [linkError, setLinkError] = useState<string | null>(null);
+
+  // Target RSC to view & authorize
+  const [deployments, setDeployments] = useState<DeploymentDetail[]>([]);
+  const [targetRsc, setTargetRsc] = useState<Address>(
+    initialRscAddress ?? CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS
+  );
+  const [customRscInput, setCustomRscInput] = useState('');
+  const [showCustomRscInput, setShowCustomRscInput] = useState(false);
+
+  useEffect(() => {
+    if (!userAddress) return;
+    void fetchDeployments(userAddress).then(deps => {
+      setDeployments(deps);
+      if (!initialRscAddress && deps.length > 0 && deps[0].contracts?.rscAddress) {
+        setTargetRsc(deps[0].contracts.rscAddress);
+      }
+    }).catch(() => {});
+  }, [userAddress, initialRscAddress]);
 
   const vaultConfigured = isAddress(vaultAddress);
   const isCorrectChain = chainId === 84532;
@@ -157,6 +195,13 @@ function VaultForWallet({
 
   const isOwner = Boolean(userAddress && vaultOwner && !ownerError && isAddressEqual(userAddress, vaultOwner));
   const canWrite = isOwner && isCorrectChain;
+
+  // Confirm and persist custom vault link ONLY when RPC confirms ownership
+  useEffect(() => {
+    if (isOwner && isCustomVaultLinked && vaultAddress) {
+      onConfirmVerifiedLink?.(vaultAddress);
+    }
+  }, [isOwner, isCustomVaultLinked, vaultAddress, onConfirmVerifiedLink]);
 
   // 1. Read Live On-Chain Vault Balance (Base Sepolia: 84532)
   const { 
@@ -190,14 +235,14 @@ function VaultForWallet({
     query: { enabled: isOwner },
   });
 
-  // 5. Read Authorized RSC Status for StopLoss_Pipeline
+  // 5. Read Authorized RSC Status for target RSC
   const { data: isRscAuthorized, isError: authorizationError, refetch: refetchAuthorization } = useReadContract({
     address: vaultAddress,
     abi: ACTION_VAULT_ABI,
     functionName: 'authorizedRSCs',
-    args: [rscAddress],
+    args: [targetRsc],
     chainId: 84532,
-    query: { enabled: isOwner },
+    query: { enabled: isOwner && isAddress(targetRsc) },
   });
 
   // Deposit Transaction (Direct Native ETH transfer into ActionVault)
@@ -276,14 +321,14 @@ function VaultForWallet({
   };
 
   const handleToggleAuthorizeRsc = () => {
-    if (!canWrite || !userAddress || isRscAuthorized === undefined || authorizationError) return;
+    if (!canWrite || !userAddress || isRscAuthorized === undefined || authorizationError || !isAddress(targetRsc)) return;
     const nextStatus = !isRscAuthorized;
     writeContract({
       address: vaultAddress,
       account: userAddress,
       abi: ACTION_VAULT_ABI,
       functionName: 'setAuthorizedRSC',
-      args: [rscAddress, nextStatus],
+      args: [targetRsc, nextStatus],
       chainId: 84532,
     });
   };
@@ -323,6 +368,20 @@ function VaultForWallet({
                   <span>Switch to Base Sepolia</span>
                 </>
               )}
+            </button>
+          </div>
+        )}
+        {isCustomVaultLinked && onUnlinkVault && (
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <span>
+              Your connected wallet ({userAddress ? truncateAddress(userAddress) : ''}) is not the owner of this custom ActionVault ({truncateAddress(vaultAddress)}).
+            </span>
+            <button
+              type="button"
+              onClick={onUnlinkVault}
+              className="ws-button text-xs text-rose-300 border-rose-500/30 shrink-0 self-start sm:self-auto"
+            >
+              Reset to Default Vault
             </button>
           </div>
         )}
@@ -402,6 +461,16 @@ function VaultForWallet({
         icon={<Lock className="size-4" />}
         actions={
           <div className="flex items-center gap-2">
+            {isCustomVaultLinked && onUnlinkVault && (
+              <button
+                type="button"
+                className="ws-button text-xs text-rose-300 hover:text-rose-200 border-rose-500/30"
+                onClick={onUnlinkVault}
+                title="Unlink custom ActionVault and reset to default"
+              >
+                Unlink Vault
+              </button>
+            )}
             <button
               type="button"
               className="ws-button inline-flex items-center gap-1.5"
@@ -620,12 +689,69 @@ function VaultForWallet({
             </span>
           </div>
 
+          {/* Target RSC Selector / Input */}
+          <div className="space-y-2">
+            {deployments.length > 0 && (
+              <div className="space-y-1">
+                <label className="text-[11px] text-zinc-300 font-medium block">
+                  Select Pipeline Automation RSC
+                </label>
+                <select
+                  value={showCustomRscInput ? 'custom' : targetRsc}
+                  onChange={(e) => {
+                    if (e.target.value === 'custom') {
+                      setShowCustomRscInput(true);
+                    } else {
+                      setShowCustomRscInput(false);
+                      setTargetRsc(e.target.value as Address);
+                    }
+                  }}
+                  className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-2.5 py-1.5 text-xs text-white focus:border-[var(--ws-accent)] focus:outline-none"
+                >
+                  {deployments.map((d) => (
+                    <option key={d.id} value={d.contracts.rscAddress}>
+                      {d.name} ({truncateAddress(d.contracts.rscAddress, 6)})
+                    </option>
+                  ))}
+                  <option value={CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS}>
+                    Default StopLoss RSC ({truncateAddress(CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS, 6)})
+                  </option>
+                  <option value="custom">-- Custom RSC Address --</option>
+                </select>
+              </div>
+            )}
+
+            {showCustomRscInput && (
+              <div className="flex gap-2 pt-1">
+                <input
+                  type="text"
+                  placeholder="0x... (Reactive Lasna RSC Address)"
+                  value={customRscInput}
+                  onChange={(e) => setCustomRscInput(e.target.value.trim())}
+                  className="min-w-0 flex-1 bg-[#111318] border border-[var(--ws-border)] rounded-md px-3 py-1.5 text-xs text-white font-mono focus:border-[var(--ws-accent)] focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isAddress(customRscInput)) {
+                      setTargetRsc(customRscInput as Address);
+                    }
+                  }}
+                  disabled={!isAddress(customRscInput)}
+                  className="ws-button text-xs disabled:opacity-50"
+                >
+                  Apply
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Delegation Row */}
           <div className="p-3.5 rounded-lg bg-[#111318] border border-[var(--ws-border)] space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xs font-semibold text-white flex items-center gap-2">
-                  <span>StopLoss_Pipeline</span>
+                  <span>{deployments.find(d => isAddressEqual(d.contracts.rscAddress, targetRsc))?.name ?? 'Reactive RSC'}</span>
                   <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full border ${
                     isRscAuthorized === true
                       ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
@@ -635,12 +761,12 @@ function VaultForWallet({
                   </span>
                 </div>
                 <div className="text-[11px] font-mono text-[var(--ws-muted)] mt-0.5">
-                  RSC: {truncateAddress(rscAddress, 8)} (Lasna #5318007)
+                  RSC: {truncateAddress(targetRsc, 8)} (Lasna #5318007)
                 </div>
               </div>
 
               <a
-                href={`https://lasna.reactscan.net/address/${rscAddress}`}
+                href={`https://lasna.reactscan.net/address/${targetRsc}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1 rounded text-zinc-400 hover:text-white transition-colors"

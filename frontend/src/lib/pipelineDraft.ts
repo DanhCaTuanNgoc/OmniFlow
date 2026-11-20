@@ -20,9 +20,12 @@ export function listBrowserDrafts(): BrowserDraft[] {
   return drafts as BrowserDraft[];
 }
 
-export function saveBrowserDraft(id: string, name: string, graph: unknown, description?: string, isArchived: boolean = false) {
-  const drafts = listBrowserDrafts().filter(draft => draft.id !== id);
-  localStorage.setItem(localDraftsKey, JSON.stringify([{ id, name, description, updatedAt: Date.now(), graph, isArchived }, ...drafts]));
+export function saveBrowserDraft(id: string, name: string, graph: unknown, description?: string, isArchived?: boolean) {
+  const drafts = listBrowserDrafts();
+  const existing = drafts.find(draft => draft.id === id);
+  const preservedArchived = isArchived !== undefined ? isArchived : Boolean(existing?.isArchived);
+  const remaining = drafts.filter(draft => draft.id !== id);
+  localStorage.setItem(localDraftsKey, JSON.stringify([{ id, name, description, updatedAt: Date.now(), graph, isArchived: preservedArchived }, ...remaining]));
 }
 
 export function archiveBrowserDraft(id: string, isArchived: boolean = true) {

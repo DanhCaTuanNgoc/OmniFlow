@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { ArrowRight, Layers, Clock, Zap, Shield, Cpu, Activity } from 'lucide-react';
+import { ArrowRight, Layers, Clock, Zap, Shield, Cpu, Activity, Radio } from 'lucide-react';
 import { PipelineKebabMenu } from './PipelineKebabMenu';
+import type { DeploymentSummary } from '@/lib/deployments';
 
 export interface PipelineItem {
   id: string;
@@ -10,7 +11,9 @@ export interface PipelineItem {
   description?: string;
   updatedAt: number;
   source: 'local' | 'wallet' | 'recipe';
-  status?: 'draft' | 'deployed' | 'archived';
+  status?: 'draft' | 'deployed' | 'pending' | 'archived';
+  hasDraft?: boolean;
+  deployment?: DeploymentSummary;
   nodeCount?: number;
   edgeCount?: number;
   triggerType?: string;
@@ -42,6 +45,22 @@ export function PipelineCard({
   const isRecipe = pipeline.source === 'recipe';
 
   const getSourceBadge = () => {
+    if (pipeline.hasDraft && pipeline.deployment) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded bg-teal-500/10 border border-teal-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300">
+          <Radio className="size-2.5 animate-pulse" />
+          <span>DRAFT + LIVE V1</span>
+        </span>
+      );
+    }
+    if (pipeline.status === 'deployed') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+          <Radio className="size-2.5 text-emerald-400" />
+          <span>LIVE V1</span>
+        </span>
+      );
+    }
     if (isWallet) {
       return (
         <span className="inline-flex items-center gap-1 rounded bg-violet-500/10 border border-violet-500/30 px-1.5 py-0.5 text-[10px] font-medium text-violet-300">
@@ -138,13 +157,15 @@ export function PipelineCard({
       {/* Bottom row: Metrics & Open Canvas CTA */}
       <div className="flex items-center justify-between border-t border-[var(--ws-border)] pt-3 text-[11px] text-[var(--ws-muted)]">
         <div className="flex items-center gap-2 font-mono tabular-nums">
-          <span className="flex items-center gap-1">
-            <Layers className="size-3 text-zinc-400" />
-            <span>{pipeline.nodeCount ?? 0}N · {pipeline.edgeCount ?? 0}W</span>
-          </span>
+          {pipeline.nodeCount !== undefined && pipeline.nodeCount > 0 && (
+            <span className="flex items-center gap-1">
+              <Layers className="size-3 text-zinc-400" />
+              <span>{pipeline.nodeCount}N · {pipeline.edgeCount ?? 0}W</span>
+            </span>
+          )}
           {pipeline.updatedAt > 0 && (
             <>
-              <span>·</span>
+              {pipeline.nodeCount !== undefined && pipeline.nodeCount > 0 && <span>·</span>}
               <span className="flex items-center gap-1" title={new Date(pipeline.updatedAt).toLocaleString()}>
                 <Clock className="size-3 text-zinc-500" />
                 <span>
@@ -159,7 +180,7 @@ export function PipelineCard({
         </div>
 
         <span className="inline-flex items-center gap-1 font-semibold text-xs text-[var(--ws-accent)] group-hover:translate-x-0.5 transition-transform">
-          <span>Open Canvas</span>
+          <span>{pipeline.hasDraft ? 'Open Draft' : pipeline.status === 'deployed' ? 'View Snapshot' : 'Open Canvas'}</span>
           <ArrowRight className="size-3" />
         </span>
       </div>

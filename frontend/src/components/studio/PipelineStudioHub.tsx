@@ -29,8 +29,10 @@ import {
   extractPipelineStats,
   parsePipelineDraft,
   archiveBrowserDraft,
+  studioGraph,
   type BrowserDraft 
 } from '@/lib/pipelineDraft';
+import { STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 import type { DeploymentSummary } from '@/lib/deployments';
 import { workspaceRequest } from '@/lib/workspaceSession';
 import { RECIPE_PRESETS } from '@/lib/recipes';
@@ -134,31 +136,66 @@ export function PipelineStudioHub() {
     };
   }, [isConnected, address]);
 
+  // Track wallet-archived pipeline IDs in localStorage
+  const [walletArchivedIds, setWalletArchivedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (address && typeof window !== 'undefined') {
+      const stored = localStorage.getItem(`omniflow.archived.pipelines.${address.toLowerCase()}`);
+      if (stored) {
+        try {
+          setWalletArchivedIds(JSON.parse(stored));
+        } catch {
+          setWalletArchivedIds([]);
+        }
+      } else {
+        setWalletArchivedIds([]);
+      }
+    }
+  }, [address]);
+
   // Handle Guest-to-Wallet Drafts Import (Section 1 & 7.2)
   const handleImportAllGuestDrafts = async () => {
     if (!address || localDrafts.length === 0) return;
     setIsImportingGuest(true);
+    let importedCount = 0;
     try {
-      for (const draft of localDrafts) {
+      // Import sequentially, removing each from localStorage upon success to prevent duplicate imports on partial failure
+      for (const draft of [...localDrafts]) {
+        const parsed = parsePipelineDraft(JSON.stringify(draft.graph), draftNodeTypes);
+        const payload = {
+          graph: {
+            ...studioGraph(parsed.nodes, parsed.edges, parsed.networks ?? STOP_LOSS_TEMPLATE.networks),
+            metadata: { name: draft.name, ownerAddress: address },
+          },
+        };
         await workspaceRequest(address, '/pipeline/drafts', {
           method: 'POST',
-          body: JSON.stringify({ name: draft.name, graph: draft.graph }),
+          body: JSON.stringify(payload),
         });
+        deleteBrowserDraft(draft.id);
+        importedCount++;
       }
-      setGuestImportMessage(`Successfully imported ${localDrafts.length} browser drafts to your wallet workspace.`);
+      refreshLocalDrafts();
+      setGuestImportMessage(`Successfully imported ${importedCount} browser drafts to your wallet workspace.`);
       setTimeout(() => setGuestImportMessage(null), 5000);
       setDismissedGuestBanner(true);
       const draftsRes = await workspaceRequest<{ drafts: WalletDraftSummary[] }>(address, '/pipeline/drafts');
       setWalletDrafts(draftsRes.drafts || []);
     } catch (err) {
-      setImportError(err instanceof Error ? err.message : 'Failed to import drafts to wallet.');
-      setTimeout(() => setImportError(null), 5000);
+      refreshLocalDrafts();
+      setImportError(
+        err instanceof Error
+          ? `${err.message} (${importedCount} drafts imported before error).`
+          : 'Failed to import drafts to wallet.'
+      );
+      setTimeout(() => setImportError(null), 6000);
     } finally {
       setIsImportingGuest(false);
     }
   };
 
-  // Combine into unified PipelineItem list with status
+  // Combine into unified PipelineItem list with status (Section 7.2: Single row for pipeline with draft & deployment)
   const unifiedPipelines = useMemo<PipelineItem[]>(() => {
     const items: PipelineItem[] = [];
 
@@ -181,41 +218,56 @@ export function PipelineStudioHub() {
       });
     }
 
-    // Wallet drafts
+    // Wallet drafts & deployments (grouped by workspacePipelineId per Section 7.2)
+    const processedDepIds = new Set<string>();
+
     for (const wDraft of walletDrafts) {
+      const matchingDep = walletDeployments.find((d) => d.workspacePipelineId === wDraft.id);
+      if (matchingDep) processedDepIds.add(matchingDep.pipelineId);
+
+      const isArchived = walletArchivedIds.includes(wDraft.id);
+      const status: PipelineItem['status'] = matchingDep
+        ? matchingDep.status === 'deployed'
+          ? 'deployed'
+          : matchingDep.status === 'signed'
+          ? 'pending'
+          : 'draft'
+        : 'draft';
+
       items.push({
         id: wDraft.id,
         name: wDraft.name,
-        description: 'Synchronized on-chain wallet workspace draft.',
+        description: matchingDep
+          ? `Revision draft in progress · Running live on ${matchingDep.contracts.vaultChainId === 84532 ? 'Base Sepolia' : 'Chain'}.`
+          : 'Synchronized on-chain wallet workspace draft.',
         updatedAt: wDraft.updatedAt,
         source: 'wallet',
-        status: 'draft',
-        isArchived: false,
-        nodeCount: 3,
-        edgeCount: 2,
+        hasDraft: true,
+        deployment: matchingDep,
+        status,
+        isArchived,
       });
     }
 
-    // Wallet deployments (Active Automations linked into Studio)
+    // Standalone deployments that don't have a separate draft revision
     for (const dep of walletDeployments) {
-      // Avoid duplicate display if draft ID matches
-      if (!items.some((it) => it.id === dep.pipelineId)) {
-        items.push({
-          id: dep.pipelineId,
-          name: dep.name,
-          description: `Deployed RSC (${dep.contracts.rscAddress?.slice(0, 10)}...) on Lasna & ActionVault on Base Sepolia.`,
-          updatedAt: dep.createdAt,
-          source: 'wallet',
-          status: 'deployed',
-          isArchived: false,
-          nodeCount: 4,
-          edgeCount: 3,
-        });
-      }
+      if (processedDepIds.has(dep.pipelineId)) continue;
+      const isArchived = walletArchivedIds.includes(dep.pipelineId);
+      items.push({
+        id: dep.pipelineId,
+        name: dep.name,
+        description: `Deployed RSC (${dep.contracts.rscAddress?.slice(0, 10)}...) on Lasna & ActionVault on Base Sepolia.`,
+        updatedAt: dep.createdAt,
+        source: 'wallet',
+        hasDraft: false,
+        deployment: dep,
+        status: dep.status === 'deployed' ? 'deployed' : dep.status === 'signed' ? 'pending' : 'draft',
+        isArchived,
+      });
     }
 
     return items;
-  }, [localDrafts, walletDrafts, walletDeployments]);
+  }, [localDrafts, walletDrafts, walletDeployments, walletArchivedIds]);
 
   // Filtered pipelines based on search and status
   const filteredPipelines = useMemo(() => {
@@ -242,7 +294,11 @@ export function PipelineStudioHub() {
     if (pipeline.source === 'local') {
       router.push(`/workspace/studio?local=${encodeURIComponent(pipeline.id)}`);
     } else if (pipeline.source === 'wallet') {
-      router.push(`/workspace/studio?pipeline=${encodeURIComponent(pipeline.id)}`);
+      if (pipeline.hasDraft) {
+        router.push(`/workspace/studio?pipeline=${encodeURIComponent(pipeline.id)}`);
+      } else if (pipeline.deployment) {
+        router.push(`/workspace/studio?deployment=${encodeURIComponent(pipeline.deployment.pipelineId)}`);
+      }
     } else if (pipeline.source === 'recipe') {
       router.push(`/workspace/studio?recipe=${encodeURIComponent(pipeline.id)}`);
     }
@@ -293,6 +349,13 @@ export function PipelineStudioHub() {
     if (pipeline.source === 'local') {
       archiveBrowserDraft(pipeline.id, !pipeline.isArchived);
       refreshLocalDrafts();
+    } else if (pipeline.source === 'wallet' && address) {
+      const willArchive = !pipeline.isArchived;
+      const next = willArchive
+        ? [...walletArchivedIds, pipeline.id]
+        : walletArchivedIds.filter((id) => id !== pipeline.id);
+      setWalletArchivedIds(next);
+      localStorage.setItem(`omniflow.archived.pipelines.${address.toLowerCase()}`, JSON.stringify(next));
     }
   };
 
