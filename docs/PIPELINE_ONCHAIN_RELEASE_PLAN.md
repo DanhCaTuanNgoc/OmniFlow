@@ -158,6 +158,8 @@ Khi một mục vướng, ghi lý do, phạm vi ảnh hưởng, chứng cứ, ng
 
 ## 10. Nhật ký triển khai Phase 0
 
+**Nghiệm thu 20/11/2026 · PASS cho phạm vi stop-loss.** Foundry 26/26, backend 48/48, build shared/backend/frontend đạt và ABI/bytecode sinh từ Solidity khớp. Bộ kiểm thử backend lưu fixture graph hợp lệ và các biến thể bị từ chối, đồng thời đối chiếu Solidity preview với dữ liệu constructor đã mã hóa. Đã chạy lại vòng xuất/nhập của sáu preset và kiểm tra bốn JSON lỗi bị từ chối. Landing, thư viện, Active và sáu URL preset đều trả HTTP 200. Preflight chỉ đọc trên bộ demo lịch sử đạt. [Fixture và kiểm tra constructor](../backend/test/deployer.test.ts) · [Hồ sơ demo lịch sử](../FULL_LOOP_EVIDENCE.json)
+
 | Hạng mục | Kết quả |
 |---|---|
 | Capability và topology | Studio, Solidity preview và API dùng cùng resolver cho stop-loss Base Sepolia → Lasna → Base Sepolia. Template nhận một watcher, một ngưỡng `<=`, cooldown tùy chọn và một swap ETH → USDC. Trường chain mâu thuẫn, dây sai cổng hoặc thứ tự, action dư và cấu hình ngoài phạm vi bị từ chối trước khi ký hay gửi giao dịch. |
@@ -170,7 +172,7 @@ Khi một mục vướng, ghi lý do, phạm vi ảnh hưởng, chứng cứ, ng
 
 ## 11. Nhật ký triển khai Phase 1
 
-**Trạng thái ngày 20/11/2026.** Đã triển khai luồng Workspace local cho stop-loss. Nghiệm thu gói 1 còn mở. BP-01 và BP-11 đang chờ một suite testnet riêng khởi tạo từ Studio. Cổng pre-cloud tiếp tục chờ toàn bộ ma trận.
+**Trạng thái ngày 20/11/2026.** Suite stop-loss riêng đã khởi tạo từ Studio local và chạy trên Base Sepolia → Lasna → Base Sepolia. Nghiệm thu gói 1 tiếp tục theo dõi BP-01, BP-11 và kết quả đọc lại trên Workspace. Cổng pre-cloud tiếp tục chờ toàn bộ ma trận.
 
 | Hạng mục | Đã triển khai và phạm vi kiểm chứng |
 |---|---|
@@ -187,8 +189,8 @@ Khi một mục vướng, ghi lý do, phạm vi ảnh hưởng, chứng cứ, ng
 
 | Mục còn mở | Nguyên nhân, bằng chứng và điều kiện tiếp tục |
 |---|---|
-| **BLOCKED · Tạo RSC mới từ Studio** | `backend/.env` thiếu `RELAYER_PRIVATE_KEY`. Ví tester đang cấu hình cho script có khoảng 0,03922 lREACT tại lúc đọc. Template cần tài trợ 1 lREACT ở constructor và phí giao dịch Lasna. Cần relayer testnet riêng có đủ quỹ, đồng thời cần ví owner, pool, Vault và ngân sách phí riêng cho suite. Điều này chặn bước broadcast RSC và xác minh constructor/subscription của deployment mới. |
-| **BLOCKED · BP-01 và BP-11** | Preflight lịch sử xác nhận Vault có 0,001 ETH principal và có dự trữ phí ở hai chain tại lúc kiểm tra. Cả ba receipt của nhánh bán cũ đã đối chiếu. Chưa có hai lượt cùng deployment Studio, receipt `OrderSkipped` hoặc bộ receipt chứng minh cooldown trên testnet. Sau khi có relayer, chạy với pool riêng, ghi hash giảm và hồi, rồi kiểm tra payout hoặc skip qua receipt. Giới hạn tối đa một ngày testnet cho lượt hồi giá theo TASK-340. |
-| **BLOCKED · Nghiệm thu UI và phục hồi sau sự kiện thật** | Cần deployment của ví mới và các giao dịch Base/Lasna/Base để xác nhận sau reload, restart và đổi ví. Kiểm tra local đã chứng minh một phần cơ chế xác thực và lưu bền. Sau lượt công khai, đối chiếu Active/Vault/Logs với RPC theo đúng ID, xác nhận mỗi log xuất hiện một lần và lưu manifest theo từng lượt. |
+| **PASS · Tạo RSC mới từ Studio** | Chromium dùng ví test `0x37c5c5465a97E13DEaa5cBD9e04E8399204D0739` làm owner trên Base Sepolia và cùng địa chỉ làm relayer trên Lasna cho suite. Studio tạo Vault, lưu draft và gửi deploy. Giao dịch Lasna thành công nhưng bộ đối soát dùng sai wildcard `REACTIVE_IGNORE`. Sau khi sửa `f9b70db` và restart backend với cùng SQLite, job chuyển sang `deployed` bằng receipt đã có, tổng số lần broadcast là 1. API đối soát receipt cấp quyền và nạp quỹ. Preflight đạt với principal 0,002 ETH, quỹ callback 0,0005 ETH, số dư RSC 1 lREACT và quỹ vận hành 0,2 lREACT. [Tạo Vault](https://sepolia.basescan.org/tx/0x90cac8a0abfb2c2eca0c3110c49ec71bf76ce795d8c8f0fd55c6b90da07fd618) · [Deploy RSC](https://lasna.reactscan.net/tx/0xad6d14828bac1643ac9c4a5d23802b6d241851b785cc25d8d68de41a115d4ece) |
+| **Đang chờ Base finalized · BP-01 và BP-11** | RPC xác nhận `OrderSkipped` sau giao dịch hồi giá và receipt callback không có chi trả. Trigger tiếp theo trong cooldown 300 giây có receipt Lasna thành công và không phát yêu cầu callback. Sau cooldown, RSC phát callback trở lại và Vault bán 0,001 ETH, trả 1,792812565871825789 MockUSDC cho owner. Hai callback khớp calldata của yêu cầu Lasna. Chờ cửa sổ đối soát Base finalized để chốt chứng cứ và chuyển trạng thái nghiệm thu. [Callback bỏ qua](https://sepolia.basescan.org/tx/0x8f17be4877e5d0edf037501fe4e21deab49394d7b40061c3265d2f332efaaa1f) · [Receipt trong cooldown](https://lasna.reactscan.net/tx/0xe9690e6f2b66823cdb046c06e938b9c8a6341a347b15c34a0b6ce575770b33e2) · [Callback bán](https://sepolia.basescan.org/tx/0x43f5ec81177a1e6a2ccd770c119cdace8857345b57a00377c978043145c7214b) |
+| **Đang đối soát · UI và phục hồi sau sự kiện thật** | Chromium mở và tải lại Active của deployment `ce6cc0a2-5bc9-4255-a62d-bbf3bc057855`, revision `1f87b52e-e694-4f5c-ae2e-1431c628a3af`, với đúng Vault/RSC. Vault hiển thị 0,001 ETH sau lượt bán, khớp số dư RPC. Logs của owner hiển thị sự kiện đang chờ finality. Ví khác nhận 404 khi mở Active hoặc Logs của cùng deployment. Sau khi Base finalized, đối chiếu trạng thái kết quả và kiểm tra mỗi log xuất hiện một lần qua reload và restart. |
 
 Khi đủ quỹ và có bộ địa chỉ riêng, đặt `PAIR_ADDRESS`, `VAULT_ADDRESS`, `RSC_ADDRESS` cho script. Chạy `pnpm test:full-loop --preflight` trước khi trigger. `pnpm test:full-loop --execute-skip` gửi hai giao dịch giảm và hồi. `--execute` chạy nhánh payout sau khi cooldown kết thúc. Khi chỉ mục callback chưa có, dùng `--verify-existing` với hash nguồn và Lasna sau khi Base finalized. Thêm `--expect-skipped` trước `--verify-existing` cho nhánh bỏ qua. Ghi chứng cứ mới theo hash nguồn và giữ `FULL_LOOP_EVIDENCE.json` lịch sử.
