@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useMemo } from 'react';
+import { Suspense, useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAccount } from 'wagmi';
@@ -105,6 +105,11 @@ function WalletDeployments({ owner, selectedId }: { owner: Address; selectedId: 
     }
   }
 
+  // Auto-load deployments on mount
+  useEffect(() => {
+    void load();
+  }, [owner]);
+
   function select(id: string) {
     router.replace(`/workspace/active?deployment=${id}`, { scroll: false });
     void load(id);
@@ -183,7 +188,7 @@ function WalletDeployments({ owner, selectedId }: { owner: Address; selectedId: 
             title="Refresh deployments from blockchain"
           >
             <RefreshCw className={`size-3 text-zinc-400 ${pending ? 'animate-spin' : ''}`} />
-            <span>{pending ? 'Checking…' : list ? 'Refresh' : 'Load Deployments'}</span>
+            <span>{pending ? 'Refreshing…' : 'Refresh'}</span>
           </button>
         </div>
       </div>
@@ -195,8 +200,14 @@ function WalletDeployments({ owner, selectedId }: { owner: Address; selectedId: 
         </div>
       )}
 
-      {/* Grid of Automation Cards */}
-      {list && (
+      {/* Loading State or Grid of Automation Cards */}
+      {pending && !list ? (
+        <WorkspaceState
+          title="Loading active automations..."
+          description="Fetching your on-chain deployments from Base Sepolia and Lasna..."
+          icon={<Activity className="size-6 animate-spin text-[var(--ws-accent)]" />}
+        />
+      ) : list && (
         filteredList.length === 0 ? (
           <WorkspaceState
             title={list.length === 0 ? 'No recorded deployments found for this wallet.' : 'No automations match your search filter.'}

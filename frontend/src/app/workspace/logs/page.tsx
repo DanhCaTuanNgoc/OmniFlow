@@ -117,6 +117,11 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
 
   const hasHistory = history !== undefined;
 
+  // Auto-load activity on mount
+  useEffect(() => {
+    void load();
+  }, [load]);
+
   async function loadEarlier() {
     const next = history?.next;
     if (!next) return;
@@ -243,7 +248,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
             title="Refresh activity logs"
           >
             <RefreshCw className={`size-3 text-zinc-400 ${pending ? 'animate-spin' : ''}`} />
-            <span>{pending ? 'Checking…' : history ? 'Refresh' : 'Load Activity'}</span>
+            <span>{pending ? 'Refreshing…' : 'Refresh'}</span>
           </button>
         </div>
       </div>
@@ -261,8 +266,14 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
         </p>
       )}
 
-      {/* Logs List */}
-      {history && (
+      {/* Loading State or Logs List */}
+      {pending && !history ? (
+        <WorkspaceState
+          title="Loading activity logs..."
+          description="Fetching cross-chain execution receipts from Base Sepolia and Lasna..."
+          icon={<Activity className="size-6 animate-spin text-[var(--ws-accent)]" />}
+        />
+      ) : history && (
         filteredLogs.length === 0 ? (
           <WorkspaceState
             title={history.logs.length === 0 ? 'No matching execution receipts yet.' : 'No activity matches your search filter.'}
