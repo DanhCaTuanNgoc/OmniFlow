@@ -38,6 +38,7 @@ const stepLabels = {
   principal: 'Deposit principal',
   'callback-reserve': 'Fund callback reserve',
   'reactive-reserve': 'Fund Reactive reserve',
+  pause: 'Pause Automation',
 };
 
 export default function ActiveAutomationsPage() {
@@ -398,6 +399,15 @@ function DeploymentPanel({
 
   const label = runtime ? runtimeLabel[runtime.status] : status === 'reverted' ? 'Lasna deployment reverted' : 'Waiting for Lasna receipt';
 
+  const isAuthorized = Boolean(runtime?.base?.authorized);
+  const baseDebt = BigInt(runtime?.base?.callback?.debt ?? 0);
+  const lasnaDebt = BigInt(runtime?.lasna?.reactive?.debt ?? 0);
+  const baseReserves = BigInt(runtime?.base?.callback?.reserves ?? 0);
+  const lasnaReserves = BigInt(runtime?.lasna?.reactive?.reserves ?? 0);
+
+  const hasDebt = baseDebt > 0n || lasnaDebt > 0n;
+  const isLowReserve = baseReserves < parseEther('0.002') || lasnaReserves < parseEther('0.005');
+
   return (
     <section className="rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-5 space-y-5 animate-in fade-in duration-150" aria-label="Selected deployment">
       {/* Header */}
@@ -522,11 +532,29 @@ function DeploymentPanel({
         </div>
       )}
 
-      {/* Runtime Telemetry & Reserve Balances */}
+      {/* Runtime Telemetry & Health Metrics (Section 2 & 7.1) */}
       {runtime && (
         <div className="space-y-3 rounded-lg border border-[var(--ws-border)] bg-[#111318] p-4">
-          <div className="flex items-center justify-between text-xs text-[var(--ws-muted)] border-b border-[var(--ws-border)] pb-2 font-mono">
-            <span className="font-semibold text-zinc-300">On-Chain Runtime Telemetry</span>
+          <div className="flex flex-wrap items-center justify-between text-xs text-[var(--ws-muted)] border-b border-[var(--ws-border)] pb-2 font-mono gap-2">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-zinc-300">On-Chain Runtime Telemetry</span>
+              {hasDebt ? (
+                <span className="inline-flex items-center gap-1 rounded bg-rose-500/10 border border-rose-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-rose-300">
+                  <AlertTriangle className="size-2.5" />
+                  <span>DEBT OUTSTANDING</span>
+                </span>
+              ) : isLowReserve ? (
+                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
+                  <Clock className="size-2.5" />
+                  <span>LOW RESERVE</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+                  <ShieldCheck className="size-2.5" />
+                  <span>HEALTHY</span>
+                </span>
+              )}
+            </div>
             <span>Checked: {new Date(runtime.readAt).toLocaleTimeString()}</span>
           </div>
 
@@ -563,7 +591,7 @@ function DeploymentPanel({
             </div>
           </dl>
 
-          {/* Step Actions & Funding Inputs */}
+          {/* Step Actions & Pause/Resume Lifecycle Controls */}
           <div className="border-t border-[var(--ws-border)] pt-3 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <label className="text-xs text-zinc-300 font-medium">
@@ -577,21 +605,42 @@ function DeploymentPanel({
                 />
               </label>
 
-              <div className="flex flex-wrap gap-2">
-                {(Object.keys(stepLabels) as (keyof typeof stepLabels)[]).map((kind) => (
-                  <button
-                    type="button"
-                    key={kind}
-                    onClick={() => void doStep(kind)}
-                    disabled={
-                      Boolean(busy) ||
-                      (kind === 'authorization' && runtime.base?.authorized && deployment.steps.some((step) => step.kind === 'authorization'))
-                    }
-                    className="ws-button text-xs"
-                  >
-                    {busy === kind ? 'Confirming…' : stepLabels[kind]}
-                  </button>
-                ))}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Pause / Resume Automation Lifecycle Button (Section 2 & 7.1) */}
+                <button
+                  type="button"
+                  onClick={() => void doStep(isAuthorized ? 'pause' : 'authorization')}
+                  disabled={Boolean(busy)}
+                  className={`ws-button text-xs inline-flex items-center gap-1 font-semibold ${
+                    isAuthorized
+                      ? 'border-amber-500/30 bg-amber-950/20 text-amber-300 hover:bg-amber-950/40'
+                      : 'border-emerald-500/30 bg-emerald-950/20 text-emerald-300 hover:bg-emerald-950/40'
+                  }`}
+                  title={isAuthorized ? 'Revoke RSC Vault authorization to temporarily halt destination executions' : 'Grant RSC Vault authorization to resume executions'}
+                >
+                  {busy === 'pause' || busy === 'authorization' ? (
+                    'Confirming on Base…'
+                  ) : isAuthorized ? (
+                    'Pause Automation'
+                  ) : (
+                    'Resume Automation'
+                  )}
+                </button>
+
+                {(Object.keys(stepLabels) as (keyof typeof stepLabels)[]).map((kind) => {
+                  if (kind === 'authorization' || kind === 'pause') return null; // Managed by Pause/Resume toggle
+                  return (
+                    <button
+                      type="button"
+                      key={kind}
+                      onClick={() => void doStep(kind)}
+                      disabled={Boolean(busy)}
+                      className="ws-button text-xs"
+                    >
+                      {busy === kind ? 'Confirming…' : stepLabels[kind]}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

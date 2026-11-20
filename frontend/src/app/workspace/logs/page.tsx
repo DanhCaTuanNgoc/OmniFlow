@@ -19,7 +19,8 @@ import {
   Radio,
   Wifi,
   WifiOff,
-  Loader2
+  Loader2,
+  FileCheck2
 } from 'lucide-react';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import { useWebSocket, WebSocketProvider } from '@/components/providers/WebSocketProvider';
@@ -71,10 +72,23 @@ function LogsRoute() {
         description="Follow live on-chain events, Reactive RSC requests, and verified destination Vault receipts."
         icon={<Activity className="size-4" />}
         actions={
-          <Link href="/workspace/active" className="ws-button ws-button-primary inline-flex items-center gap-1.5">
-            <Layers className="size-3.5" />
-            <span>Active Automations</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <a
+              href="/#proofs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ws-button inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white"
+              title="Inspect verified 3-tx on-chain execution proofs from buildathon judges"
+            >
+              <FileCheck2 className="size-3.5 text-emerald-400" />
+              <span>Public Proofs</span>
+              <ExternalLink className="size-3 text-zinc-400" />
+            </a>
+            <Link href="/workspace/active" className="ws-button ws-button-primary inline-flex items-center gap-1.5">
+              <Layers className="size-3.5" />
+              <span>Active Automations</span>
+            </Link>
+          </div>
         }
       />
 
@@ -99,6 +113,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
   const isCorrectChain = chainId === 84532;
   const [history, setHistory] = useState<History>();
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const { addListener, sendMessage, status } = useWebSocket();
@@ -112,7 +127,9 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
     setPending(true);
     setError(undefined);
     try {
-      setHistory(await workspaceRequest<History>(owner, path));
+      const res = await workspaceRequest<History>(owner, path);
+      setHistory(res);
+      setLastSyncedAt(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to open activity.');
     } finally {
@@ -301,6 +318,26 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
         <p role="status" className="text-xs text-amber-200 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-lg">
           Some recent receipts could not be indexed yet. Pull to refresh.
         </p>
+      )}
+
+      {/* Stale data indicator when WS disconnected (Section 1 of Operations Analysis) */}
+      {status !== 'CONNECTED' && hasHistory && (
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs text-amber-300">
+          <div className="flex items-center gap-2">
+            <Clock className="size-3.5 text-amber-400 shrink-0" />
+            <span>
+              Live WebSocket stream disconnected. Displaying cached receipts{lastSyncedAt ? ` (last synced at ${lastSyncedAt.toLocaleTimeString()})` : ''}.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void load()}
+            disabled={pending}
+            className="text-xs font-semibold text-amber-200 underline hover:text-white shrink-0"
+          >
+            {pending ? 'Syncing…' : 'Sync now'}
+          </button>
+        </div>
       )}
 
       {/* Loading State or Logs List */}

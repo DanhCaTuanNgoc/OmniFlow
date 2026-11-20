@@ -10,11 +10,13 @@ export interface PipelineItem {
   description?: string;
   updatedAt: number;
   source: 'local' | 'wallet' | 'recipe';
+  status?: 'draft' | 'deployed' | 'archived';
   nodeCount?: number;
   edgeCount?: number;
   triggerType?: string;
   actionType?: string;
   graph?: unknown;
+  isArchived?: boolean;
 }
 
 export interface PipelineCardProps {
@@ -24,6 +26,7 @@ export interface PipelineCardProps {
   onDuplicate: (pipeline: PipelineItem) => void;
   onDelete: (pipeline: PipelineItem) => void;
   onExport: (pipeline: PipelineItem) => void;
+  onArchive?: (pipeline: PipelineItem) => void;
 }
 
 export function PipelineCard({
@@ -33,6 +36,7 @@ export function PipelineCard({
   onDuplicate,
   onDelete,
   onExport,
+  onArchive,
 }: PipelineCardProps) {
   const isWallet = pipeline.source === 'wallet';
   const isRecipe = pipeline.source === 'recipe';
@@ -111,6 +115,8 @@ export function PipelineCard({
           onDuplicate={() => onDuplicate(pipeline)}
           onExport={() => onExport(pipeline)}
           onDelete={() => onDelete(pipeline)}
+          onArchive={onArchive ? () => onArchive(pipeline) : undefined}
+          isArchived={pipeline.isArchived}
           canDelete={pipeline.source !== 'recipe'}
         />
       </div>

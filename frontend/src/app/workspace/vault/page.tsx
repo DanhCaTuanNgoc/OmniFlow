@@ -37,9 +37,35 @@ function VaultRoute() {
   const { address, isConnected } = useAccount();
   const id = useSearchParams().get('deployment');
   const owner = isConnected ? address : undefined;
-  return id ? <VaultSelection key={`${owner}:${id}`} owner={owner} id={id} />
-    : <VaultForWallet key={owner ?? 'guest'} userAddress={owner}
-      vaultAddress={CONTRACT_ADDRESSES.DEFAULT_ACTION_VAULT} rscAddress={CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS} />;
+  const [customVault, setCustomVault] = useState<Address | null>(null);
+
+  useEffect(() => {
+    if (owner && typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`omniflow.vault.link.${owner.toLowerCase()}`);
+      if (saved && isAddress(saved)) {
+        setCustomVault(saved as Address);
+      }
+    }
+  }, [owner]);
+
+  const handleLink = (addr: Address) => {
+    if (owner && typeof window !== 'undefined') {
+      localStorage.setItem(`omniflow.vault.link.${owner.toLowerCase()}`, addr);
+    }
+    setCustomVault(addr);
+  };
+
+  return id ? (
+    <VaultSelection key={`${owner}:${id}`} owner={owner} id={id} />
+  ) : (
+    <VaultForWallet
+      key={`${owner ?? 'guest'}:${customVault ?? 'default'}`}
+      userAddress={owner}
+      vaultAddress={customVault ?? CONTRACT_ADDRESSES.DEFAULT_ACTION_VAULT}
+      rscAddress={CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS}
+      onLinkVault={handleLink}
+    />
+  );
 }
 
 function VaultSelection({ owner, id }: { owner?: Address; id: string }) {
@@ -95,13 +121,27 @@ function VaultSelection({ owner, id }: { owner?: Address; id: string }) {
   );
 }
 
-function VaultForWallet({ userAddress, vaultAddress, rscAddress }: { userAddress?: Address; vaultAddress: Address; rscAddress: Address }) {
+function VaultForWallet({ 
+  userAddress, 
+  vaultAddress, 
+  rscAddress,
+  onLinkVault
+}: { 
+  userAddress?: Address; 
+  vaultAddress: Address; 
+  rscAddress: Address;
+  onLinkVault?: (address: Address) => void;
+}) {
   const { chainId } = useAccount();
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
   const isConnected = Boolean(userAddress);
   const [depositAmount, setDepositAmount] = useState('0.001');
   const [isPanicConfirmOpen, setIsPanicConfirmOpen] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<{ title: string; txHash?: string } | null>(null);
+
+  // Link existing Vault input
+  const [inputVault, setInputVault] = useState('');
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   const vaultConfigured = isAddress(vaultAddress);
   const isCorrectChain = chainId === 84532;
@@ -302,6 +342,54 @@ function VaultForWallet({ userAddress, vaultAddress, rscAddress }: { userAddress
           icon={<Lock className="size-6" />}
           action={!isConnected ? undefined : { label: 'Go to Pipeline Studio', href: '/workspace/studio' }}
         />
+
+        {/* Section 1 & 6.2: Link existing ActionVault */}
+        {isConnected && onLinkVault && (
+          <div className="mx-auto w-full max-w-lg rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-5 space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-white">Link Your ActionVault Contract</h3>
+              <p className="text-xs text-[var(--ws-muted)] leading-relaxed">
+                Enter the contract address of your ActionVault deployed on Base Sepolia (Chain ID: 84532) to manage collateral, panic withdraw, and configure authorized RSCs.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-zinc-300 font-medium block mb-1">
+                  ActionVault Address
+                </label>
+                <input
+                  type="text"
+                  value={inputVault}
+                  onChange={(e) => {
+                    setInputVault(e.target.value.trim());
+                    setLinkError(null);
+                  }}
+                  placeholder="0x..."
+                  className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-3 py-2 text-xs text-white font-mono placeholder-zinc-600 focus:border-[var(--ws-accent)] focus:outline-none"
+                />
+              </div>
+
+              {linkError && (
+                <p role="alert" className="text-xs text-rose-300">{linkError}</p>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isAddress(inputVault)) {
+                    setLinkError('Please enter a valid Ethereum hex address (0x...).');
+                    return;
+                  }
+                  onLinkVault(inputVault as Address);
+                }}
+                className="ws-button ws-button-primary inline-flex items-center gap-1.5 text-xs w-full justify-center"
+              >
+                <span>Link & Verify Vault</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

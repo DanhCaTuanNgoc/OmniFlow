@@ -188,3 +188,24 @@ Tổng **2–4 ngày công** nếu RPC, signer thử nghiệm và quỹ testnet 
 | Reload hoặc mất phản hồi ngay sau broadcast | Lưu hash và kiểm tra receipt/nonce hoặc trạng thái chain trước khi thử lại. Việc mở lịch sử và tải lại trang chỉ đọc dữ liệu. |
 | Ảnh hưởng pool, dữ liệu hoặc cấu hình đang dùng | Giữ driver thay đổi reserves trong script testnet chạy chủ động. Dùng pool/Vault/RSC và cấu hình riêng. UI ở chế độ đọc với deployment demo, không đưa bản ghi demo vào stream mặc định của Workspace cá nhân. Triển khai trước trên môi trường preview và kiểm tra build, luồng stop-loss hiện hữu cùng các URL evidence. |
 | Nghiệm thu preview thất bại | Tạm ẩn điểm vào demo mới hoặc khôi phục bản preview trước. Giữ bằng chứng và deployment cũ để đối chiếu. Nếu cần ngừng automation demo, thu hồi quyền callback trên Vault demo qua ví owner sau khi kiểm tra giao dịch đang chờ. |
+
+---
+
+## 9. Tiến độ thực hiện các cải tiến UI Workspace (Cập nhật 20/11/2026)
+
+Tuân thủ nguyên tắc **Zero Mock Data** (dữ liệu thật on-chain, trạng thái rỗng/lỗi rõ ràng khi chưa có dữ liệu hoặc mất kết nối), các hạng mục cải tiến giao diện theo đặc tả đã được triển khai và ghi nhận:
+
+| Hạng mục | Màn hình | Hiện trạng triển khai | Ghi chú kỹ thuật |
+|---|---|---|---|
+| **Bộ lọc nghiệp vụ (All / Drafts / Active / Archived)** | Pipeline Studio | ✅ Hoàn thành | Đã chuyển từ lọc nguồn kỹ thuật (Local/Wallet) sang phân loại trạng thái nghiệp vụ theo Mục 7.2. Tự động liên kết danh sách deployments on-chain của ví vào thẻ Active. |
+| **Thao tác Lưu trữ (Archive / Restore Pipeline)** | Pipeline Studio | ✅ Hoàn thành | Thêm mục `Archive pipeline` / `Restore pipeline` vào menu kebab trên từng card. Bộ lọc `Archived` hiển thị danh sách đã lưu trữ. |
+| **Gợi ý nhập nháp khách vào ví (Guest-to-Wallet Import)** | Pipeline Studio | ✅ Hoàn thành | Banner xuất hiện khi ví kết nối và có bản nháp cục bộ trên máy. Thao tác `Import to Wallet` gọi API lưu vào tài khoản ví qua phiên SIWE, có nút `Dismiss`. |
+| **Chế độ Read-only cho Deployed Snapshot + Tạo v2** | Pipeline Studio (Canvas) | ✅ Hoàn thành | Khóa chỉnh sửa, kéo thả, nối dây khi mở deployment snapshot. Banner thông báo trực quan kèm nút `Create Editable Draft (v2)` để nhân bản sang bản nháp mới. |
+| **Cảnh báo thay đổi chưa lưu (Unsaved Changes)** | Pipeline Studio (Canvas) | ✅ Hoàn thành | Tích hợp sự kiện `beforeunload` chặn đóng/rời trang khi canvas đang có chỉnh sửa chưa lưu. |
+| **Nút điều khiển vòng đời: Pause / Resume Automation** | Active Automations | ✅ Hoàn thành | Nút bấm trực tiếp gọi `setAuthorizedRSC(rsc, false)` để tạm dừng (Pause) hoặc `setAuthorizedRSC(rsc, true)` để khôi phục (Resume) quyền thực thi của RSC trên ActionVault Base Sepolia. |
+| **Badge sức khỏe vận hành (Health Metrics)** | Active Automations | ✅ Hoàn thành | Đọc telemetry on-chain và phân loại trực quan: `HEALTHY` (xanh lá), `LOW RESERVE` (vàng khi quỹ < 0.002 ETH hoặc < 0.005 lREACT), `DEBT OUTSTANDING` (đỏ khi có nợ phí callback/reactive). |
+| **Liên kết mở snapshot đang chạy** | Active Automations | ✅ Hoàn thành | Nút `Open in Studio` mở thẳng URL deployment snapshot ở chế độ Read-only để đối soát cấu hình. |
+| **Form liên kết ActionVault thủ công** | Vault Manager | ✅ Hoàn thành | Khi ví kết nối chưa có deployment hoặc muốn liên kết một Vault có sẵn, UI cung cấp form nhập địa chỉ ActionVault và xác minh quyền `owner` trực tiếp on-chain qua RPC Base Sepolia. |
+| **Nút mở Public Proofs / Demo Evidence** | Activity Logs | ✅ Hoàn thành | Thêm nút điều hướng nhanh `Public Proofs` trên thanh header dẫn tới bảng chứng thực on-chain 3 giao dịch (`FULL_LOOP_EVIDENCE.json`) cho giám khảo. |
+| **Chỉ báo Stale Data khi mất stream WebSocket** | Activity Logs | ✅ Hoàn thành | Hiển thị banner cảnh báo dữ liệu cũ kèm mốc thời gian đồng bộ cuối cùng (`Last synced at HH:MM:SS`) và nút `Sync now` khi WebSocket chuyển sang chế độ Polling/Disconnect. |
+| **Chuyển nhanh mạng Base Sepolia (1-Click Switch)** | Toàn bộ Workspace | ✅ Hoàn thành | Tích hợp banner cảnh báo sai mạng kèm nút chuyển mạng tự động (`Switch to Base Sepolia`) trên cả Active, Logs và Vault. |

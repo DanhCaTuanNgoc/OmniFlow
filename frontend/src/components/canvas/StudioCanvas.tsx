@@ -52,7 +52,9 @@ import {
   ArrowLeft,
   Rocket, 
   AlertTriangle,
-  Code2
+  Code2,
+  ShieldCheck,
+  Plus
 } from 'lucide-react';
 
 // STABLE DEFINITIONS OUTSIDE COMPONENT SCOPE (Mandatory for XYFlow performance)
@@ -218,6 +220,13 @@ function StudioCanvasInner() {
       setDraftBusy(false);
     }
   }
+
+  const handleCreateDraftFromSnapshot = () => {
+    const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
+    const v2Name = `${draftName} (Draft v2)`;
+    saveBrowserDraft(newId, v2Name, studioGraph(nodes, edges, draftNetworks));
+    router.push(`/workspace/studio?local=${encodeURIComponent(newId)}`);
+  };
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
   const phaseTwo = isPhaseTwoGraph({ nodes, edges });
@@ -468,6 +477,26 @@ function StudioCanvasInner() {
           </p>}
           {draftMessage && <p role="status" className="w-full text-xs text-[var(--ws-muted)]">{draftMessage}</p>}
         </div>
+
+        {/* Deployed Snapshot Banner (Section 7.1 & 7.2 of Operations Analysis) */}
+        {isSnapshot && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 bg-indigo-950/40 border-b border-indigo-500/20 text-xs text-indigo-200">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="size-4 text-indigo-400 shrink-0" />
+              <span>
+                Viewing deployed on-chain snapshot (Read-Only). Live on Base Sepolia and Reactive Lasna.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleCreateDraftFromSnapshot}
+              className="ws-button ws-button-primary text-xs inline-flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
+            >
+              <Plus className="size-3.5" />
+              <span>Create Editable Draft (v2)</span>
+            </button>
+          </div>
+        )}
 
         <div className="relative min-h-0 flex-1 bg-[var(--ws-bg)]">
           {nodes.length === 0 && (

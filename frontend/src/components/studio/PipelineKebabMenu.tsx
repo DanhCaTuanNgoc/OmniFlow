@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreVertical, Edit3, Copy, Download, Trash2 } from 'lucide-react';
+import { MoreVertical, Edit3, Copy, Download, Trash2, Archive, ArchiveRestore } from 'lucide-react';
 
 export interface PipelineKebabMenuProps {
   onRename?: () => void;
   onDuplicate?: () => void;
   onExport?: () => void;
   onDelete?: () => void;
+  onArchive?: () => void;
+  isArchived?: boolean;
   canDelete?: boolean;
 }
 
@@ -16,6 +18,8 @@ export function PipelineKebabMenu({
   onDuplicate,
   onExport,
   onDelete,
+  onArchive,
+  isArchived = false,
   canDelete = true,
 }: PipelineKebabMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -105,6 +109,27 @@ export function PipelineKebabMenu({
             >
               <Download className="size-3.5 text-emerald-400" />
               <span>Export JSON</span>
+            </button>
+          )}
+
+          {onArchive && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={(e) => handleAction(e, onArchive)}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 transition-colors hover:bg-white/5 hover:text-white"
+            >
+              {isArchived ? (
+                <>
+                  <ArchiveRestore className="size-3.5 text-amber-400" />
+                  <span>Restore pipeline</span>
+                </>
+              ) : (
+                <>
+                  <Archive className="size-3.5 text-amber-400" />
+                  <span>Archive pipeline</span>
+                </>
+              )}
             </button>
           )}
 

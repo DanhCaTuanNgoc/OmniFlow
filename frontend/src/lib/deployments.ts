@@ -4,7 +4,7 @@ import { ACTION_VAULT_ABI, STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 import { wagmiConfig } from './wagmi';
 import { signInToWorkspace, workspaceRequest } from './workspaceSession';
 
-type DeploymentStep = 'authorization' | 'principal' | 'callback-reserve' | 'reactive-reserve';
+type DeploymentStep = 'authorization' | 'principal' | 'callback-reserve' | 'reactive-reserve' | 'pause';
 const reserveAbi = parseAbi(['function depositTo(address) payable']);
 
 export type DeploymentSummary = {
@@ -54,10 +54,10 @@ export async function runDeploymentAction(owner: Address, deployment: Deployment
     if (!account.address || !isAddressEqual(account.address, owner) || account.chainId !== chainId) {
       throw new Error(`Switch the deployment wallet to ${reactive ? 'Reactive Lasna' : 'Base Sepolia'}.`);
     }
-    if (kind === 'authorization') {
+    if (kind === 'authorization' || kind === 'pause') {
       hash = await writeContract(wagmiConfig, {
         account: owner, chainId: 84532, address: vaultAddress, abi: ACTION_VAULT_ABI,
-        functionName: 'setAuthorizedRSC', args: [rscAddress, true],
+        functionName: 'setAuthorizedRSC', args: [rscAddress, kind === 'authorization'],
       });
     } else {
       if (value === undefined || value <= 0n) throw new Error('Enter an amount greater than zero.');
@@ -77,9 +77,13 @@ export async function runDeploymentAction(owner: Address, deployment: Deployment
     throw new Error(`Transaction reverted: ${receipt.transactionHash}.`);
   }
   if (receipt.transactionHash !== hash) localStorage.setItem(key, receipt.transactionHash);
-  await workspaceRequest(owner, `/pipeline/deployments/${deployment.pipelineId}/steps`, {
-    method: 'POST', body: JSON.stringify({ kind, hash: receipt.transactionHash }),
-  });
+  try {
+    await workspaceRequest(owner, `/pipeline/deployments/${deployment.pipelineId}/steps`, {
+      method: 'POST', body: JSON.stringify({ kind, hash: receipt.transactionHash }),
+    });
+  } catch {
+    // Backend may ignore non-initial steps
+  }
   localStorage.removeItem(key);
   return receipt.transactionHash;
 }

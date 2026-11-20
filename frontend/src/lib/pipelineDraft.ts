@@ -2,26 +2,35 @@ import type { Edge, Node } from '@xyflow/react';
 import type { StopLossGraph } from '@omniflow/shared';
 
 const localDraftsKey = 'omniflow.studio.drafts.v1';
-export type BrowserDraft = { id: string; name: string; description?: string; updatedAt: number; graph: unknown };
+export type BrowserDraft = { id: string; name: string; description?: string; updatedAt: number; graph: unknown; isArchived?: boolean };
 
 export function listBrowserDrafts(): BrowserDraft[] {
   const serialized = localStorage.getItem(localDraftsKey);
   if (!serialized) {
     const previous = localStorage.getItem('omniflow.studio.guest.v1');
-    return previous ? [{ id: 'previous', name: 'Browser draft', description: 'Recovered browser draft', updatedAt: 0, graph: JSON.parse(previous) }] : [];
+    return previous ? [{ id: 'previous', name: 'Browser draft', description: 'Recovered browser draft', updatedAt: 0, graph: JSON.parse(previous), isArchived: false }] : [];
   }
   const drafts: unknown = JSON.parse(serialized);
   if (!Array.isArray(drafts) || !drafts.every(draft => record(draft) &&
     typeof draft.id === 'string' && typeof draft.name === 'string' && typeof draft.updatedAt === 'number' && 'graph' in draft &&
-    (draft.description === undefined || typeof draft.description === 'string'))) {
+    (draft.description === undefined || typeof draft.description === 'string') &&
+    (draft.isArchived === undefined || typeof draft.isArchived === 'boolean'))) {
     throw new Error('Browser drafts could not be read.');
   }
   return drafts as BrowserDraft[];
 }
 
-export function saveBrowserDraft(id: string, name: string, graph: unknown, description?: string) {
+export function saveBrowserDraft(id: string, name: string, graph: unknown, description?: string, isArchived: boolean = false) {
   const drafts = listBrowserDrafts().filter(draft => draft.id !== id);
-  localStorage.setItem(localDraftsKey, JSON.stringify([{ id, name, description, updatedAt: Date.now(), graph }, ...drafts]));
+  localStorage.setItem(localDraftsKey, JSON.stringify([{ id, name, description, updatedAt: Date.now(), graph, isArchived }, ...drafts]));
+}
+
+export function archiveBrowserDraft(id: string, isArchived: boolean = true) {
+  const drafts = listBrowserDrafts();
+  const existing = drafts.find(draft => draft.id === id);
+  if (!existing) return;
+  const updated = drafts.map(draft => draft.id === id ? { ...draft, isArchived, updatedAt: Date.now() } : draft);
+  localStorage.setItem(localDraftsKey, JSON.stringify(updated));
 }
 
 export function deleteBrowserDraft(id: string) {

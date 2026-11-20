@@ -12,7 +12,12 @@ import {
   Library, 
   Layers, 
   AlertCircle,
-  Network
+  Network,
+  Loader2,
+  CheckCircle2,
+  Archive,
+  Zap,
+  Activity
 } from 'lucide-react';
 import { 
   listBrowserDrafts, 
@@ -23,8 +28,10 @@ import {
   exportDraftJson, 
   extractPipelineStats,
   parsePipelineDraft,
+  archiveBrowserDraft,
   type BrowserDraft 
 } from '@/lib/pipelineDraft';
+import type { DeploymentSummary } from '@/lib/deployments';
 import { workspaceRequest } from '@/lib/workspaceSession';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { PALETTE_ITEMS } from '@/components/canvas/NodePalette';
@@ -46,14 +53,20 @@ export function PipelineStudioHub() {
   const [localDrafts, setLocalDrafts] = useState<BrowserDraft[]>([]);
   const [localError, setLocalError] = useState(false);
 
-  // Wallet drafts state
+  // Wallet drafts & deployments state
   const [walletDrafts, setWalletDrafts] = useState<WalletDraftSummary[]>([]);
+  const [walletDeployments, setWalletDeployments] = useState<DeploymentSummary[]>([]);
   const [walletPending, setWalletPending] = useState(false);
   const [walletError, setWalletError] = useState<string>();
 
-  // Filter & Search
+  // Filter & Search (Aligned with Section 7.2 of Operations Analysis: All, Drafts, Active, Archived)
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterSource, setFilterSource] = useState<'ALL' | 'LOCAL' | 'WALLET'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'DRAFTS' | 'ACTIVE' | 'ARCHIVED'>('ALL');
+
+  // Guest draft migration state
+  const [isImportingGuest, setIsImportingGuest] = useState(false);
+  const [dismissedGuestBanner, setDismissedGuestBanner] = useState(false);
+  const [guestImportMessage, setGuestImportMessage] = useState<string | null>(null);
 
   // Modals
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -78,25 +91,35 @@ export function PipelineStudioHub() {
     refreshLocalDrafts();
   }, []);
 
-  // 2. Load Wallet Drafts when connected
+  // 2. Load Wallet Drafts & Deployments when connected
   useEffect(() => {
     if (!isConnected || !address) {
       setWalletDrafts([]);
+      setWalletDeployments([]);
       return;
     }
 
     let isMounted = true;
-    async function fetchWalletDrafts(owner: Address) {
+    async function fetchWalletData(owner: Address) {
       setWalletPending(true);
       setWalletError(undefined);
       try {
-        const response = await workspaceRequest<{ drafts: WalletDraftSummary[] }>(owner, '/pipeline/drafts');
+        const [draftsRes, depsRes] = await Promise.allSettled([
+          workspaceRequest<{ drafts: WalletDraftSummary[] }>(owner, '/pipeline/drafts'),
+          workspaceRequest<{ deployments: DeploymentSummary[] }>(owner, '/pipeline/deployments'),
+        ]);
+
         if (isMounted) {
-          setWalletDrafts(response.drafts || []);
+          if (draftsRes.status === 'fulfilled') {
+            setWalletDrafts(draftsRes.value.drafts || []);
+          }
+          if (depsRes.status === 'fulfilled') {
+            setWalletDeployments(depsRes.value.deployments || []);
+          }
         }
       } catch (err) {
         if (isMounted) {
-          setWalletError(err instanceof Error ? err.message : 'Unable to load wallet drafts.');
+          setWalletError(err instanceof Error ? err.message : 'Unable to load wallet data.');
         }
       } finally {
         if (isMounted) {
@@ -105,13 +128,37 @@ export function PipelineStudioHub() {
       }
     }
 
-    fetchWalletDrafts(address);
+    fetchWalletData(address);
     return () => {
       isMounted = false;
     };
   }, [isConnected, address]);
 
-  // Combine into unified PipelineItem list
+  // Handle Guest-to-Wallet Drafts Import (Section 1 & 7.2)
+  const handleImportAllGuestDrafts = async () => {
+    if (!address || localDrafts.length === 0) return;
+    setIsImportingGuest(true);
+    try {
+      for (const draft of localDrafts) {
+        await workspaceRequest(address, '/pipeline/drafts', {
+          method: 'POST',
+          body: JSON.stringify({ name: draft.name, graph: draft.graph }),
+        });
+      }
+      setGuestImportMessage(`Successfully imported ${localDrafts.length} browser drafts to your wallet workspace.`);
+      setTimeout(() => setGuestImportMessage(null), 5000);
+      setDismissedGuestBanner(true);
+      const draftsRes = await workspaceRequest<{ drafts: WalletDraftSummary[] }>(address, '/pipeline/drafts');
+      setWalletDrafts(draftsRes.drafts || []);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Failed to import drafts to wallet.');
+      setTimeout(() => setImportError(null), 5000);
+    } finally {
+      setIsImportingGuest(false);
+    }
+  };
+
+  // Combine into unified PipelineItem list with status
   const unifiedPipelines = useMemo<PipelineItem[]>(() => {
     const items: PipelineItem[] = [];
 
@@ -124,6 +171,8 @@ export function PipelineStudioHub() {
         description: draft.description,
         updatedAt: draft.updatedAt,
         source: 'local',
+        status: draft.isArchived ? 'archived' : 'draft',
+        isArchived: Boolean(draft.isArchived),
         nodeCount: stats.nodeCount,
         edgeCount: stats.edgeCount,
         triggerType: stats.triggerType,
@@ -134,27 +183,48 @@ export function PipelineStudioHub() {
 
     // Wallet drafts
     for (const wDraft of walletDrafts) {
-      // If we don't have the full graph until opened, we show summary
       items.push({
         id: wDraft.id,
         name: wDraft.name,
         description: 'Synchronized on-chain wallet workspace draft.',
         updatedAt: wDraft.updatedAt,
         source: 'wallet',
+        status: 'draft',
+        isArchived: false,
         nodeCount: 3,
         edgeCount: 2,
       });
     }
 
-    return items;
-  }, [localDrafts, walletDrafts]);
+    // Wallet deployments (Active Automations linked into Studio)
+    for (const dep of walletDeployments) {
+      // Avoid duplicate display if draft ID matches
+      if (!items.some((it) => it.id === dep.pipelineId)) {
+        items.push({
+          id: dep.pipelineId,
+          name: dep.name,
+          description: `Deployed RSC (${dep.contracts.rscAddress?.slice(0, 10)}...) on Lasna & ActionVault on Base Sepolia.`,
+          updatedAt: dep.createdAt,
+          source: 'wallet',
+          status: 'deployed',
+          isArchived: false,
+          nodeCount: 4,
+          edgeCount: 3,
+        });
+      }
+    }
 
-  // Filtered pipelines based on search and tab
+    return items;
+  }, [localDrafts, walletDrafts, walletDeployments]);
+
+  // Filtered pipelines based on search and status
   const filteredPipelines = useMemo(() => {
     return unifiedPipelines.filter((item) => {
-      // Source filter
-      if (filterSource === 'LOCAL' && item.source !== 'local') return false;
-      if (filterSource === 'WALLET' && item.source !== 'wallet') return false;
+      // Status filter
+      if (statusFilter === 'DRAFTS' && (item.status === 'deployed' || item.isArchived)) return false;
+      if (statusFilter === 'ACTIVE' && item.status !== 'deployed') return false;
+      if (statusFilter === 'ARCHIVED' && !item.isArchived) return false;
+      if (statusFilter === 'ALL' && item.isArchived) return false;
 
       // Search query
       if (searchQuery.trim()) {
@@ -165,7 +235,7 @@ export function PipelineStudioHub() {
       }
       return true;
     });
-  }, [unifiedPipelines, filterSource, searchQuery]);
+  }, [unifiedPipelines, statusFilter, searchQuery]);
 
   // Handlers
   const handleOpenPipeline = (pipeline: PipelineItem) => {
@@ -215,6 +285,13 @@ export function PipelineStudioHub() {
     } else if (pipeline.source === 'recipe' && pipeline.graph) {
       const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
       saveBrowserDraft(newId, `${pipeline.name} (Custom)`, pipeline.graph, pipeline.description);
+      refreshLocalDrafts();
+    }
+  };
+
+  const handleArchive = (pipeline: PipelineItem) => {
+    if (pipeline.source === 'local') {
+      archiveBrowserDraft(pipeline.id, !pipeline.isArchived);
       refreshLocalDrafts();
     }
   };
@@ -316,6 +393,44 @@ export function PipelineStudioHub() {
         </div>
       </header>
 
+      {/* Guest-to-Wallet Import Banner (Section 1 & 7.2 of Operations Analysis) */}
+      {isConnected && address && localDrafts.length > 0 && !dismissedGuestBanner && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-[var(--ws-accent)]/30 bg-[var(--ws-accent-bg)]/30 p-3.5 text-xs text-zinc-200">
+          <div className="flex items-center gap-2.5">
+            <Upload className="size-4 text-[var(--ws-accent)] shrink-0" />
+            <span>
+              You have <strong>{localDrafts.length}</strong> browser drafts on this device. Would you like to import them to your connected wallet workspace?
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleImportAllGuestDrafts}
+              disabled={isImportingGuest}
+              className="inline-flex items-center gap-1.5 rounded-md bg-[var(--ws-accent)] text-[#111318] px-3 py-1.5 font-semibold text-xs hover:brightness-110 transition cursor-pointer"
+            >
+              {isImportingGuest ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+              <span>Import to Wallet</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDismissedGuestBanner(true)}
+              className="rounded-md px-2.5 py-1.5 text-xs text-zinc-400 hover:text-white hover:bg-white/5 transition"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Guest import success toast */}
+      {guestImportMessage && (
+        <div role="status" className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 text-xs text-emerald-300">
+          <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
+          <span>{guestImportMessage}</span>
+        </div>
+      )}
+
       {/* Import error notification */}
       {importError && (
         <div role="alert" className="flex items-center gap-2 rounded-lg border border-rose-900/60 bg-rose-950/30 p-3 text-xs text-rose-300">
@@ -324,7 +439,7 @@ export function PipelineStudioHub() {
         </div>
       )}
 
-      {/* Toolbar: Search & Filter Tabs */}
+      {/* Toolbar: Search & Business Status Filter Tabs (All, Drafts, Active, Archived) */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-2.5">
         {/* Search Input */}
         <div className="relative flex-1 max-w-md">
@@ -338,21 +453,22 @@ export function PipelineStudioHub() {
           />
         </div>
 
-        {/* Filter Tabs */}
+        {/* Filter Tabs (Mục 7.2: Tất cả, Có bản nháp, Có deployment, Đã lưu trữ) */}
         <div className="flex items-center gap-1 overflow-x-auto text-xs">
           {(
             [
-              { key: 'ALL', label: `All (${unifiedPipelines.length})` },
-              { key: 'LOCAL', label: `Local (${localDrafts.length})` },
-              { key: 'WALLET', label: `Wallet (${walletDrafts.length})` },
+              { key: 'ALL', label: `All (${unifiedPipelines.filter(p => !p.isArchived).length})` },
+              { key: 'DRAFTS', label: `Drafts (${unifiedPipelines.filter(p => p.status !== 'deployed' && !p.isArchived).length})` },
+              { key: 'ACTIVE', label: `Active (${unifiedPipelines.filter(p => p.status === 'deployed').length})` },
+              { key: 'ARCHIVED', label: `Archived (${unifiedPipelines.filter(p => p.isArchived).length})` },
             ] as const
           ).map((tab) => (
             <button
               key={tab.key}
               type="button"
-              onClick={() => setFilterSource(tab.key)}
+              onClick={() => setStatusFilter(tab.key)}
               className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
-                filterSource === tab.key
+                statusFilter === tab.key
                   ? 'bg-[var(--ws-accent-bg)] text-[var(--ws-accent)] font-semibold'
                   : 'text-[var(--ws-muted)] hover:bg-white/5 hover:text-white'
               }`}
@@ -375,6 +491,7 @@ export function PipelineStudioHub() {
               onDuplicate={handleDuplicate}
               onDelete={(item) => setDeletingPipeline(item)}
               onExport={handleExport}
+              onArchive={handleArchive}
             />
           ))}
         </div>
@@ -400,7 +517,7 @@ export function PipelineStudioHub() {
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
-                  setFilterSource('ALL');
+                  setStatusFilter('ALL');
                 }}
                 className="ws-button"
               >
