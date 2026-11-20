@@ -17,10 +17,10 @@
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 24 | 23 | 0 | **95.8%** |
 | **Đánh giá cạnh tranh, bằng chứng và tính năng mở rộng** | 18–19/11/2026 | 8 | 5 | 0 | **62.5%** |
-| **Vận hành Workspace & nghiệm thu dự thi** | Ghi nhận 20/11/2026 | 7 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **Đối chiếu 20/11/2026** | **75** | **64** | **0** | **85.3%** |
+| **Vận hành Workspace & nghiệm thu dự thi** | Ghi nhận 20/11/2026 | 8 | 0 | 0 | **0%** |
+| **TỔNG CỘNG** | **Đối chiếu 20/11/2026** | **76** | **64** | **0** | **84.2%** |
 
-Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **11 mục `TODO`**.
+Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **12 mục `TODO`**.
 
 * **On-chain:** Lượt stop-loss ngày 19/11 dùng pool và token thử nghiệm trên testnet. Đã đọc lại cả ba receipt qua RPC ngày 20/11 và xác nhận đều thành công. [Bằng chứng full loop](FULL_LOOP_EVIDENCE.json)
 * **Workspace:** Commit `155d62f` bỏ dữ liệu mẫu, `872a381` kiểm tra Vault/RSC cấu hình sẵn, và `f8c3410` đồng bộ giao diện năm màn hình. Deployer hiện chỉ hỗ trợ các node của luồng stop-loss. Xác thực theo ví, lưu pipeline và phục hồi deploy nằm ở `TASK-333` đến `TASK-335`.
@@ -950,7 +950,7 @@ Phạm vi Workspace theo [phân tích vận hành](docs/WORKSPACE_OPERATIONS_ANA
 #### `TASK-337` [TODO] — Nghiệm thu luồng stop-loss trên bản demo cloud
 * **Module:** Studio, backend cloud, Reactive Lasna, Base Sepolia và Activity Logs.
 * **Mục đích:** Xác minh luồng người dùng trên bản demo dùng để chấm.
-* **Chi tiết:** Sau khi có URL ở `TASK-304`, chạy từ Studio qua deploy, cấp quyền Vault, sự kiện nguồn và callback, rồi đối chiếu trạng thái UI và ba hash với RPC. Chạy lại Foundry và ghi kết quả thực tế. Kiểm tra thao tác bàn phím và độ tương phản trên luồng demo.
+* **Chi tiết:** Sau khi có URL ở `TASK-304`, chạy từ Studio qua deploy, cấp quyền Vault, sự kiện nguồn và callback, rồi đối chiếu trạng thái UI và ba hash với RPC. Dùng kịch bản hai kết quả ở `TASK-340` khi đủ bằng chứng. Chạy lại Foundry và ghi kết quả thực tế. Kiểm tra thao tác bàn phím và độ tương phản trên luồng demo.
 * **Ngày tạo:** 20/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
@@ -969,6 +969,19 @@ Phạm vi Workspace theo [phân tích vận hành](docs/WORKSPACE_OPERATIONS_ANA
 * **Module:** Hồ sơ dự thi.
 * **Mục đích:** Hoàn tất hồ sơ track Set It and Forget It.
 * **Chi tiết:** Repo đã public. Đối chiếu địa chỉ hợp đồng và ba hash trong hồ sơ, bổ sung link video, gửi form và lưu xác nhận nộp bài. Chưa có xác nhận nộp.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-340` [TODO] — Chứng minh hai kết quả stop-loss và mở lại đúng pipeline
+* **Module:** Script full loop, Base Sepolia/Lasna, Active Automations và lịch sử demo.
+* **Mục đích:** Cho người dùng để một pipeline tự chạy rồi quay lại xem đúng Vault, gas và bằng chứng thực thi hoặc bỏ qua.
+* **Ưu tiên và effort:** Làm trước `TASK-331` (AI Copilot) và `TASK-332` (Telegram). Dự kiến 2–4 ngày công nếu có RPC, signer và quỹ testnet. Dùng các node và hợp đồng stop-loss ngưỡng cố định trên Base Sepolia hiện có.
+* **Chi tiết:** Mở rộng verifier để nhận cả `OrderSkipped` và `StopLossExecuted`. Chạy hai lượt trên cùng deployment demo, đối chiếu origin → Lasna → proxy/Vault, kiểm tra payout ở nhánh thực thi và lưu bằng chứng riêng theo lượt. Mở lại deployment theo ví trên cùng trình duyệt, đọc Vault và lREACT qua RPC và hiển thị hai kết quả cùng link receipt.
+* **Điểm dừng và cô lập:** Dành tối đa một ngày testnet cho receipt bỏ qua. Cô lập signer, pool, Vault, RSC và cấu hình demo. Chạy script ghi giao dịch chủ động, giới hạn retry và đối soát hash trước khi gửi lại. Giữ hồ sơ full loop đang dùng và nghiệm thu trên preview trước khi đưa vào bản demo cloud.
+* **Nghiệm thu:** Hai receipt đích thuộc đúng RSC/Vault, một lượt có `OrderSkipped` với giá hồi trên ngưỡng và một lượt có `StopLossExecuted` cùng payout hợp lệ. Đóng app, mở lại đúng pipeline bằng cùng ví để xem dữ liệu on-chain và hai lượt đã xác minh. Đổi ví và kiểm tra lỗi RPC để chắc rằng UI bỏ dữ liệu cũ và báo trạng thái đúng.
+* **Tham chiếu:** [Thiết kế kỹ thuật và xử lý sự cố](docs/WORKSPACE_OPERATIONS_ANALYSIS.md#8-demo-stop-loss-với-hai-kết-quả-được-xác-minh-bằng-receipt). Lịch sử tự động và đồng bộ Workspace tiếp tục theo `TASK-333` đến `TASK-336`. Kết quả ở đây phục vụ nghiệm thu cloud tại `TASK-337`.
 * **Ngày tạo:** 20/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.

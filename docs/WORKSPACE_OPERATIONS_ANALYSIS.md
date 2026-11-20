@@ -142,3 +142,49 @@ Ví dụ, ETH Stop-Loss có **v1 đang chạy** và **v2 đang soạn**. Studio 
 3. Ví A lưu nhiều canvas và mở cùng dữ liệu trên thiết bị khác. Khi đổi sang ví B trong editor, graph của A biến mất và đường dẫn riêng của A không tải được bằng phiên B.
 4. Deploy v1 rồi tạo nháp v2. Studio hiện một dòng với v1 đang chạy và v2 đang soạn. Active trỏ đến deployment v1. Mở v1 là chỉ đọc. Sửa hoặc xóa nháp v2 không thay đổi cấu hình v1.
 5. Reload giữa deploy và cấp quyền. Mở lại đúng pipeline và bước còn thiếu. Thử lại không tạo RSC trùng và không mất liên kết với snapshot.
+
+## 8. Demo stop-loss với hai kết quả được xác minh bằng receipt
+
+### 8.1 Phạm vi và thứ tự thực hiện
+
+Ưu tiên cho demo Set It and Forget It trước AI Copilot và Telegram. Dùng lại một pipeline **Watch DEX Price → Price Threshold Guard → Cooldown Guard → DEX Swap** trên Base Sepolia → Lasna → Base Sepolia. Origin và Vault dùng cùng pool thử nghiệm, ngưỡng giá cố định và một lần xác nhận giá. Luồng này dùng các node và hợp đồng hiện có. Cross-chain trigger và price-velocity trigger bỏ qua kiểm tra ngưỡng tĩnh ở Vault, vì vậy nằm ngoài kịch bản này. [Kiểm tra giá tại Vault](../PROJECT_BLUEPRINT.md#45-pattern-3-live-price-re-validation-pattern-tái-thẩm-định-giá-tức-thời-chống-stale-trigger) · [RSC](../contracts/src/StopLoss_Pipeline.sol) · [Vault](../contracts/src/ActionVault.sol)
+
+| Bước | Ước tính | Kết quả cần có |
+|---|---:|---|
+| Mở rộng script xác minh | 0,5–1 ngày | Xác minh được cả `OrderSkipped` và `StopLossExecuted`, giữ được cách kiểm chứng receipt thành công hiện tại. |
+| Chạy trên testnet | 0,5–1 ngày | Hai kết quả trên cùng một deployment, mỗi lượt có đủ ba receipt và đúng giá trị nghiệp vụ. |
+| Màn hình mở lại deployment | 1–2 ngày | Cùng ví và trình duyệt mở lại đúng pipeline, xem Vault, gas Lasna và hai lượt đã xác minh. |
+
+Tổng **2–4 ngày công** nếu RPC, signer thử nghiệm và quỹ testnet sẵn sàng. Dành tối đa một ngày cho việc thu được receipt `OrderSkipped` sau khi script có thể xác minh nó. Nếu hết khung thử mà vẫn thiếu receipt, ghi lại lỗi và hash đã có, giữ nhánh bỏ qua ở trạng thái chưa xác minh và tiếp tục nghiệm thu nhánh thực thi hiện hữu. Đồng bộ đa thiết bị, phục hồi deploy và lịch sử tự động thuộc [TASK-333 đến TASK-336](../TASKS.md#task-333-todo--xác-thực-và-phân-quyền-workspace-theo-ví).
+
+### 8.2 Thiết lập và chạy hai lượt testnet
+
+1. **Kiểm tra trước khi gửi giao dịch.** Dùng ví, pool và token thử nghiệm, Vault và RSC của riêng demo. Đọc lại chain ID, bytecode, owner và quyền RSC trên Vault, pool nguồn và pool dùng để đọc giá tại Vault. Kiểm tra ETH của signer, ETH trong Vault, phí giao callback và lREACT của RSC. Giữ lại cấu hình địa chỉ, ngưỡng, tỷ lệ swap, cooldown và hash liên kết deployment.
+2. **Bỏ qua khi giá hồi.** Tạo `Sync` dưới ngưỡng để RSC yêu cầu callback, rồi đưa reserves của pool thử nghiệm về mức trên ngưỡng trước khi Vault đọc. Đưa hai giao dịch đổi reserves gần nhau và kiểm tra thứ tự theo receipt. Việc đợi Lasna xác nhận rồi mới gửi giao dịch hồi có thể khiến callback đến trước. Điều kiện đạt là log giảm tham chiếu đúng trong receipt Lasna, proxy giao đúng callback và Vault phát `OrderSkipped` với giá trên ngưỡng, không có payout token trong receipt đó. Giá hồi mà RSC chưa yêu cầu callback là trường hợp khác.
+3. **Thực thi khi giá vẫn dưới ngưỡng.** Chờ hết cooldown đã cấu hình, đối chiếu số dư và giữ giá dưới ngưỡng đến khi callback settle. Dùng cùng RSC/Vault để chạy lượt tiếp theo. Điều kiện đạt là Vault phát `StopLossExecuted` và receipt có `Transfer` token đầu ra đến owner với amount đạt `minUsdcOut`.
+4. **Giữ một lượt đang đối soát trên mỗi cặp RSC/Vault.** Ghi hash origin ngay khi có. Chỉ bắt đầu lượt tiếp theo sau khi đã phân loại lượt trước hoặc dừng để điều tra. Tránh dùng receipt cũ để bù một lượt thiếu bằng chứng.
+
+### 8.3 Xác minh và lưu bằng chứng
+
+- Mở rộng [`scripts/test-full-loop.ts`](../scripts/test-full-loop.ts) để nhận kết quả kỳ vọng cho mỗi lượt. Giữ chế độ đọc lại hash và đường chạy xác minh nhánh thực thi hiện có. Kiểm tra source receipt có đúng pool, topic và log index. Đối chiếu `refTx`, chain, event index trong receipt Lasna, callback của đúng RSC và cấu hình `CallbackRequest` của system contract.
+- Ưu tiên bản ghi giao callback từ Lasna, sau đó kiểm tra receipt và calldata của proxy đích. Khi chỉ mục chưa trả bản ghi, quét cả hai event Vault trong cửa sổ block giới hạn, rồi đối chiếu proxy, địa chỉ đích và payload có địa chỉ RSC được chèn. Payload giống nhau có thể xuất hiện ở nhiều lần chạy. Nếu còn nhiều ứng viên hoặc phạm vi quét chưa đủ để xác định duy nhất, hiển thị đang đối soát và không gán receipt cho lượt chạy.
+- Phân loại theo log nghiệp vụ của đúng Vault. `SKIPPED` cần `OrderSkipped`, lý do và giá đọc lại. `EXECUTED` cần `StopLossExecuted` và payout hợp lệ trong cùng receipt. Receipt success đơn lẻ không đủ. Nếu proxy phát `CallbackFailure`, giao dịch revert hoặc thiếu event dự kiến, ghi rõ lỗi hay kết quả chưa xác minh. Nếu RPC hết thời gian chờ, giữ trạng thái đang đối soát và các hash đã biết.
+- Lưu bằng chứng riêng theo từng `originTxHash` và log index, gắn với deployment và revision khi có. Ghi chain IDs, pool, RSC, Vault, proxy, ba hash, block/log index, ngưỡng, kết quả, thời điểm xác minh và giá hoặc số lượng tương ứng. Ghi tệp mới theo lượt, giữ nguyên [`FULL_LOOP_EVIDENCE.json`](../FULL_LOOP_EVIDENCE.json) đang được landing và README tham chiếu. Dữ liệu demo dùng receipt thật.
+
+### 8.4 Workspace và nghiệm thu UI
+
+- Khi deploy đã xác nhận, giữ liên kết `pipelineId`/revision với chain, địa chỉ RSC, Vault và hash deploy/cấp quyền. Bản demo có thể lưu tham chiếu theo ví và môi trường trên cùng trình duyệt. Lúc mở lại, đọc owner của Vault, Vault đích của RSC và quyền callback qua RPC trước khi hiển thị trạng thái. Cache cục bộ chỉ dùng để tìm deployment. Khi đổi ví, ngắt kết nối hoặc đổi deployment, xóa trạng thái đang hiển thị và bỏ kết quả RPC đến muộn.
+- Đọc ETH trong Vault trên Base Sepolia và lREACT tại RSC trên Lasna. Hiển thị số 0 sau khi đọc thành công. Tách trạng thái đang tải, lỗi RPC và cấu hình sai. Nếu dùng kết quả lần đọc gần nhất, ghi thời điểm đọc và trạng thái chưa cập nhật. Refuel theo địa chỉ deployment thuộc `TASK-329`.
+- Hiển thị lịch sử giới hạn của hai lượt đã xác minh, phân theo deployment. Mỗi dòng có kết quả nghiệp vụ, lý do và giá nếu bỏ qua, số lượng swap và token thực nhận nếu thực thi, cùng link cho từng bước có hash. Ghi rõ phạm vi lịch sử đã xác minh. Nghiệm thu bằng cách đóng app sau deploy, chạy hai lượt, mở lại bằng cùng ví để thấy đúng deployment, rồi đổi sang ví khác để kiểm tra cô lập dữ liệu.
+
+### 8.5 Sự cố và cách giới hạn ảnh hưởng
+
+| Lỗi có thể gặp | Cách xử lý |
+|---|---|
+| Callback đến trước giao dịch hồi, hoặc cooldown chặn lượt mới | Kiểm tra thứ tự receipt, xác nhận RSC đã yêu cầu callback cho log giảm và chờ cooldown kết thúc. Chỉ thử lại với mức quỹ nhỏ và số lượt giới hạn trên deployment demo. |
+| Sai chain, sai RSC/Vault/pool, mất quyền hoặc thiếu phí | Dừng trước khi phát sinh giao dịch mới. Đọc lại cấu hình và trạng thái on-chain, báo đúng bước thiếu. Nạp phí hoặc cấp quyền chỉ cho địa chỉ demo đã xác định. |
+| RPC chậm, trả 429, chưa lập chỉ mục hoặc receipt đổi do reorg | Giới hạn phạm vi quét và số request, retry có backoff. Đối chiếu lại receipt và block hash trước khi ghi kết luận. Khi thiếu dữ liệu, giữ hash và cho thử đọc lại. |
+| Proxy trả success ở cấp giao dịch nhưng Vault lỗi, hoặc nhiều callback có cùng calldata | Kiểm tra event lỗi của proxy, log đúng Vault và payout. Dùng tham chiếu origin và bản ghi hệ thống để phân biệt. Giữ trạng thái chưa xác minh nếu không thể ghép duy nhất. |
+| Reload hoặc mất phản hồi ngay sau broadcast | Lưu hash và kiểm tra receipt/nonce hoặc trạng thái chain trước khi thử lại. Việc mở lịch sử và tải lại trang chỉ đọc dữ liệu. |
+| Ảnh hưởng pool, dữ liệu hoặc cấu hình đang dùng | Giữ driver thay đổi reserves trong script testnet chạy chủ động. Dùng pool/Vault/RSC và cấu hình riêng. UI ở chế độ đọc với deployment demo, không đưa bản ghi demo vào stream mặc định của Workspace cá nhân. Triển khai trước trên môi trường preview và kiểm tra build, luồng stop-loss hiện hữu cùng các URL evidence. |
+| Nghiệm thu preview thất bại | Tạm ẩn điểm vào demo mới hoặc khôi phục bản preview trước. Giữ bằng chứng và deployment cũ để đối chiếu. Nếu cần ngừng automation demo, thu hồi quyền callback trên Vault demo qua ví owner sau khi kiểm tra giao dịch đang chờ. |
