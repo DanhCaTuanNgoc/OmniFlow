@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import evidence from "../../../../FULL_LOOP_EVIDENCE.json";
+import evidenceManifest from "../../../../FULL_LOOP_EVIDENCE.json";
 
+const evidence = evidenceManifest.demo;
 const { contracts, verifiableTransactions } = evidence;
 const fullLoopVerified = evidence.status.startsWith("VERIFIED_FULL_LOOP");
 const VERIFICATION_COMMAND = "pnpm --filter backend exec tsx ../scripts/test-full-loop.ts --preflight";
@@ -133,7 +134,7 @@ export default function OnChainProofLedger() {
             onClick={() => setActiveTab("json")}
           >
             <i className="fa-solid fa-code" />
-            <span>Raw FULL_LOOP_EVIDENCE.json</span>
+            <span>Raw Demo Evidence</span>
           </button>
           <button
             type="button"

@@ -125,7 +125,7 @@ pnpm dev
 
 OmniFlow's Set It and Forget It demo is a personal stop-loss. Once configured, the Lasna reactive contract monitors a Base Sepolia pool and calls the owner's Vault through the official callback proxy. The verified run used a deployed test pool and transferred 1.394409773455864503 test tokens to the Vault owner after swapping 0.001 ETH.
 
-- Deployed addresses and transaction receipts are listed in [FULL_LOOP_EVIDENCE.json](FULL_LOOP_EVIDENCE.json).
+- [FULL_LOOP_EVIDENCE.json](FULL_LOOP_EVIDENCE.json) lists the historical demo deployment under `demo`, additional verified runs under `fullLoops`, and cooldown checks under `cooldowns`.
 - Watch the 53-second [stop-loss demo](docs/omniflow-reactive-demo.mp4).
 - Follow the same run on the explorers from the [Base Sepolia Sync](https://sepolia.basescan.org/tx/0xbcc9358892705f831b7733cf47c6a707b2b017a6d3a60e5c018821e6713ed31a) through the [Lasna callback request](https://lasna.reactscan.net/tx/0xf66b1f9a183811bc9a857027e42a7c3aa8d8f13cef2c6c3156508752a7ffe0eb) to the [Base Sepolia settlement](https://sepolia.basescan.org/tx/0x6683e71dfc3fb75e1b103985e79a027a8087217c2e23077d26897584d177d052).
 - Replay the receipt verification without sending a transaction. Run this from the repository root after installing dependencies.

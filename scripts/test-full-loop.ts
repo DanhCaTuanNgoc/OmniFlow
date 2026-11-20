@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { config } from '../backend/node_modules/dotenv';
@@ -10,7 +10,7 @@ import {
 import { baseSepolia } from '../backend/node_modules/viem/chains';
 import { privateKeyToAccount } from '../backend/node_modules/viem/accounts';
 import { estimateL1Fee } from '../backend/node_modules/viem/op-stack';
-import deployment from '../FULL_LOOP_EVIDENCE.json';
+import evidenceManifest from '../FULL_LOOP_EVIDENCE.json';
 import { callbackConfiguration, findStopLossDelivery } from '../backend/src/services/callbackEvidence';
 import { STOP_LOSS_PIPELINE_ABI } from '../backend/src/abis/StopLossPipeline';
 import { STOP_LOSS_RUNTIME } from '../backend/src/abis/runtimeFingerprints';
@@ -18,6 +18,41 @@ import { matchesRuntime } from '../backend/src/services/runtimeBytecode';
 
 config({ path: resolve(__dirname, '../.env') });
 config({ path: resolve(__dirname, '../backend/.env') });
+
+const deployment = evidenceManifest.demo;
+
+type EvidenceManifest = {
+  schemaVersion: number;
+  demo: typeof deployment;
+  fullLoops: Record<string, unknown>;
+  cooldowns: Record<string, unknown>;
+};
+
+function recordEvidence(bucket: 'fullLoops' | 'cooldowns', originHash: Hash, evidence: object) {
+  const output = resolve(process.env.FULL_LOOP_EVIDENCE_DIR ?? resolve(__dirname, '..'), 'FULL_LOOP_EVIDENCE.json');
+  const temporary = `${output}.${process.pid}.tmp`;
+  const lock = `${output}.lock`;
+  const fd = openSync(lock, 'wx');
+  try {
+    const manifest: EvidenceManifest = existsSync(output)
+      ? JSON.parse(readFileSync(output, 'utf8'))
+      : { schemaVersion: evidenceManifest.schemaVersion, demo: deployment, fullLoops: {}, cooldowns: {} };
+    requireCheck(manifest.schemaVersion === evidenceManifest.schemaVersion && manifest.demo &&
+      manifest.fullLoops && manifest.cooldowns, 'Unsupported full-loop evidence manifest.');
+    const key = originHash.toLowerCase();
+    const isDemo = bucket === 'fullLoops' && key === manifest.demo.verifiableTransactions.step1_originEvent.txHash.toLowerCase();
+    if (isDemo || Object.hasOwn(manifest[bucket], key)) return output;
+
+    manifest[bucket][key] = evidence;
+    writeFileSync(temporary, JSON.stringify(manifest, null, 2) + '\n', { flag: 'wx' });
+    renameSync(temporary, output);
+    return output;
+  } finally {
+    closeSync(fd);
+    rmSync(temporary, { force: true });
+    rmSync(lock, { force: true });
+  }
+}
 
 const lasna = defineChain({
   id: 5318007,
@@ -322,8 +357,7 @@ async function verifyCooldown(hashes: Hash[]) {
         timestamp: timestamp.toString(), requests, explorerUrl: `https://lasna.reactscan.net/tx/${reaction.transactionHash}` },
     })),
   };
-  const output = resolve(process.env.FULL_LOOP_EVIDENCE_DIR ?? resolve(__dirname, '..'), `COOLDOWN_EVIDENCE.${hashes[0]}.json`);
-  writeFileSync(output, JSON.stringify(evidence, null, 2) + '\n', { flag: 'wx' });
+  const output = recordEvidence('cooldowns', hashes[0], evidence);
   console.log(`Verified BP-11 cooldown evidence: ${output}`);
 }
 
@@ -629,8 +663,7 @@ async function verifyLoop(
       },
     },
   };
-  const output = resolve(process.env.FULL_LOOP_EVIDENCE_DIR ?? resolve(__dirname, '..'), `FULL_LOOP_EVIDENCE.${originHash}.json`);
-  writeFileSync(output, JSON.stringify(evidence, null, 2) + '\n', { flag: 'wx' });
+  const output = recordEvidence('fullLoops', originHash, evidence);
   console.log(`Verified evidence: ${output}`);
 }
 

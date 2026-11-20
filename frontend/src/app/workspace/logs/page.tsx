@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAccount } from 'wagmi';
+import { useAccount, useSwitchChain } from 'wagmi';
 import type { Address } from 'viem';
 import { 
   Activity, 
@@ -13,11 +13,13 @@ import {
   CheckCircle2, 
   Clock, 
   AlertCircle, 
+  AlertTriangle,
   Layers, 
   Zap, 
   Radio,
   Wifi,
-  WifiOff
+  WifiOff,
+  Loader2
 } from 'lucide-react';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import { useWebSocket, WebSocketProvider } from '@/components/providers/WebSocketProvider';
@@ -93,6 +95,9 @@ function LogsRoute() {
 }
 
 function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: string | null }) {
+  const { chainId } = useAccount();
+  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
+  const isCorrectChain = chainId === 84532;
   const [history, setHistory] = useState<History>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
@@ -117,10 +122,12 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
 
   const hasHistory = history !== undefined;
 
-  // Auto-load activity on mount
+  // Auto-load activity on mount or when switching to correct chain
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (isCorrectChain) {
+      void load();
+    }
+  }, [load, isCorrectChain]);
 
   async function loadEarlier() {
     const next = history?.next;
@@ -253,12 +260,42 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
         </div>
       </div>
 
-      {error && (
+      {/* Network Warning Banner or Error Display */}
+      {(!isCorrectChain || error?.includes('Base Sepolia')) ? (
+        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="size-4 text-rose-400 shrink-0" />
+            <span>
+              {chainId
+                ? `Your wallet is currently on Chain ID ${chainId}. Please switch to Base Sepolia (84532) to stream activity receipts.`
+                : 'Connect the deployment wallet to Base Sepolia (84532) to sign in.'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => switchChain?.({ chainId: 84532 })}
+            disabled={isSwitchingChain}
+            className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs px-3 py-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+          >
+            {isSwitchingChain ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" />
+                <span>Switching...</span>
+              </>
+            ) : (
+              <>
+                <Zap className="size-3.5" />
+                <span>Switch to Base Sepolia</span>
+              </>
+            )}
+          </button>
+        </div>
+      ) : error ? (
         <div role="alert" className="flex items-center gap-2 rounded-lg border border-rose-900/60 bg-rose-950/30 p-3 text-xs text-rose-300">
           <AlertCircle className="size-4 shrink-0 text-rose-400" />
           <span>{error}</span>
         </div>
-      )}
+      ) : null}
 
       {history?.indexer?.error && (
         <p role="status" className="text-xs text-amber-200 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-lg">

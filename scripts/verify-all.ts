@@ -2,17 +2,19 @@
  * Comprehensive System Verification Suite — OmniFlow
  * Verifies RPC connectivity, on-chain contracts, zero-mock evidence, and UI design token compliance.
  */
-import { createPublicClient, http } from 'viem';
+import { createPublicClient, http } from '../backend/node_modules/viem';
 import * as fs from 'fs';
 import * as path from 'path';
+import evidenceManifest from '../FULL_LOOP_EVIDENCE.json';
 
 const BASE_SEPOLIA_RPC = 'https://sepolia.base.org';
 const LASNA_RPC = 'https://lasna-rpc.rnk.dev';
+const { demo } = evidenceManifest;
 
 const CONTRACTS = {
-  actionVault: '0x005d4cb896c9e0B07Bbf961FDC26b098D84079d7' as `0x${string}`,
-  pair: '0x9a796b794999cabcd10d08f777b24ceb76e34b3e' as `0x${string}`,
-  stopLossRsc: '0x8c2d098617102a64925cc683d9b444f938a96082' as `0x${string}`,
+  actionVault: demo.contracts.destinationVault.address as `0x${string}`,
+  pair: demo.contracts.originPair.address as `0x${string}`,
+  stopLossRsc: demo.contracts.reactiveSmartContract.address as `0x${string}`,
 };
 
 async function main() {
@@ -86,7 +88,7 @@ async function main() {
   assertCheck('FULL_LOOP_EVIDENCE.json file exists', hasEvidence);
 
   if (hasEvidence) {
-    const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
+    const evidence = demo;
     assertCheck('Evidence Status is VERIFIED', evidence.status === 'VERIFIED_FULL_LOOP_ON_TESTNET');
     assertCheck('Origin Tx Hash recorded', Boolean(evidence.verifiableTransactions?.step1_originEvent?.txHash));
     assertCheck('Reactive Tx Hash recorded', Boolean(evidence.verifiableTransactions?.step2_reactiveExecution?.txHash));

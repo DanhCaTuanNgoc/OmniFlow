@@ -3,7 +3,7 @@
 import { Suspense, useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAccount } from 'wagmi';
+import { useAccount, useSwitchChain } from 'wagmi';
 import { formatEther, parseEther, type Address } from 'viem';
 import { 
   Activity, 
@@ -18,7 +18,8 @@ import {
   ShieldCheck, 
   Zap, 
   Network,
-  RotateCcw
+  RotateCcw,
+  Loader2
 } from 'lucide-react';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import { runDeploymentAction, type DeploymentDetail, type DeploymentSummary } from '@/lib/deployments';
@@ -81,6 +82,9 @@ function ActiveRoute() {
 
 function WalletDeployments({ owner, selectedId }: { owner: Address; selectedId: string | null }) {
   const router = useRouter();
+  const { chainId } = useAccount();
+  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
+  const isCorrectChain = chainId === 84532;
   const [list, setList] = useState<DeploymentSummary[]>();
   const [detail, setDetail] = useState<DeploymentDetail>();
   const [pending, setPending] = useState(false);
@@ -105,10 +109,12 @@ function WalletDeployments({ owner, selectedId }: { owner: Address; selectedId: 
     }
   }
 
-  // Auto-load deployments on mount
+  // Auto-load deployments on mount or when switching to correct chain
   useEffect(() => {
-    void load();
-  }, [owner]);
+    if (isCorrectChain) {
+      void load();
+    }
+  }, [owner, isCorrectChain]);
 
   function select(id: string) {
     router.replace(`/workspace/active?deployment=${id}`, { scroll: false });
@@ -193,12 +199,42 @@ function WalletDeployments({ owner, selectedId }: { owner: Address; selectedId: 
         </div>
       </div>
 
-      {error && (
+      {/* Network Warning Banner or Error Display */}
+      {(!isCorrectChain || error?.includes('Base Sepolia')) ? (
+        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="size-4 text-rose-400 shrink-0" />
+            <span>
+              {chainId
+                ? `Your wallet is currently on Chain ID ${chainId}. Please switch to Base Sepolia (84532) to interact with Active Automations.`
+                : 'Connect the deployment wallet to Base Sepolia (84532) to sign in.'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => switchChain?.({ chainId: 84532 })}
+            disabled={isSwitchingChain}
+            className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs px-3 py-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+          >
+            {isSwitchingChain ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" />
+                <span>Switching...</span>
+              </>
+            ) : (
+              <>
+                <Zap className="size-3.5" />
+                <span>Switch to Base Sepolia</span>
+              </>
+            )}
+          </button>
+        </div>
+      ) : error ? (
         <div role="alert" className="flex items-center gap-2 rounded-lg border border-rose-900/60 bg-rose-950/30 p-3 text-xs text-rose-300">
           <AlertTriangle className="size-4 shrink-0 text-rose-400" />
           <span>{error}</span>
         </div>
-      )}
+      ) : null}
 
       {/* Loading State or Grid of Automation Cards */}
       {pending && !list ? (
