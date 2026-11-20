@@ -84,6 +84,7 @@ export class DeploymentStore {
       CREATE TABLE IF NOT EXISTS executions (
         deploymentId TEXT NOT NULL REFERENCES deployments(id), reactiveTxHash TEXT NOT NULL,
         originTxHash TEXT NOT NULL, originLogIndex INTEGER NOT NULL, report TEXT, checkedAt INTEGER NOT NULL DEFAULT 0,
+        conflictingReaction INTEGER NOT NULL DEFAULT 0,
         PRIMARY KEY (deploymentId, reactiveTxHash)
       );
       CREATE INDEX IF NOT EXISTS executions_by_origin ON executions (deploymentId, originTxHash, originLogIndex);
@@ -100,6 +101,10 @@ export class DeploymentStore {
     if (!columns.some(column => column.name === 'broadcastCount')) {
       this.db.exec('ALTER TABLE deployments ADD COLUMN broadcastCount INTEGER NOT NULL DEFAULT 0');
       this.db.exec('ALTER TABLE deployments ADD COLUMN lastBroadcastAt INTEGER NOT NULL DEFAULT 0');
+    }
+    const executionColumns = this.db.pragma('table_info(executions)') as { name: string }[];
+    if (!executionColumns.some(column => column.name === 'conflictingReaction')) {
+      this.db.exec('ALTER TABLE executions ADD COLUMN conflictingReaction INTEGER NOT NULL DEFAULT 0');
     }
   }
 
@@ -142,8 +147,18 @@ export class DeploymentStore {
       INSERT OR IGNORE INTO executions (deploymentId, reactiveTxHash, originTxHash, originLogIndex)
       VALUES (@deploymentId, @reactiveTxHash, @originTxHash, @originLogIndex)
     `);
+    const originMatch = this.db.prepare(
+      'SELECT reactiveTxHash FROM executions WHERE deploymentId = ? AND originTxHash = ? AND originLogIndex = ? LIMIT 1',
+    );
+    const markConflict = this.db.prepare(
+      "UPDATE executions SET conflictingReaction = 1, report = NULL, checkedAt = 0 WHERE deploymentId = ? AND reactiveTxHash = ? AND conflictingReaction = 0",
+    );
     this.db.transaction(() => {
-      for (const entry of entries) insert.run(entry);
+      for (const entry of entries) {
+        const current = originMatch.get(entry.deploymentId, entry.originTxHash, entry.originLogIndex) as { reactiveTxHash: Hash } | undefined;
+        if (!current) insert.run(entry);
+        else if (entry.reactiveTxHash !== current.reactiveTxHash) markConflict.run(entry.deploymentId, current.reactiveTxHash);
+      }
       const previous = this.cursor(deploymentId);
       if (previous === undefined || previous < nextBlock) {
         this.db.prepare('INSERT OR REPLACE INTO execution_cursors VALUES (?, ?)').run(deploymentId, nextBlock.toString());
@@ -152,11 +167,12 @@ export class DeploymentStore {
   }
 
   pendingExecutions(deploymentId: string, limit: number) {
-    return this.db.prepare(`
-      SELECT deploymentId, reactiveTxHash, originTxHash, originLogIndex FROM executions
-      WHERE deploymentId = ? AND (report IS NULL OR json_extract(report, '$.status') IN ('PENDING', 'UNVERIFIED'))
+    const rows = this.db.prepare(`
+      SELECT deploymentId, reactiveTxHash, originTxHash, originLogIndex, conflictingReaction FROM executions
+      WHERE deploymentId = ? AND (report IS NULL OR json_extract(report, '$.status') IN ('PENDING', 'UNVERIFIED', 'REORGED'))
       ORDER BY checkedAt ASC, rowid ASC LIMIT ?
-    `).all(deploymentId, limit) as PendingExecution[];
+    `).all(deploymentId, limit) as (Omit<PendingExecution, 'conflictingReaction'> & { conflictingReaction: number })[];
+    return rows.map(({ conflictingReaction, ...entry }) => conflictingReaction ? { ...entry, conflictingReaction: true } : entry);
   }
 
   updateExecution(entry: PendingExecution, report: ActivityLogEntry) {
@@ -173,14 +189,27 @@ export class DeploymentStore {
   }
 
   history(owner: Address, deploymentId?: string) {
+    return this.historyPage(owner, deploymentId).logs;
+  }
+
+  historyPage(owner: Address, deploymentId?: string, before?: { timestamp: string; sequence: number }) {
     const rows = this.db.prepare(`
-      SELECT executions.report FROM executions
+      SELECT executions.report, executions.rowid AS sequence FROM executions
       JOIN deployments ON deployments.id = executions.deploymentId
       WHERE deployments.owner = ? AND deployments.environment = ?
         AND (? IS NULL OR deployments.id = ?) AND executions.report IS NOT NULL
-      ORDER BY json_extract(executions.report, '$.timestamp') DESC, executions.rowid DESC LIMIT 100
-    `).all(owner.toLowerCase(), deploymentEnvironment, deploymentId ?? null, deploymentId ?? null) as { report: string }[];
-    return rows.map(row => JSON.parse(row.report) as ActivityLogEntry);
+        AND (? IS NULL OR json_extract(executions.report, '$.timestamp') < ?
+          OR (json_extract(executions.report, '$.timestamp') = ? AND executions.rowid < ?))
+      ORDER BY json_extract(executions.report, '$.timestamp') DESC, executions.rowid DESC LIMIT 51
+    `).all(owner.toLowerCase(), deploymentEnvironment, deploymentId ?? null, deploymentId ?? null,
+      before?.timestamp ?? null, before?.timestamp ?? null, before?.timestamp ?? null, before?.sequence ?? null
+    ) as { report: string; sequence: number }[];
+    const results = rows.slice(0, 50).map(row => ({ sequence: row.sequence, entry: JSON.parse(row.report) as ActivityLogEntry }));
+    const last = results.at(-1);
+    return {
+      logs: results.map(row => row.entry),
+      next: rows.length > 50 && last ? { timestamp: last.entry.timestamp, sequence: last.sequence } : null,
+    };
   }
 
   owns(owner: Address, id: string) {

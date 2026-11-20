@@ -62,7 +62,11 @@ pipelineRouter.get('/deployments/:id', async (req, res, next) => {
     const deployment = deployerService.getDeployment(res.locals.workspaceOwner, req.params.id);
     if (!deployment) return res.status(404).json({ error: 'Deployment not found.' });
     const runtime = await readDeploymentRuntime(deployment, res.locals.workspaceOwner);
-    return res.json({ ...deployment, runtime });
+    return res.json({
+      ...deployment,
+      runtime,
+      latestExecution: deploymentStore().history(res.locals.workspaceOwner, req.params.id)[0] ?? null,
+    });
   } catch (error) {
     return next(error);
   }

@@ -25,7 +25,8 @@ const outcome = {
   SUCCESS: 'Executed', SKIPPED: 'Skipped', FAILED: 'Failed',
 };
 
-type History = { logs: Execution[]; indexer: { checkedAt: string; error: boolean } | null };
+type History = { logs: Execution[]; indexer: { checkedAt: string; error: boolean } | null;
+  next: { timestamp: string; sequence: number } | null };
 
 export default function ActivityLogsPage() {
   return <Suspense fallback={<WorkspaceState title="Loading Activity Logs…" />}><LogsRoute /></Suspense>;
@@ -66,6 +67,24 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
   }, [owner, path]);
 
   const hasHistory = history !== undefined;
+  async function loadEarlier() {
+    const next = history?.next;
+    if (!next) return;
+    setPending(true);
+    setError(undefined);
+    try {
+      const params = new URLSearchParams({ before: next.timestamp, sequence: String(next.sequence) });
+      const page = await workspaceRequest<History>(owner, `${path}${deploymentId ? '&' : '?'}${params}`);
+      setHistory(current => current && {
+        ...page,
+        logs: [...current.logs, ...page.logs.filter(entry => !current.logs.some(currentEntry => currentEntry.id === entry.id))],
+      });
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Unable to load earlier receipts.');
+    } finally {
+      setPending(false);
+    }
+  }
   useEffect(() => {
     if (status !== 'CONNECTED' || !hasHistory || !deploymentId) return;
     const token = getWorkspaceSessionToken(owner);
@@ -81,7 +100,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
         setHistory(current => current && {
           ...current,
           logs: [update, ...current.logs.filter(entry => entry.id !== update.id)]
-            .sort((left, right) => right.timestamp.localeCompare(left.timestamp)).slice(0, 100),
+            .sort((left, right) => right.timestamp.localeCompare(left.timestamp)),
         });
       }
     });
@@ -124,6 +143,9 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
           ))}
         </ol>
       ))}
+      {history?.next && <button type="button" className="ws-button self-start" disabled={pending} onClick={() => void loadEarlier()}>
+        Load earlier receipts
+      </button>}
     </>
   );
 }

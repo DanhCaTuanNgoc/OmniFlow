@@ -15,13 +15,17 @@ export function VaultSetup({ owner, pair, currentVault, onLinked }: {
   currentVault: string;
   onLinked: (address: Address) => void;
 }) {
-  const [mode, setMode] = useState<'link' | 'create'>('link');
+  const pendingKey = `omniflow.vault-create.v1.${owner.toLowerCase()}.${pair.toLowerCase()}`;
+  const [creationHash, setCreationHash] = useState(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem(pendingKey) : null;
+    return stored && /^0x[0-9a-f]{64}$/i.test(stored) ? stored as Hash : undefined;
+  });
+  const [mode, setMode] = useState<'link' | 'create'>(creationHash ? 'create' : 'link');
   const [candidate, setCandidate] = useState(currentVault);
   const [router, setRouter] = useState('');
   const [backup, setBackup] = useState<Address | string>(owner);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
-  const [creationHash, setCreationHash] = useState<Hash>();
   const [linked, setLinked] = useState<Address>();
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -51,10 +55,12 @@ export function VaultSetup({ owner, pair, currentVault, onLinked }: {
             }),
           });
           setCreationHash(hash);
+          localStorage.setItem(pendingKey, hash);
         }
         const receipt = await waitForTransactionReceipt(wagmiConfig, { chainId: 84532, hash, checkReplacement: false });
         if (receipt.status !== 'success' || !receipt.contractAddress) {
           setCreationHash(undefined);
+          localStorage.removeItem(pendingKey);
           throw new Error('The Vault creation transaction reverted.');
         }
         vault = receipt.contractAddress;
@@ -66,6 +72,7 @@ export function VaultSetup({ owner, pair, currentVault, onLinked }: {
       });
       onLinked(result.vault.address);
       setLinked(result.vault.address);
+      if (hash) localStorage.removeItem(pendingKey);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Vault setup failed.');
     } finally {

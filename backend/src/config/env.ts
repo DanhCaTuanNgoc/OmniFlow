@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
+import { STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 
 dotenv.config();
 
@@ -21,10 +22,10 @@ const envSchema = z.object({
   LASNA_RPC_URL: z.string().url().default('https://lasna-rpc.rnk.dev'),
   SYSTEM_CONTRACT_LASNA: z
     .string()
-    .default('0x0000000000000000000000000000000000fffFfF'),
+    .default(STOP_LOSS_TEMPLATE.omniSystem),
   CALLBACK_PROXY_BASE_SEPOLIA: z
     .string()
-    .default('0xa6eA49Ed671B8a4dfCDd34E36b7a75Ac79B8A5a6'),
+    .default(STOP_LOSS_TEMPLATE.callbackProxy),
   RELAYER_PRIVATE_KEY: z
     .string()
     .regex(/^0x[0-9a-fA-F]{64}$/, 'Invalid 32-byte hexadecimal private key')

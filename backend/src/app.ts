@@ -58,8 +58,8 @@ export function createApp(): {
 
   // Global Error Handler
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    console.error('Unhandled Server Error:', err);
-    res.status(500).json({ error: 'Internal server error', message: err.message });
+    console.error('Unhandled Server Error:', err.name);
+    res.status(500).json({ error: 'Internal server error' });
   });
 
   return { app, server, wsGateway };

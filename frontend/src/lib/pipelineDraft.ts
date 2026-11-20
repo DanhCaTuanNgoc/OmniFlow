@@ -1,6 +1,28 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { StopLossGraph } from '@omniflow/shared';
 
+const localDraftsKey = 'omniflow.studio.drafts.v1';
+type BrowserDraft = { id: string; name: string; updatedAt: number; graph: unknown };
+
+export function listBrowserDrafts(): BrowserDraft[] {
+  const serialized = localStorage.getItem(localDraftsKey);
+  if (!serialized) {
+    const previous = localStorage.getItem('omniflow.studio.guest.v1');
+    return previous ? [{ id: 'previous', name: 'Browser draft', updatedAt: 0, graph: JSON.parse(previous) }] : [];
+  }
+  const drafts: unknown = JSON.parse(serialized);
+  if (!Array.isArray(drafts) || !drafts.every(draft => record(draft) &&
+    typeof draft.id === 'string' && typeof draft.name === 'string' && typeof draft.updatedAt === 'number' && 'graph' in draft)) {
+    throw new Error('Browser drafts could not be read.');
+  }
+  return drafts as BrowserDraft[];
+}
+
+export function saveBrowserDraft(id: string, name: string, graph: unknown) {
+  const drafts = listBrowserDrafts().filter(draft => draft.id !== id);
+  localStorage.setItem(localDraftsKey, JSON.stringify([{ id, name, updatedAt: Date.now(), graph }, ...drafts]));
+}
+
 export function studioGraph(nodes: readonly Node[], edges: readonly Edge[], networks?: StopLossGraph['networks']) {
   return {
     nodes: nodes.map(({ id, type, position, data }) => {

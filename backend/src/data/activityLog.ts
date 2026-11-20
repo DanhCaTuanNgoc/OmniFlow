@@ -34,4 +34,5 @@ export type PendingExecution = {
   reactiveTxHash: `0x${string}`;
   originTxHash: `0x${string}`;
   originLogIndex: number;
+  conflictingReaction?: boolean;
 };

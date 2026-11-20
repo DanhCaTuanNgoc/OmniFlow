@@ -4,13 +4,14 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { config } from '../backend/node_modules/dotenv';
 import {
   createPublicClient, createWalletClient, decodeAbiParameters, decodeFunctionData, defineChain, encodeFunctionData,
-  formatEther, getAddress, http, isAddressEqual, numberToHex, parseAbi, parseAbiItem, parseAbiParameters, parseEventLogs,
+  formatEther, getAddress, http, isAddressEqual, numberToHex, parseAbi, parseEventLogs,
   toEventSelector, type Address, type Hash, type Hex, type TransactionReceipt,
 } from '../backend/node_modules/viem';
 import { baseSepolia } from '../backend/node_modules/viem/chains';
 import { privateKeyToAccount } from '../backend/node_modules/viem/accounts';
 import { estimateL1Fee } from '../backend/node_modules/viem/op-stack';
 import deployment from '../FULL_LOOP_EVIDENCE.json';
+import { callbackConfiguration, findStopLossDelivery } from '../backend/src/services/callbackEvidence';
 
 config({ path: resolve(__dirname, '../.env') });
 config({ path: resolve(__dirname, '../backend/.env') });
@@ -74,8 +75,6 @@ const abi = parseAbi([
   'event CallbackFailure(address indexed target, bytes payload)',
   'event Transfer(address indexed from, address indexed to, uint256 value)',
 ]);
-const stopLossExecuted = parseAbiItem('event StopLossExecuted(uint256 ethAmountIn, uint256 minUsdcOut, uint256 timestamp)');
-const callbackConfiguration = parseAbiParameters('(uint256 chainId, address recipient, uint64 gasLimit, bytes payload)');
 const syncTopic = toEventSelector('Sync(uint112,uint112)');
 
 function requireCheck(ok: unknown, message: string): asserts ok {
@@ -105,7 +104,7 @@ async function funding(
   return { balance, debt, reserves, budget, extraGas, chargeGas };
 }
 
-async function preflight() {
+async function preflight(forRebound = false) {
   requireCheck(isAddressEqual(proxy, officialProxy), `Use the current Base Sepolia callback proxy: ${officialProxy}.`);
   const [baseId, lasnaId] = await Promise.all([base.getChainId(), reactive.getChainId()]);
   requireCheck(baseId === baseSepolia.id && lasnaId === lasna.id, 'Unexpected RPC chain ID.');
@@ -161,7 +160,7 @@ async function preflight() {
   const [reserve0, reserve1] = reserves;
   requireCheck(reserve0 > 0n && reserve1 > 0n, 'Pair is missing liquidity.');
   const price = reserve1 * 10n ** 18n / reserve0;
-  if (price > threshold || threshold === 0n) blockers.push('Current pair price is above the active stop-loss threshold or the threshold is disabled.');
+  if ((!forRebound && price > threshold) || threshold === 0n) blockers.push('Current pair price is above the active stop-loss threshold or the threshold is disabled.');
   if (hits + 1n < requiredHits) blockers.push(`One Sync cannot trigger this pipeline (hits ${hits}/${requiredHits}).`);
   if (lastTrigger !== 0n && lasnaTip.timestamp < lastTrigger + cooldown) blockers.push('RSC cooldown is still active.');
 
@@ -182,7 +181,7 @@ async function preflight() {
       throw new Error(`Live RPC swap simulation failed: ${reason} Verify Vault compatibility before funding.`);
     }
   }
-  return { reserve0, reserve1, token, owner, blockers };
+  return { reserve0, reserve1, token, owner, blockers, threshold };
 }
 
 type LasnaReceipt = Omit<TransactionReceipt, 'status'> & { status: Hex } & { refTx?: Hash; refChainId?: Hex; refEventIndex?: Hex };
@@ -202,10 +201,19 @@ async function main() {
   const expectSkip = args[0] === '--expect-skipped';
   if (expectSkip) args.shift();
   const replay = args[0] === '--verify-existing';
-  requireCheck((!expectSkip && (args.length === 0 || (args.length === 1 && ['--preflight', '--execute'].includes(args[0])))) ||
-    (replay && [3, 4].includes(args.length) && args.slice(1).every(hash => /^0x[0-9a-fA-F]{64}$/.test(hash))),
-  'Usage: test-full-loop.ts [--preflight | --execute | [--expect-skipped] --verify-existing ORIGIN LASNA [DESTINATION]]');
-  const execute = args[0] === '--execute';
+  requireCheck((!expectSkip && (args.length === 0 || (args.length === 1 && ['--preflight', '--execute', '--execute-skip'].includes(args[0])))) ||
+    (replay && (expectSkip ? [3, 4, 5] : [3, 4]).includes(args.length) &&
+      args.slice(1).every(hash => /^0x[0-9a-fA-F]{64}$/.test(hash))),
+  'Usage: test-full-loop.ts [--preflight | --execute | --execute-skip | [--expect-skipped] --verify-existing ORIGIN LASNA [DESTINATION [REBOUND]]]');
+  const executeSkip = args[0] === '--execute-skip';
+  const execute = args[0] === '--execute' || executeSkip;
+  const isolated = Boolean(process.env.PAIR_ADDRESS && process.env.VAULT_ADDRESS && process.env.RSC_ADDRESS &&
+    !isAddressEqual(pair, deployment.contracts.originPair.address) &&
+    !isAddressEqual(vault, deployment.contracts.destinationVault.address) &&
+    !isAddressEqual(rsc, deployment.contracts.reactiveSmartContract.address));
+  if (executeSkip) {
+    requireCheck(isolated, 'Set dedicated testbed PAIR_ADDRESS, VAULT_ADDRESS and RSC_ADDRESS before the rebound trial.');
+  }
   console.log({ pair, vault, rsc, proxy, mode: execute ? 'live execution' : 'read-only verification' });
   if (replay) {
     const vaultRead = { address: vault, abi } as const;
@@ -213,10 +221,11 @@ async function main() {
       base.readContract({ ...vaultRead, functionName: 'usdcToken' }),
       base.readContract({ ...vaultRead, functionName: 'owner' }),
     ]);
-    await verifyLoop({ token, owner }, args[1] as Hash, 0n, args[2] as Hash, args[3] as Hash | undefined, expectSkip);
+    await verifyLoop({ token, owner }, args[1] as Hash, 0n, args[2] as Hash, args[3] as Hash | undefined,
+      expectSkip, args[4] as Hash | undefined);
     return;
   }
-  const setup = await preflight();
+  const setup = await preflight(isolated);
   const key = process.env.TESTER_PRIVATE_KEY || process.env.DEPLOYER_PRIVATE_KEY;
   requireCheck(!key || /^0x[0-9a-fA-F]{64}$/.test(key), 'Tester private key has an invalid format.');
   const account = key ? privateKeyToAccount(key as Hex) : undefined;
@@ -227,15 +236,26 @@ async function main() {
     requireCheck(!execute, 'Configure TESTER_PRIVATE_KEY or DEPLOYER_PRIVATE_KEY locally to execute.');
     return;
   }
-  const trigger = { account: tester, address: pair, abi, functionName: 'setReserves', args: [setup.reserve0, setup.reserve1] } as const;
-  const [gas, fees, walletBalance] = await Promise.all([
-    base.estimateContractGas(trigger), base.estimateFeesPerGas(), base.getBalance({ address: tester }),
+  const scale = 10n ** 18n;
+  const thresholdReserve1 = setup.threshold * setup.reserve0 / scale;
+  const lowReserve1 = (executeSkip || (isolated && setup.reserve1 > thresholdReserve1))
+    ? thresholdReserve1 : setup.reserve1;
+  const highReserve1 = executeSkip ? ((setup.threshold + 1n) * setup.reserve0 + scale - 1n) / scale : lowReserve1;
+  requireCheck(lowReserve1 > 0n && highReserve1 < 2n ** 112n && (!executeSkip || highReserve1 > lowReserve1),
+    'Trial reserves exceed the test pair limits or cannot represent both prices.');
+  const trigger = { account: tester, address: pair, abi, functionName: 'setReserves', args: [setup.reserve0, lowReserve1] } as const;
+  const rebound = { ...trigger, args: [setup.reserve0, highReserve1] } as const;
+  const [gas, reboundGas, fees, walletBalance] = await Promise.all([
+    base.estimateContractGas(trigger), executeSkip ? base.estimateContractGas(rebound) : 0n,
+    base.estimateFeesPerGas(), base.getBalance({ address: tester }),
   ]);
   const gasLimit = (gas * 120n + 99n) / 100n;
-  const l1Fee = await estimateL1Fee(base, {
-    account: tester, to: pair, gas: gasLimit, ...fees, data: encodeFunctionData(trigger),
-  });
-  const feeBudget = gasLimit * fees.maxFeePerGas + (l1Fee * 120n + 99n) / 100n;
+  const reboundGasLimit = (reboundGas * 120n + 99n) / 100n;
+  const l1Fees = await Promise.all([
+    estimateL1Fee(base, { account: tester, to: pair, gas: gasLimit, ...fees, data: encodeFunctionData(trigger) }),
+    executeSkip ? estimateL1Fee(base, { account: tester, to: pair, gas: reboundGasLimit, ...fees, data: encodeFunctionData(rebound) }) : 0n,
+  ]);
+  const feeBudget = (gasLimit + reboundGasLimit) * fees.maxFeePerGas + (l1Fees.reduce((sum, fee) => sum + fee, 0n) * 120n + 99n) / 100n;
   console.log(`Tester ${tester}: ${formatEther(walletBalance)} ETH; estimated gas budget including L1 data: ${formatEther(feeBudget)} ETH.`);
   if (walletBalance < feeBudget) setup.blockers.push(
     `Base Sepolia faucet: fund ${tester} with at least ${formatEther(feeBudget - walletBalance)} ETH at the current quote.`,
@@ -249,13 +269,20 @@ async function main() {
     transport: http(process.env.BASE_SEPOLIA_RPC_URL || 'https://base-sepolia-rpc.publicnode.com'),
   });
   const lasnaCursor = await reactive.getBlockNumber();
-  const originHash = await wallet.writeContract({ ...trigger, account, gas: gasLimit, ...fees });
-  await verifyLoop(setup, originHash, lasnaCursor);
+  const nonce = await base.getTransactionCount({ address: account.address, blockTag: 'pending' });
+  const originHash = await wallet.writeContract({ ...trigger, account, gas: gasLimit, nonce, ...fees });
+  console.log(`Origin submitted: ${originHash}`);
+  let reboundHash: Hash | undefined;
+  if (executeSkip) {
+    reboundHash = await wallet.writeContract({ ...rebound, account, gas: reboundGasLimit, nonce: nonce + 1, ...fees });
+    console.log(`Rebound submitted: ${reboundHash}`);
+  }
+  await verifyLoop({ ...setup, reserve1: lowReserve1 }, originHash, lasnaCursor, undefined, undefined, executeSkip, reboundHash);
 }
 
 async function verifyLoop(
   setup: { token: Address; owner: Address; reserve0?: bigint; reserve1?: bigint }, originHash: Hash, lasnaCursor: bigint,
-  knownReaction?: Hash, knownDestination?: Hash, expectSkip = false,
+  knownReaction?: Hash, knownDestination?: Hash, expectSkip = false, reboundHash?: Hash,
 ) {
   console.log(`Origin: https://sepolia.basescan.org/tx/${originHash}`);
   const origin = await base.waitForTransactionReceipt({ hash: originHash, timeout: 180_000, checkReplacement: false });
@@ -334,7 +361,7 @@ async function verifyLoop(
       delivered[1].slice(74) === requestedPayload.slice(74);
   }
 
-  let destinationCursor = origin.blockNumber;
+  let correlation: 'system' | 'receipt-window' = 'system';
   const callbackHash = await waitFor('the matching Base Sepolia callback', async () => {
     const records = await reactive.readContract({
       address: system, abi, functionName: 'getCallbacks', args: [BigInt(reaction.hash)],
@@ -350,32 +377,38 @@ async function verifyLoop(
       return hash;
     }
 
-    // Omni can deliver on Base before Lasna indexes the delivery record. Match the signed proxy transaction
-    // against the system request within the origin block window.
-    if (expectSkip || reaction.callback.eventName !== 'OmniCallbackRequested') return;
-    if (knownDestination) return knownDestination;
-    const tip = await base.getBlockNumber({ cacheTime: 0 });
-    const toBlock = tip < origin.blockNumber + 500n ? tip : origin.blockNumber + 500n;
-    const matches = new Set<Hash>();
-    while (destinationCursor <= toBlock) {
-      const end = destinationCursor + 9n < toBlock ? destinationCursor + 9n : toBlock;
-      const events = await base.getLogs({
-        address: vault, event: stopLossExecuted, fromBlock: destinationCursor, toBlock: end,
-      });
-      for (const { transactionHash } of events) {
-        if (await matchingDelivery(transactionHash)) matches.add(transactionHash);
-      }
-      destinationCursor = end + 1n;
-    }
-    requireCheck(matches.size <= 1, 'Multiple proxy deliveries match the Lasna request.');
-    return [...matches][0];
+    if (!knownReaction || reaction.callback.eventName !== 'OmniCallbackRequested') return;
+    const [reactionBlock, finalized, cooldown] = await Promise.all([
+      reactive.getBlock({ blockNumber: BigInt(reaction.blockNumber) }), base.getBlock({ blockTag: 'finalized' }),
+      reactive.readContract({ address: rsc, abi, functionName: 'cooldownSeconds' }),
+    ]);
+    const payload = `${requestedPayload.slice(0, 10)}${rsc.slice(2).toLowerCase().padStart(64, '0')}${requestedPayload.slice(74)}` as Hex;
+    const fallback = await findStopLossDelivery(base, {
+      vault, proxy, payload, gasLimit: callbackGas, cooldown, originBlock: origin.blockNumber,
+      reactionTimestamp: reactionBlock.timestamp, finalizedBlock: finalized.number,
+    });
+    requireCheck(fallback.status === 'found',
+      'No indexed callback or unique finalized proxy delivery is available. Retry after Base finality if the run is recent.');
+    requireCheck(!knownDestination || knownDestination.toLowerCase() === fallback.hash, 'The verified window points to another transaction.');
+    correlation = 'receipt-window';
+    return fallback.hash;
   });
   requireCheck(await matchingDelivery(callbackHash), 'Proxy calldata does not match the Lasna callback.');
   console.log(`Destination: https://sepolia.basescan.org/tx/${callbackHash}`);
   const destination = await base.waitForTransactionReceipt({ hash: callbackHash, timeout: 180_000, checkReplacement: false });
+  const after = (left: TransactionReceipt, right: TransactionReceipt) => left.blockNumber > right.blockNumber ||
+    (left.blockNumber === right.blockNumber && left.transactionIndex > right.transactionIndex);
   requireCheck(destination.status === 'success' && destination.to && isAddressEqual(destination.to, proxy) &&
-    destination.blockNumber > origin.blockNumber &&
-    (reaction.callback.eventName !== 'OmniCallbackRequested' || destination.blockNumber <= origin.blockNumber + 500n), 'Destination receipt did not succeed through the configured proxy.');
+    after(destination, origin), 'Destination receipt did not succeed through the configured proxy.');
+  if (reboundHash) {
+    const rebound = await base.getTransactionReceipt({ hash: reboundHash });
+    requireCheck(rebound.status === 'success' && after(rebound, origin) && after(destination, rebound),
+      'The rebound transaction did not settle between the origin Sync and Vault delivery.');
+    const rises = parseEventLogs({ abi, eventName: 'Sync', logs: rebound.logs.filter(log => isAddressEqual(log.address, pair)) });
+    requireCheck(rises.length === 1 && rises[0].args.reserve0 > 0n &&
+      rises[0].args.reserve1 * 10n ** 18n / rises[0].args.reserve0 > threshold,
+    'The rebound receipt does not prove that the test pool price moved above the threshold.');
+  }
   const failures = parseEventLogs({ abi, eventName: 'CallbackFailure',
     logs: destination.logs.filter(log => isAddressEqual(log.address, proxy)) });
   requireCheck(!failures.some(log => isAddressEqual(log.args.target, vault)), 'Callback Proxy emitted CallbackFailure.');
@@ -432,6 +465,7 @@ async function verifyLoop(
     scenario: expectSkip
       ? 'Stop-loss skipped on public testnets after the price rebounded above the threshold.'
       : 'Stop-loss executed on public testnets using a deployed test pool and a test token.',
+    ...(reboundHash ? { reboundTxHash: reboundHash } : {}),
     verifiableTransactions: {
       step1_originEvent: {
         chainId: baseSepolia.id, contract: pair, event: 'Sync', blockNumber: Number(origin.blockNumber),
@@ -443,14 +477,14 @@ async function verifyLoop(
         txHash: reaction.hash, explorerUrl: `https://lasna.reactscan.net/tx/${reaction.hash}`,
       },
       step3_callbackExecution: {
-        chainId: baseSepolia.id, contract: vault, proxy, ...outcome,
+        chainId: baseSepolia.id, contract: vault, proxy, correlation, ...outcome,
         status: destination.status, blockNumber: Number(destination.blockNumber), txHash: callbackHash,
         token: setup.token, recipient: setup.owner,
         explorerUrl: `https://sepolia.basescan.org/tx/${callbackHash}`,
       },
     },
   };
-  const output = resolve(__dirname, `../FULL_LOOP_EVIDENCE.${originHash}.json`);
+  const output = resolve(process.env.FULL_LOOP_EVIDENCE_DIR ?? resolve(__dirname, '..'), `FULL_LOOP_EVIDENCE.${originHash}.json`);
   writeFileSync(output, JSON.stringify(evidence, null, 2) + '\n', { flag: 'wx' });
   console.log(`Verified evidence: ${output}`);
 }

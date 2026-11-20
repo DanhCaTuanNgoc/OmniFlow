@@ -23,11 +23,13 @@ export type DeploymentSummary = {
     vaultChainId: number;
   };
   reconciliationError?: string;
+  broadcastLimitReached?: boolean;
 };
 
 export type DeploymentDetail = DeploymentSummary & {
   graph: unknown;
   requestKey: string;
+  latestExecution: { status: string; timestamp: string; destinationTxHash?: Hash } | null;
   steps: { kind: DeploymentStep; txHash: Hash; chainId: number; blockNumber: string; blockHash: Hash }[];
   runtime: {
     status: 'unverified' | 'awaiting-authorization' | 'awaiting-principal' | 'awaiting-fees' | 'ready';

@@ -43,7 +43,6 @@ function ActiveRoute() {
 function WalletDeployments({ owner, selectedId }: { owner: Address; selectedId: string | null }) {
   const router = useRouter();
   const [list, setList] = useState<DeploymentSummary[]>();
-  const [drafts, setDrafts] = useState<{ id: string; name: string }[]>();
   const [detail, setDetail] = useState<DeploymentDetail>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
@@ -54,12 +53,7 @@ function WalletDeployments({ owner, selectedId }: { owner: Address; selectedId: 
     try {
       const result = await workspaceRequest<{ deployments: DeploymentSummary[] }>(owner, '/pipeline/deployments');
       setList(result.deployments);
-      const [draftList, selected] = await Promise.all([
-        workspaceRequest<{ drafts: { id: string; name: string }[] }>(owner, '/pipeline/drafts'),
-        id ? workspaceRequest<DeploymentDetail>(owner, `/pipeline/deployments/${encodeURIComponent(id)}`) : undefined,
-      ]);
-      setDrafts(draftList.drafts);
-      setDetail(selected);
+      setDetail(id ? await workspaceRequest<DeploymentDetail>(owner, `/pipeline/deployments/${encodeURIComponent(id)}`) : undefined);
     } catch (error) {
       setDetail(undefined);
       setError(error instanceof Error ? error.message : 'Unable to load deployments.');
@@ -100,12 +94,6 @@ function WalletDeployments({ owner, selectedId }: { owner: Address; selectedId: 
         </ul>
       ))}
       {detail?.pipelineId === selectedId && <DeploymentPanel key={detail.pipelineId} deployment={detail} owner={owner} reload={() => load(detail.pipelineId)} />}
-      {drafts && drafts.length > 0 && <section className="ws-panel space-y-2 p-4" aria-label="Saved drafts">
-        <h2 className="font-semibold">Saved drafts</h2>
-        <ul className="space-y-2">
-          {drafts.map(draft => <li key={draft.id}><Link className="ws-address" href={`/workspace/studio?pipeline=${draft.id}`}>{draft.name}</Link></li>)}
-        </ul>
-      </section>}
     </>
   );
 }
@@ -166,17 +154,29 @@ function DeploymentPanel({ deployment, owner, reload }: {
       <dl className="grid gap-3 text-sm md:grid-cols-2">
         <dt className="text-[var(--ws-muted)]">Base Sepolia Vault</dt>
         <dd><a className="ws-address break-all" href={`https://sepolia.basescan.org/address/${contracts.vaultAddress}`}>{contracts.vaultAddress}</a></dd>
-        <dt className="text-[var(--ws-muted)]">Lasna deployment transaction</dt>
-        <dd><a className="ws-address break-all" href={`https://lasna.reactscan.net/tx/${contracts.rscTxHash}`}>{contracts.rscTxHash}</a></dd>
+        <dt className="text-[var(--ws-muted)]">{status === 'signed' ? 'Stored Lasna transaction hash' : 'Lasna deployment transaction'}</dt>
+        <dd className="break-all">{status === 'signed' ? <code>{contracts.rscTxHash}</code> :
+          <a className="ws-address" href={`https://lasna.reactscan.net/tx/${contracts.rscTxHash}`}>{contracts.rscTxHash}</a>}</dd>
         {contracts.rscAddress && <>
           <dt className="text-[var(--ws-muted)]">Lasna RSC</dt>
           <dd><a className="ws-address break-all" href={`https://lasna.reactscan.net/address/${contracts.rscAddress}`}>{contracts.rscAddress}</a></dd>
         </>}
       </dl>
+      {deployment.latestExecution && (
+        <p className="text-sm text-[var(--ws-muted)]">
+          Latest execution <span className="font-medium text-slate-100">{deployment.latestExecution.status.toLowerCase()}</span>
+          {deployment.latestExecution.destinationTxHash && (
+            <a className="ws-address ml-2" href={`https://sepolia.basescan.org/tx/${deployment.latestExecution.destinationTxHash}`}>Vault receipt</a>
+          )}
+        </p>
+      )}
       {status === 'signed' && (
-        <button type="button" className="ws-button" disabled={Boolean(busy)} onClick={() => void retryDeployment()}>
-          {busy ? 'Checking Lasna…' : 'Resume stored deployment'}
-        </button>
+        <div className="space-y-2">
+          {deployment.broadcastLimitReached && <p role="status" className="text-sm text-amber-200">Broadcast retry limit reached. Check the stored transaction for a receipt.</p>}
+          <button type="button" className="ws-button" disabled={Boolean(busy)} onClick={() => void retryDeployment()}>
+            {busy ? 'Checking Lasna…' : deployment.broadcastLimitReached ? 'Check stored receipt' : 'Resume stored deployment'}
+          </button>
+        </div>
       )}
       {runtime && <>
         <dl className="grid gap-3 border-t border-[var(--ws-border)] pt-3 text-sm tabular-nums md:grid-cols-2">

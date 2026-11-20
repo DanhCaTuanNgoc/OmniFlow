@@ -16,7 +16,7 @@ export async function findStopLossDelivery(
 ): Promise<{ status: 'pending' | 'unverified' } | { status: 'found'; hash: Hash }> {
   // Repeated requests from this RSC have identical calldata. Only use a time window shorter than its cooldown.
   if (criteria.cooldown < evidenceWindowSeconds) return { status: 'unverified' };
-  const cap = criteria.originBlock + 500n;
+  const cap = criteria.originBlock + 2_000n;
   const end = criteria.finalizedBlock < cap ? criteria.finalizedBlock : cap;
   if (end < criteria.originBlock) return { status: 'pending' };
   const deadline = criteria.reactionTimestamp + evidenceWindowSeconds;

@@ -134,6 +134,7 @@ class EventListenerService {
     const result = (status: ActivityLogEntry['status'], reason?: string): ActivityLogEntry =>
       ({ ...report, status, details: { ...report.details, ...(reason ? { reason } : {}) } });
 
+    if (entry.conflictingReaction) return result('UNVERIFIED', 'Multiple reactions reference this source log.');
     if (originBlock.hash !== origin.blockHash) return result('REORGED', 'Source receipt is outside the canonical Base chain.');
     const syncs = parseEventLogs({
       abi, eventName: 'Sync', logs: origin.logs.filter(log =>
@@ -195,7 +196,8 @@ class EventListenerService {
     if (destination.blockHash !== destinationBlock.hash || transaction.blockHash !== destination.blockHash) {
       return result('REORGED', 'Callback receipt is outside the canonical Base chain.');
     }
-    if (!transaction.to || !isAddressEqual(transaction.to, proxy) || destination.blockNumber < origin.blockNumber) {
+    if (!transaction.to || !isAddressEqual(transaction.to, proxy) || destination.blockNumber < origin.blockNumber ||
+        (destination.blockNumber === origin.blockNumber && destination.transactionIndex <= origin.transactionIndex)) {
       return result('UNVERIFIED', 'Destination transaction does not match the proxy and source order.');
     }
     const delivered = decodeFunctionData({ abi, data: transaction.input });
@@ -215,17 +217,22 @@ class EventListenerService {
     const logs = destination.logs.filter(log => isAddressEqual(log.address, vault));
     const skipped = parseEventLogs({ abi: ACTION_VAULT_ABI, eventName: 'OrderSkipped', logs });
     const executed = parseEventLogs({ abi: ACTION_VAULT_ABI, eventName: 'StopLossExecuted', logs });
-    if (skipped.length === 1 && executed.length === 0) {
-      report.details.executedPrice = skipped[0].args.currentPrice.toString();
-      return result('SKIPPED', skipped[0].args.reason);
-    }
-    if (executed.length !== 1 || skipped.length !== 0) return result('UNVERIFIED', 'Vault outcome is ambiguous.');
+    if (skipped.length + executed.length !== 1) return result('UNVERIFIED', 'Vault outcome is ambiguous.');
     const token = await base.readContract({
       address: vault, abi: ACTION_VAULT_ABI, functionName: 'usdcToken', blockNumber: destination.blockNumber,
     });
+    const transfers = parseEventLogs({ abi, eventName: 'Transfer', logs: destination.logs.filter(log => isAddressEqual(log.address, token)) });
+    if (skipped.length === 1 && executed.length === 0) {
+      const { reason, currentPrice } = skipped[0].args;
+      if (reason !== 'Price bounced back above stop threshold' || currentPrice <= params.priceThresholdWei ||
+          transfers.some(log => isAddressEqual(log.args.to, deployment.owner) || isAddressEqual(log.args.from, vault))) {
+        return result('UNVERIFIED', 'The receipt does not prove a price-rebound skip without payout.');
+      }
+      report.details.executedPrice = currentPrice.toString();
+      return result('SKIPPED', reason);
+    }
     const { ethAmountIn, minUsdcOut } = executed[0].args;
-    const payouts = parseEventLogs({ abi, eventName: 'Transfer', logs: destination.logs.filter(log => isAddressEqual(log.address, token)) })
-      .filter(log => isAddressEqual(log.args.to, deployment.owner) && log.args.value >= minUsdcOut);
+    const payouts = transfers.filter(log => isAddressEqual(log.args.to, deployment.owner) && log.args.value >= minUsdcOut);
     if (ethAmountIn === 0n || minUsdcOut === 0n || payouts.length !== 1) {
       return result('UNVERIFIED', 'Owner payout and minimum output could not be proven.');
     }

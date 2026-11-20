@@ -15,7 +15,14 @@ logsRouter.get('/', (req: Request, res: Response) => {
   }
   const owns = (id: string) => deploymentStore().owns(session.owner, id);
   if (pipelineId && !owns(pipelineId)) return res.status(404).json({ error: 'Deployment not found.' });
-  const logs = deploymentStore().history(session.owner, pipelineId || undefined);
+  const { before, sequence } = req.query;
+  if ((before !== undefined || sequence !== undefined) &&
+      (typeof before !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(before) ||
+        typeof sequence !== 'string' || !/^\d+$/.test(sequence) || !Number.isSafeInteger(Number(sequence)))) {
+    return res.status(400).json({ error: 'Invalid activity cursor.' });
+  }
+  const { logs, next } = deploymentStore().historyPage(session.owner, pipelineId || undefined,
+    typeof before === 'string' ? { timestamp: before, sequence: Number(sequence) } : undefined);
 
   return res.json({
     success: true,
@@ -23,5 +30,6 @@ logsRouter.get('/', (req: Request, res: Response) => {
     pipelineFilter: pipelineId || 'ALL',
     indexer: pipelineId ? eventListenerService.state(pipelineId) ?? null : null,
     logs,
+    next,
   });
 });

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ReactFlow,
   Controls,
@@ -22,13 +23,10 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useAccount } from 'wagmi';
 import { RECIPE_PRESETS } from '@/lib/recipes';
-import { resolveStopLoss, type StopLossGraph } from '@omniflow/shared';
+import { resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { APP_CONFIG } from '@/lib/constants';
-import { parsePipelineDraft, studioGraph } from '@/lib/pipelineDraft';
+import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, studioGraph } from '@/lib/pipelineDraft';
 import { workspaceRequest } from '@/lib/workspaceSession';
-import { STOP_LOSS_TEMPLATE } from '@omniflow/shared';
-
-const guestDraftKey = 'omniflow.studio.guest.v1';
 
 import {
   WatchDEXPriceNode,
@@ -94,6 +92,7 @@ function StudioCanvasInner() {
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [isPaletteOpen, setPaletteOpen] = useState(false);
   const [activeRecipeId, setActiveRecipeId] = useState<string>('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -103,8 +102,12 @@ function StudioCanvasInner() {
   const [savedDraft, setSavedDraft] = useState<{ id: string; updatedAt: number }>();
   const [draftMessage, setDraftMessage] = useState<string>();
   const [draftBusy, setDraftBusy] = useState(false);
+  const [pipelineName, setPipelineName] = useState('');
   const pipelineParam = searchParams.get('pipeline');
   const deploymentParam = searchParams.get('deployment');
+  const localParam = searchParams.get('local');
+  const isSnapshot = Boolean(deploymentParam && !savedDraft);
+  const draftName = pipelineName.trim() || RECIPE_PRESETS[activeRecipeId]?.title || 'Custom pipeline';
 
   // Hydrate preset from query parameter ?recipe=...
   useEffect(() => {
@@ -119,18 +122,19 @@ function StudioCanvasInner() {
   }, [searchParams, setNodes, setEdges]);
 
   useEffect(() => {
-    if (searchParams.get('recipe') || pipelineParam || deploymentParam) return;
-    const saved = localStorage.getItem(guestDraftKey);
-    if (!saved) return;
+    if (!localParam) return;
     try {
-      const restored = parsePipelineDraft(saved, draftNodeTypes);
+      const saved = listBrowserDrafts().find(draft => draft.id === localParam);
+      if (!saved) throw new Error('Browser draft not found.');
+      const restored = parsePipelineDraft(JSON.stringify(saved.graph), draftNodeTypes);
       setNodes(restored.nodes);
       setEdges(restored.edges);
       setDraftNetworks(restored.networks);
+      setPipelineName(saved.name);
     } catch {
       setValidationWarning('The browser draft could not be opened. Import a valid Studio JSON file.');
     }
-  }, [searchParams, pipelineParam, deploymentParam, setNodes, setEdges]);
+  }, [localParam, setNodes, setEdges]);
 
   async function openSavedGraph() {
     if (!address || (!pipelineParam && !deploymentParam)) return;
@@ -140,12 +144,13 @@ function StudioCanvasInner() {
       const path = deploymentParam
         ? `/pipeline/deployments/${encodeURIComponent(deploymentParam)}`
         : `/pipeline/drafts/${encodeURIComponent(pipelineParam!)}`;
-      const snapshot = await workspaceRequest<{ graph: unknown; id?: string; updatedAt?: number }>(address, path);
+      const snapshot = await workspaceRequest<{ graph: { metadata: { name: string } }; id?: string; updatedAt?: number }>(address, path);
       const draft = parsePipelineDraft(JSON.stringify(snapshot.graph), draftNodeTypes);
       setNodes(draft.nodes);
       setEdges(draft.edges);
       setDraftNetworks(draft.networks);
       setSelectedNodeId(null);
+      setPipelineName(snapshot.graph.metadata.name);
       setSavedDraft(snapshot.id && snapshot.updatedAt !== undefined ? { id: snapshot.id, updatedAt: snapshot.updatedAt } : undefined);
       setDraftMessage(deploymentParam ? 'Deployment snapshot opened. Save to create an editable draft.' : 'Saved draft opened.');
     } catch (error) {
@@ -161,15 +166,18 @@ function StudioCanvasInner() {
     try {
       const graph = studioGraph(nodes, edges, draftNetworks ?? STOP_LOSS_TEMPLATE.networks);
       if (isConnected && address) {
-        const name = RECIPE_PRESETS[activeRecipeId]?.title || 'Custom pipeline';
-        setSavedDraft(await workspaceRequest(address, '/pipeline/drafts', {
+        const result = await workspaceRequest<{ id: string; updatedAt: number }>(address, '/pipeline/drafts', {
           method: 'POST', body: JSON.stringify({
-            graph: { ...graph, metadata: { name, ownerAddress: address } }, revision: savedDraft,
+            graph: { ...graph, metadata: { name: draftName, ownerAddress: address } }, revision: savedDraft,
           }),
-        }));
+        });
+        setSavedDraft(result);
+        router.replace(`/workspace/studio?pipeline=${result.id}`, { scroll: false });
         setDraftMessage('Draft saved to your wallet workspace.');
       } else {
-        localStorage.setItem(guestDraftKey, JSON.stringify(graph));
+        const id = localParam ?? crypto.randomUUID();
+        saveBrowserDraft(id, draftName, graph);
+        router.replace(`/workspace/studio?local=${id}`, { scroll: false });
         setDraftMessage('Draft saved in this browser.');
       }
     } catch (error) {
@@ -404,7 +412,7 @@ function StudioCanvasInner() {
 
   return (
     <div className="relative flex h-full min-h-[24rem] w-full overflow-hidden">
-      <div id="studio-node-palette" className={`absolute inset-y-0 left-0 z-30 w-full max-w-[17rem] shrink-0 flex-col bg-[var(--ws-rail)] lg:relative lg:flex ${isPaletteOpen ? 'flex' : 'hidden'}`}>
+      {!isSnapshot && <div id="studio-node-palette" className={`absolute inset-y-0 left-0 z-30 w-full max-w-[17rem] shrink-0 flex-col bg-[var(--ws-rail)] lg:relative lg:flex ${isPaletteOpen ? 'flex' : 'hidden'}`}>
         <div className="border-b border-[var(--ws-border)] p-2 lg:hidden">
           <button type="button" className="ws-button" onClick={() => setPaletteOpen(false)}>Close nodes</button>
         </div>
@@ -412,26 +420,29 @@ function StudioCanvasInner() {
           handleAddNodeFromPalette(type, data);
           setPaletteOpen(false);
         }} />
-      </div>
+      </div>}
 
       <div className="relative flex h-full min-w-0 flex-1 flex-col" ref={reactFlowWrapper}>
         <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--ws-border)] bg-[var(--ws-rail)] px-3 py-2.5 sm:px-4">
           <div className="flex min-w-0 items-center gap-2">
-            <button type="button" className="ws-button lg:hidden" aria-expanded={isPaletteOpen} aria-controls="studio-node-palette"
-              onClick={() => setPaletteOpen(open => !open)}>Add nodes</button>
-            <h1 className="truncate text-sm font-semibold">{RECIPE_PRESETS[activeRecipeId]?.title || 'Custom pipeline'}</h1>
+            {!isSnapshot && <button type="button" className="ws-button lg:hidden" aria-expanded={isPaletteOpen} aria-controls="studio-node-palette"
+              onClick={() => setPaletteOpen(open => !open)}>Add nodes</button>}
+            <h1 className="truncate text-sm font-semibold">{draftName}</h1>
           </div>
 
           <div className="ws-actions">
+            <Link className="ws-button" href="/workspace/studio">All pipelines</Link>
             {(pipelineParam || deploymentParam) && (
               <button type="button" className="ws-button" disabled={!isConnected || draftBusy} onClick={() => void openSavedGraph()}>
                 {deploymentParam ? 'Open snapshot' : 'Open saved draft'}
               </button>
             )}
             <button type="button" className="ws-button" disabled={draftBusy || !nodes.length} onClick={() => void saveGraph()}>
-              Save draft
+              {isSnapshot ? 'Save a draft copy' : 'Save draft'}
             </button>
-            <select aria-label="Recipe preset" value={activeRecipeId} onChange={(event) => handleSelectPreset(event.target.value)}
+            {!isSnapshot && <input aria-label="Pipeline name" placeholder="Pipeline name" value={pipelineName}
+              maxLength={120} onChange={event => setPipelineName(event.target.value)} className="ws-button max-w-[10rem]" />}
+            <select aria-label="Recipe preset" value={activeRecipeId} disabled={isSnapshot} onChange={(event) => handleSelectPreset(event.target.value)}
               className="ws-button max-w-[11rem] bg-[var(--ws-panel)]">
               <option value="">Recipe preset</option>
               {Object.values(RECIPE_PRESETS).map(preset => (
@@ -441,15 +452,15 @@ function StudioCanvasInner() {
             <button type="button" className="ws-button" onClick={() => setIsSolidityOpen(true)} disabled={!nodes.length}>
               <Code2 size={14} aria-hidden="true" /> Solidity
             </button>
-            <button type="button" className="ws-button" onClick={handleResetGraph} disabled={!nodes.length}>
+            <button type="button" className="ws-button" onClick={handleResetGraph} disabled={!nodes.length || isSnapshot}>
               <RotateCcw size={14} aria-hidden="true" /> Clear
             </button>
             <button type="button" className="ws-button" onClick={handleExportGraph} disabled={!nodes.length}>Export JSON</button>
-            <label className="ws-button cursor-pointer focus-within:outline focus-within:outline-2">
+            {!isSnapshot && <label className="ws-button cursor-pointer focus-within:outline focus-within:outline-2">
               Import JSON
               <input type="file" className="sr-only" accept=".json,application/json" onChange={handleImportGraph} />
-            </label>
-            <button type="button" className="ws-button ws-button-primary" onClick={handleOpenDeploy} disabled={!isConnected || !nodes.length}>
+            </label>}
+            <button type="button" className="ws-button ws-button-primary" onClick={handleOpenDeploy} disabled={!isConnected || !nodes.length || isSnapshot}>
               <Rocket size={14} aria-hidden="true" /> {isConnected ? 'Deploy' : 'Connect wallet to deploy'}
             </button>
           </div>
@@ -476,8 +487,12 @@ function StudioCanvasInner() {
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
             onInit={setReactFlowInstance}
-            onDrop={onDrop}
+            onDrop={isSnapshot ? undefined : onDrop}
             onDragOver={onDragOver}
+            nodesDraggable={!isSnapshot}
+            nodesConnectable={!isSnapshot}
+            elementsSelectable={!isSnapshot}
+            deleteKeyCode={isSnapshot ? null : undefined}
             isValidConnection={isValidConnection}
             fitView
             fitViewOptions={{ padding: 0.2 }}
@@ -508,7 +523,7 @@ function StudioCanvasInner() {
       </div>
 
       {/* Right Node Inspector */}
-      {selectedNode && (
+      {selectedNode && !isSnapshot && (
         <div className="absolute inset-y-0 right-0 z-30 w-full max-w-[20rem] shrink-0 lg:relative">
         <InspectorPanel
           selectedNode={selectedNode}
@@ -528,6 +543,7 @@ function StudioCanvasInner() {
         onClose={() => setIsDeployOpen(false)}
         graph={studioGraph(nodes, edges, draftNetworks)}
         workspacePipelineId={savedDraft?.id}
+        name={draftName}
       />
 
       {/* Solidity Preview Modal */}
@@ -544,10 +560,15 @@ function StudioCanvasInner() {
 
 export function StudioCanvas() {
   const { address, isConnected } = useAccount();
+  const owner = isConnected ? address : undefined;
+  const [identity, setIdentity] = useState({ owner, version: 0 });
+  if (identity.owner !== owner) {
+    setIdentity({ owner, version: identity.version + (identity.owner ? 1 : 0) });
+  }
   return (
     <ReactFlowProvider>
       <Suspense fallback={<div className="w-full h-full bg-[#07080d]" />}>
-        <StudioCanvasInner key={isConnected ? address : 'guest'} />
+        <StudioCanvasInner key={identity.version} />
       </Suspense>
     </ReactFlowProvider>
   );

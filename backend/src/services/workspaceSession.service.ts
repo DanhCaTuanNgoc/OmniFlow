@@ -1,4 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
+import { mkdirSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import Database from 'better-sqlite3';
 import { getAddress, verifyMessage, type Address, type Hex } from 'viem';
 import { createSiweMessage } from 'viem/siwe';
 import { env } from '../config/env.js';
@@ -16,23 +19,27 @@ function tokenDigest(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
-function reclaimExpired<T extends Session>(entries: Map<string, T>, now: number) {
-  if (entries.size < capacity) return;
-  for (const [key, value] of entries) {
-    if (value.expiresAt <= now) entries.delete(key);
-  }
-}
-
 export class WorkspaceSessionService {
-  private readonly challenges = new Map<string, Challenge>();
-  private readonly sessions = new Map<string, Session>();
+  private readonly db: Database.Database;
 
-  constructor(private readonly now: () => number = Date.now) {}
+  constructor(private readonly now: () => number = Date.now, path = ':memory:') {
+    if (path !== ':memory:') mkdirSync(dirname(resolve(path)), { recursive: true });
+    this.db = new Database(path);
+    this.db.pragma('journal_mode = WAL');
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS siwe_challenges (
+        nonce TEXT PRIMARY KEY, origin TEXT NOT NULL, owner TEXT NOT NULL, message TEXT NOT NULL, expiresAt INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS siwe_challenge_expiry ON siwe_challenges (expiresAt);
+      CREATE TABLE IF NOT EXISTS wallet_sessions (
+        digest TEXT PRIMARY KEY, origin TEXT NOT NULL, owner TEXT NOT NULL, expiresAt INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS wallet_session_expiry ON wallet_sessions (expiresAt);
+    `);
+  }
 
   createChallenge(address: Address) {
     const now = this.now();
-    reclaimExpired(this.challenges, now);
-    if (this.challenges.size >= capacity) return undefined;
     const nonce = randomBytes(16).toString('hex');
     const owner = getAddress(address.toLowerCase());
     const expiresAt = now + challengeTtl;
@@ -48,40 +55,56 @@ export class WorkspaceSessionService {
       issuedAt: new Date(now),
       expirationTime: new Date(expiresAt),
     });
-    this.challenges.set(nonce, { message, owner, expiresAt });
-    return { nonce, message, expiresAt };
+    return this.db.transaction(() => {
+      this.db.prepare('DELETE FROM siwe_challenges WHERE expiresAt <= ?').run(now);
+      const { count } = this.db.prepare('SELECT COUNT(*) AS count FROM siwe_challenges').get() as { count: number };
+      if (count >= capacity) return undefined;
+      this.db.prepare('INSERT INTO siwe_challenges VALUES (?, ?, ?, ?, ?)')
+        .run(nonce, workspaceOrigin.origin, owner, message, expiresAt);
+      return { nonce, message, expiresAt };
+    }).immediate();
   }
 
   async verify(nonce: string, signature: Hex) {
-    const challenge = this.challenges.get(nonce);
-    if (!challenge || challenge.expiresAt <= this.now()) return undefined;
+    const challenge = this.db.prepare(`
+      SELECT owner, message, expiresAt FROM siwe_challenges WHERE nonce = ? AND origin = ? AND expiresAt > ?
+    `).get(nonce, workspaceOrigin.origin, this.now()) as Challenge | undefined;
+    if (!challenge) return undefined;
     const valid = await verifyMessage({
       address: challenge.owner,
       message: challenge.message,
       signature,
     }).catch(() => false);
-    const now = this.now();
-    if (!valid || challenge.expiresAt <= now || !this.challenges.delete(nonce)) return undefined;
-
-    reclaimExpired(this.sessions, now);
-    if (this.sessions.size >= capacity) return undefined;
-    const token = randomBytes(32).toString('hex');
-    const session = { owner: challenge.owner, expiresAt: now + sessionTtl };
-    this.sessions.set(tokenDigest(token), session);
-    return { token, ...session };
+    if (!valid) return undefined;
+    return this.db.transaction(() => {
+      const now = this.now();
+      this.db.prepare('DELETE FROM wallet_sessions WHERE expiresAt <= ?').run(now);
+      const { count } = this.db.prepare('SELECT COUNT(*) AS count FROM wallet_sessions').get() as { count: number };
+      if (count >= capacity) return undefined;
+      const consumed = this.db.prepare('DELETE FROM siwe_challenges WHERE nonce = ? AND origin = ? AND expiresAt > ?')
+        .run(nonce, workspaceOrigin.origin, now);
+      if (!consumed.changes) return undefined;
+      const token = randomBytes(32).toString('hex');
+      const session = { owner: challenge.owner, expiresAt: now + sessionTtl };
+      this.db.prepare('INSERT INTO wallet_sessions VALUES (?, ?, ?, ?)')
+        .run(tokenDigest(token), workspaceOrigin.origin, session.owner, session.expiresAt);
+      return { token, ...session };
+    }).immediate();
   }
 
   getSession(token: string | undefined) {
     if (!token || !/^[a-f0-9]{64}$/.test(token)) return undefined;
-    const key = tokenDigest(token);
-    const session = this.sessions.get(key);
-    if (session && session.expiresAt > this.now()) return session;
-    this.sessions.delete(key);
-    return undefined;
+    return this.db.prepare('SELECT owner, expiresAt FROM wallet_sessions WHERE digest = ? AND origin = ? AND expiresAt > ?')
+      .get(tokenDigest(token), workspaceOrigin.origin, this.now()) as Session | undefined;
   }
 
   revoke(token: string | undefined) {
-    if (token) this.sessions.delete(tokenDigest(token));
+    if (token) this.db.prepare('DELETE FROM wallet_sessions WHERE digest = ? AND origin = ?')
+      .run(tokenDigest(token), workspaceOrigin.origin);
+  }
+
+  close() {
+    this.db.close();
   }
 }
 
@@ -89,4 +112,4 @@ export function bearerToken(header: string | undefined) {
   return /^Bearer ([a-f0-9]{64})$/i.exec(header ?? '')?.[1];
 }
 
-export const workspaceSessions = new WorkspaceSessionService();
+export const workspaceSessions = new WorkspaceSessionService(Date.now, env.WORKSPACE_DB_PATH);
