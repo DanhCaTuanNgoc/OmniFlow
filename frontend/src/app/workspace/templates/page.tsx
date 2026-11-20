@@ -3,6 +3,9 @@
 import React, { useState, useMemo } from 'react';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { RECIPE_PRESETS } from '@/lib/recipes';
+import { saveBrowserDraft } from '@/lib/pipelineDraft';
 import { 
   Library, 
   ArrowRight, 
@@ -238,9 +241,18 @@ if (velocityDrop > VELOCITY_LIMIT) {
 ];
 
 export default function TemplateLibraryPage() {
+  const router = useRouter();
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [inspectingRecipe, setInspectingRecipe] = useState<Recipe | null>(null);
+
+  const handleHydrateRecipe = (recipe: Recipe) => {
+    const preset = RECIPE_PRESETS[recipe.id];
+    const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
+    const graph = preset ? { nodes: preset.nodes, edges: preset.edges } : { nodes: [], edges: [] };
+    saveBrowserDraft(newId, recipe.title, graph, recipe.description);
+    router.push(`/workspace/studio?local=${encodeURIComponent(newId)}`);
+  };
 
   const categories = [
     { id: 'all', label: 'All Recipes', count: RECIPES.length },
@@ -413,15 +425,15 @@ export default function TemplateLibraryPage() {
                     <span>Inspect Specs</span>
                   </button>
 
-                  <Link
-                    href={`/workspace/studio?recipe=${recipe.id}`}
-                    prefetch={true}
+                  <button
+                    type="button"
+                    onClick={() => handleHydrateRecipe(recipe)}
                     className="ws-button ws-button-primary flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-semibold"
                   >
                     <Zap className="size-3.5" />
                     <span>Hydrate onto Canvas</span>
                     <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </Link>
+                  </button>
                 </div>
               </div>
             );
@@ -528,15 +540,18 @@ export default function TemplateLibraryPage() {
                 Close
               </button>
 
-              <Link
-                href={`/workspace/studio?recipe=${inspectingRecipe.id}`}
-                prefetch={true}
-                className="flex items-center gap-2 px-5 py-2 text-xs font-semibold rounded-lg bg-white hover:bg-slate-200 text-black transition-colors shadow-sm"
+              <button
+                type="button"
+                onClick={() => {
+                  setInspectingRecipe(null);
+                  handleHydrateRecipe(inspectingRecipe);
+                }}
+                className="ws-button ws-button-primary flex items-center gap-2 px-5 py-2 text-xs font-semibold"
               >
-                <Zap className="w-3.5 h-3.5 fill-black" />
+                <Zap className="size-3.5" />
                 <span>Hydrate onto Canvas</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+                <ArrowRight className="size-3.5" />
+              </button>
             </div>
           </div>
         </div>

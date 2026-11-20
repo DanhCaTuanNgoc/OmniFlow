@@ -53,7 +53,7 @@ export function PipelineStudioHub() {
 
   // Filter & Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterSource, setFilterSource] = useState<'ALL' | 'LOCAL' | 'WALLET' | 'RECIPES'>('ALL');
+  const [filterSource, setFilterSource] = useState<'ALL' | 'LOCAL' | 'WALLET'>('ALL');
 
   // Modals
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -146,21 +146,6 @@ export function PipelineStudioHub() {
       });
     }
 
-    // Recipe Presets
-    for (const recipe of Object.values(RECIPE_PRESETS)) {
-      items.push({
-        id: recipe.id,
-        name: recipe.title,
-        description: recipe.description,
-        updatedAt: 0,
-        source: 'recipe',
-        nodeCount: recipe.nodesCount,
-        edgeCount: recipe.edges.length,
-        triggerType: recipe.nodes[0]?.type,
-        graph: { nodes: recipe.nodes, edges: recipe.edges },
-      });
-    }
-
     return items;
   }, [localDrafts, walletDrafts]);
 
@@ -170,7 +155,6 @@ export function PipelineStudioHub() {
       // Source filter
       if (filterSource === 'LOCAL' && item.source !== 'local') return false;
       if (filterSource === 'WALLET' && item.source !== 'wallet') return false;
-      if (filterSource === 'RECIPES' && item.source !== 'recipe') return false;
 
       // Search query
       if (searchQuery.trim()) {
@@ -197,11 +181,17 @@ export function PipelineStudioHub() {
   const handleCreateBlank = (name: string) => {
     const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
     saveBrowserDraft(newId, name, { nodes: [], edges: [] });
+    refreshLocalDrafts();
     router.push(`/workspace/studio?local=${encodeURIComponent(newId)}`);
   };
 
   const handleSelectRecipe = (recipeId: string) => {
-    router.push(`/workspace/studio?recipe=${encodeURIComponent(recipeId)}`);
+    const preset = RECIPE_PRESETS[recipeId];
+    const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
+    const graph = preset ? { nodes: preset.nodes, edges: preset.edges } : { nodes: [], edges: [] };
+    saveBrowserDraft(newId, preset?.title || 'New Pipeline', graph, preset?.description);
+    refreshLocalDrafts();
+    router.push(`/workspace/studio?local=${encodeURIComponent(newId)}`);
   };
 
   const handleRenameSave = (newName: string, newDescription: string) => {
@@ -355,7 +345,6 @@ export function PipelineStudioHub() {
               { key: 'ALL', label: `All (${unifiedPipelines.length})` },
               { key: 'LOCAL', label: `Local (${localDrafts.length})` },
               { key: 'WALLET', label: `Wallet (${walletDrafts.length})` },
-              { key: 'RECIPES', label: `Recipes (${Object.keys(RECIPE_PRESETS).length})` },
             ] as const
           ).map((tab) => (
             <button
@@ -396,11 +385,13 @@ export function PipelineStudioHub() {
             <Layers className="size-6" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-white">No pipelines found</h3>
+            <h3 className="text-sm font-semibold text-white">
+              {searchQuery ? 'No pipelines found' : 'No pipelines created yet'}
+            </h3>
             <p className="text-xs text-[var(--ws-muted)] max-w-sm mx-auto">
               {searchQuery
                 ? 'No pipelines match your current search query. Try clearing the search or switching filters.'
-                : 'You have no saved pipeline drafts yet. Create a new pipeline or pick from our curated recipes.'}
+                : 'Choose a verified automation blueprint from the Template Library or create a new blank pipeline to get started.'}
             </p>
           </div>
           <div className="flex items-center justify-center gap-2 pt-2">
@@ -416,14 +407,23 @@ export function PipelineStudioHub() {
                 Clear Search
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={() => setIsNewModalOpen(true)}
-                className="ws-button ws-button-primary"
-              >
-                <Plus className="size-3.5" />
-                <span>Create Your First Pipeline</span>
-              </button>
+              <>
+                <Link
+                  href="/workspace/templates"
+                  className="ws-button inline-flex items-center gap-1.5"
+                >
+                  <Library className="size-3.5" />
+                  <span>Browse Templates</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setIsNewModalOpen(true)}
+                  className="ws-button ws-button-primary inline-flex items-center gap-1.5"
+                >
+                  <Plus className="size-3.5" />
+                  <span>New Pipeline</span>
+                </button>
+              </>
             )}
           </div>
         </div>
