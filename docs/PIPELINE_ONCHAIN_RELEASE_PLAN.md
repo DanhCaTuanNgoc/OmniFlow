@@ -69,6 +69,16 @@ Mỗi hàng cần một deployment có thể mở lại trong Active, một lư�
 
 **Điểm quyết định tiến độ.** Chạy A trước rồi làm nền chung Vault, quyền và Active song song với runtime B/C/D theo quan hệ phụ thuộc. Phần mở rộng cron, định tuyến hai chiều, nhiều nhánh và chuyển tài sản cần dự trù theo tuần, trong khi TASK-340 riêng vẫn ước tính 2–4 ngày công. Chốt lịch sau khi đã khảo sát từng runtime và thử preflight testnet. Điều kiện tất cả flow đạt có thể đẩy lịch cloud, kể cả khi stop-loss đã sẵn sàng.
 
+### 5.1 Lưu trữ Workspace trước khi đưa lên cloud
+
+| Môi trường | Quyết định và điều kiện nghiệm thu |
+|---|---|
+| **Phase 1 với Studio/API local và RPC testnet** | Tiếp tục dùng SQLite WAL tại `WORKSPACE_DB_PATH`. Giữ DB qua restart để kiểm chứng phiên SIWE, revision, job deploy và cursor. Supabase nằm ngoài điều kiện hoàn tất BP-01/BP-11 trên cấu hình này. |
+| **Preview nội bộ một replica** | Có thể dùng SQLite với Railway Volume nếu cần preview tạm thời sau khi qua cổng pre-cloud. Mount `WORKSPACE_DB_PATH` trên volume và kiểm chứng dữ liệu qua redeploy, sao lưu và khôi phục. Railway Volume giới hạn service ở một replica và có gián đoạn khi redeploy. [Railway Volumes](https://docs.railway.com/volumes/reference#caveats) |
+| **Workspace cloud dùng chung hoặc nhiều replica** | Theo kế hoạch MVP, ưu tiên Supabase làm PostgreSQL cho Workspace. PostgreSQL được quản lý tương đương cũng phù hợp nếu đáp ứng cùng điều kiện bàn giao. Giữ SIWE, REST và WebSocket tại Express. Cấu hình `DATABASE_URL` ở backend Railway với TLS và role giới hạn quyền. [Thiết kế lưu trữ Workspace](WORKSPACE_OPERATIONS_ANALYSIS.md#6-kế-hoạch-triển-khai-supabase-cho-workspace) · [Kết nối PostgreSQL của Supabase](https://supabase.com/docs/guides/database/connecting-to-postgres) |
+
+**Hạng mục trước cloud dùng chung · TASK-333–336/353.** Chuẩn bị migration PostgreSQL và kiểm tra trên DB sạch. Với dữ liệu cần giữ từ SQLite, sao lưu và đối soát liên kết ví, revision, deployment, chữ ký giao dịch đã lưu, nonce, idempotency key, receipt và cursor trước khi chuyển nguồn đọc. Nghiệm thu cách ly hai ví, khôi phục backup, restart giữa lúc broadcast và ghi receipt, đọc bù lịch sử và tiếp tục đúng job. Với nhiều replica, thử hai worker tranh cùng job/cursor và kiểm tra mỗi bước chỉ được một worker nhận. Mục này đang chờ triển khai, có thể làm độc lập với việc cấp quỹ relayer testnet.
+
 ## 6. Gói triển khai và điều kiện bàn giao
 
 Kế hoạch này đặt **độ bao phủ 100% trên các cấu hình được phép Deploy**. Mỗi node trong catalog cần ít nhất một lượt chạy thực sự sử dụng node đó. Mỗi recipe, kịch bản Blueprint và biến thể nêu tại mục 8 cần đủ bằng chứng theo kỳ vọng riêng. Một lỗi còn mở làm sai kết quả, sai quyền, sai số tiền hoặc lệch deployment sẽ giữ cổng release ở trạng thái chờ. Đồ thị tự ghép đi qua cùng bộ xác thực với preset và chỉ chạy trong phạm vi template có runtime tương ứng.
@@ -173,7 +183,7 @@ Khi một mục vướng, ghi lý do, phạm vi ảnh hưởng, chứng cứ, ng
 
 **Kiểm tra local.** Foundry đạt 26/26, backend đạt 48/48, build shared/backend/frontend đạt và `node scripts/extract-abis.js --check` xác nhận bộ artifact. Smoke REST dùng hai chữ ký SIWE và RPC Base Sepolia thật để đối chiếu receipt tạo Vault lịch sử, từ chối ví khác, đọc lại nháp và xác nhận API trả 503 khi thiếu relayer. Chromium đã lưu nháp khách từ recipe stop-loss, tải lại và mở lại từ danh sách. Harness ví trong Chromium ký SIWE thật bằng hai khóa thử nghiệm, giữ bản nháp khi kết nối, mở lại nháp riêng sau reload, xóa dữ liệu khi đổi ví và nhận 404 khi ví thứ hai mở nháp cũ. Màn Active, Logs và Vault tải được ở chiều rộng 375 px.
 
-**Lựa chọn lưu trữ.** Gói local dùng SQLite với WAL tại `WORKSPACE_DB_PATH`, mặc định `backend/.workspace/workspace.sqlite` khi chạy backend từ thư mục repo. Cần giữ file DB qua restart và sao lưu trước migration. Kiểm chứng Supabase/PostgreSQL, backup hạ tầng và vận hành nhiều replica nằm trong điều kiện triển khai môi trường dùng chung. Browser giữ token phiên trong bộ nhớ và có thể ký lại sau khi tải lại trang.
+**Lựa chọn lưu trữ.** Gói local dùng SQLite với WAL tại `WORKSPACE_DB_PATH`, mặc định `backend/.workspace/workspace.sqlite`. Browser giữ token phiên trong bộ nhớ và có thể ký lại sau khi tải lại trang. Điều kiện chuyển sang PostgreSQL và nghiệm thu trước cloud dùng chung nằm ở [mục 5.1](#51-lưu-trữ-workspace-trước-khi-đưa-lên-cloud).
 
 | Mục còn mở | Nguyên nhân, bằng chứng và điều kiện tiếp tục |
 |---|---|

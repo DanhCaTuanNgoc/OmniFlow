@@ -4,14 +4,17 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { config } from '../backend/node_modules/dotenv';
 import {
   createPublicClient, createWalletClient, decodeAbiParameters, decodeFunctionData, defineChain, encodeFunctionData,
-  formatEther, getAddress, http, isAddressEqual, numberToHex, parseAbi, parseEventLogs,
-  toEventSelector, type Address, type Hash, type Hex, type TransactionReceipt,
+  formatEther, getAddress, http, isAddressEqual, numberToHex, parseAbi, parseAbiItem, parseEventLogs,
+  toEventSelector, toFunctionSelector, type Address, type Hash, type Hex, type TransactionReceipt,
 } from '../backend/node_modules/viem';
 import { baseSepolia } from '../backend/node_modules/viem/chains';
 import { privateKeyToAccount } from '../backend/node_modules/viem/accounts';
 import { estimateL1Fee } from '../backend/node_modules/viem/op-stack';
 import deployment from '../FULL_LOOP_EVIDENCE.json';
 import { callbackConfiguration, findStopLossDelivery } from '../backend/src/services/callbackEvidence';
+import { STOP_LOSS_PIPELINE_ABI } from '../backend/src/abis/StopLossPipeline';
+import { STOP_LOSS_RUNTIME } from '../backend/src/abis/runtimeFingerprints';
+import { matchesRuntime } from '../backend/src/services/runtimeBytecode';
 
 config({ path: resolve(__dirname, '../.env') });
 config({ path: resolve(__dirname, '../backend/.env') });
@@ -49,6 +52,7 @@ const abi = parseAbi([
   'function priceThreshold() view returns (uint256)',
   'function percentToSwap() view returns (uint256)',
   'function requiredHits() view returns (uint256)',
+  'function velocityThresholdBps() view returns (uint256)',
   'function consecutiveHits() view returns (uint256)',
   'function cooldownSeconds() view returns (uint256)',
   'function lastTriggeredTimestamp() view returns (uint256)',
@@ -186,6 +190,143 @@ async function preflight(forRebound = false) {
 
 type LasnaReceipt = Omit<TransactionReceipt, 'status'> & { status: Hex } & { refTx?: Hash; refChainId?: Hex; refEventIndex?: Hex };
 
+type CallTrace = { type?: string; from?: Address; to?: Address; input?: Hex; error?: string; calls?: CallTrace[] };
+type TraceRequest = (request: { method: 'debug_traceTransaction'; params: [Hash, { tracer: 'callTracer' }] }) => Promise<CallTrace>;
+const cooldownCallbackEvents = [
+  parseAbiItem('event OmniCallbackRequested(uint256 indexed chain_id, address indexed _contract, uint64 indexed gas_limit, bytes payload)'),
+  parseAbiItem('event Callback(uint256 indexed chain_id, address indexed _contract, uint64 indexed gas_limit, bytes payload)'),
+];
+const reactSelector = toFunctionSelector('react((uint256,address,uint256,uint256,uint256,uint256,bytes,uint256,uint256,uint256,uint256,uint256))');
+
+function* traceFrames(frame: CallTrace): Generator<CallTrace> {
+  if (frame.error) return;
+  yield frame;
+  for (const child of frame.calls ?? []) yield* traceFrames(child);
+}
+
+type TransactionPosition = Pick<TransactionReceipt, 'blockNumber' | 'transactionIndex'>;
+
+function transactionAfter(left: TransactionPosition, right: TransactionPosition) {
+  return left.blockNumber > right.blockNumber ||
+    (left.blockNumber === right.blockNumber && left.transactionIndex > right.transactionIndex);
+}
+
+async function readCooldownReaction(originHash: Hash, reactionHash: Hash, finalized: bigint, threshold: bigint, percent: bigint) {
+  const [origin, reaction, reference] = await Promise.all([
+    base.getTransactionReceipt({ hash: originHash }),
+    reactive.getTransactionReceipt({ hash: reactionHash }),
+    reactive.request({ method: 'eth_getTransactionReceipt', params: [reactionHash] }) as Promise<LasnaReceipt | null>,
+  ]);
+  const [originBlock, reactionBlock] = await Promise.all([
+    base.getBlock({ blockNumber: origin.blockNumber }), reactive.getBlock({ blockNumber: reaction.blockNumber }),
+  ]);
+  const syncs = parseEventLogs({ abi, eventName: 'Sync', logs: origin.logs.filter(log => isAddressEqual(log.address, pair)) });
+  requireCheck(origin.status === 'success' && originBlock.hash === origin.blockHash && origin.blockNumber <= finalized &&
+    syncs.length === 1, `Expected a unique finalized Sync from the test pair in ${originHash}.`);
+  const [sync] = syncs;
+  requireCheck(sync.args.reserve0 > 0n && sync.args.reserve1 * 10n ** 18n / sync.args.reserve0 <= threshold,
+    `Sync ${originHash} does not meet the stop-loss threshold.`);
+  requireCheck(reaction.status === 'success' && reaction.to && isAddressEqual(reaction.to, system) &&
+    reactionBlock.hash === reaction.blockHash && reference?.refTx?.toLowerCase() === originHash.toLowerCase() &&
+    reference.refChainId && BigInt(reference.refChainId) === BigInt(baseSepolia.id) &&
+    reference.refEventIndex && BigInt(reference.refEventIndex) === BigInt(sync.logIndex),
+  `Lasna receipt ${reactionHash} does not reference the exact finalized Sync.`);
+
+  // The outer receipt can succeed even when the system catches a failed react() call.
+  const trace = await (reactive.request as TraceRequest)({
+    method: 'debug_traceTransaction', params: [reactionHash, { tracer: 'callTracer' }],
+  });
+  const calls = [...traceFrames(trace)].filter(frame => frame.type === 'CALL' && frame.from && isAddressEqual(frame.from, system) &&
+    frame.to && isAddressEqual(frame.to, rsc) && frame.input?.startsWith(reactSelector));
+  requireCheck(!trace.error && calls.length === 1 && !calls[0].error && calls[0].input,
+    `Expected one successful react() call to the configured RSC in ${reactionHash}.`);
+  const input = decodeFunctionData({ abi: STOP_LOSS_PIPELINE_ABI, data: calls[0].input });
+  requireCheck(input.functionName === 'react', `Unexpected RSC method in ${reactionHash}.`);
+  const [log] = input.args;
+  requireCheck(log.chain_id === BigInt(baseSepolia.id) && isAddressEqual(log._contract, pair) &&
+    log.topic_0 === BigInt(syncTopic) && log.block_number === origin.blockNumber &&
+    log.block_hash === BigInt(origin.blockHash) && log.tx_hash === BigInt(originHash) &&
+    log.log_index === BigInt(sync.logIndex) && log.data === sync.data,
+  `The RSC call input in ${reactionHash} does not match the source log.`);
+
+  const requests = parseEventLogs({ abi, eventName: 'CallbackRequest',
+    logs: reaction.logs.filter(entry => isAddressEqual(entry.address, system)) })
+    .filter(entry => isAddressEqual(entry.args.sender, rsc));
+  for (const { args } of requests) {
+    const [configuration] = decodeAbiParameters(callbackConfiguration, args.configuration);
+    const call = decodeFunctionData({ abi, data: configuration.payload });
+    requireCheck(args.version === 0 && args.chainId === BigInt(baseSepolia.id) && isAddressEqual(args.recipient, vault) &&
+      configuration.chainId === BigInt(baseSepolia.id) && isAddressEqual(configuration.recipient, vault) &&
+      configuration.gasLimit === callbackGas && call.functionName === 'executeStopLoss' &&
+      BigInt(call.args[0]) === 0n && isAddressEqual(call.args[1], rsc) && call.args[2] === percent && call.args[3] === threshold,
+    `Unexpected callback request in ${reactionHash}.`);
+  }
+  return { origin, reaction, logIndex: sync.logIndex, timestamp: reactionBlock.timestamp, requests: requests.length };
+}
+
+async function verifyCooldown(hashes: Hash[]) {
+  requireCheck(new Set(hashes.map(hash => hash.toLowerCase())).size === 6, 'BP-11 requires six distinct transaction hashes.');
+  const rscRead = { address: rsc, abi } as const;
+  const [baseChain, lasnaChain, finalized, code, originPair, target, chain, cooldown, threshold, hits, velocity, percent] =
+    await Promise.all([
+      base.getChainId(), reactive.getChainId(), base.getBlock({ blockTag: 'finalized' }), reactive.getCode({ address: rsc }),
+      reactive.readContract({ ...rscRead, functionName: 'pairAddress' }),
+      reactive.readContract({ ...rscRead, functionName: 'actionVault' }),
+      reactive.readContract({ ...rscRead, functionName: 'originChainId' }),
+      reactive.readContract({ ...rscRead, functionName: 'cooldownSeconds' }),
+      reactive.readContract({ ...rscRead, functionName: 'priceThreshold' }),
+      reactive.readContract({ ...rscRead, functionName: 'requiredHits' }),
+      reactive.readContract({ ...rscRead, functionName: 'velocityThresholdBps' }),
+      reactive.readContract({ ...rscRead, functionName: 'percentToSwap' }),
+    ]);
+  requireCheck(baseChain === baseSepolia.id && lasnaChain === lasna.id && chain === BigInt(baseChain) &&
+    matchesRuntime(code, STOP_LOSS_RUNTIME) && isAddressEqual(originPair, pair) && isAddressEqual(target, vault) &&
+    cooldown > 0n && threshold > 0n && hits === 1n && velocity === 0n,
+  'BP-11 expects the configured Omni stop-loss template with one required hit, a static threshold and a positive cooldown.');
+  const first = await readCooldownReaction(hashes[0], hashes[1], finalized.number, threshold, percent);
+  const blocked = await readCooldownReaction(hashes[2], hashes[3], finalized.number, threshold, percent);
+  const resumed = await readCooldownReaction(hashes[4], hashes[5], finalized.number, threshold, percent);
+  requireCheck(transactionAfter(blocked.origin, first.origin) && transactionAfter(resumed.origin, blocked.origin) &&
+    transactionAfter(blocked.reaction, first.reaction) && transactionAfter(resumed.reaction, blocked.reaction) &&
+    blocked.timestamp >= first.timestamp && blocked.timestamp - first.timestamp < cooldown &&
+    resumed.timestamp - first.timestamp >= cooldown && first.requests === 1 && blocked.requests === 0 && resumed.requests === 1,
+  'The three matched reactions do not show request, suppression within cooldown, then request after cooldown.');
+  const permissions = await Promise.all([first, resumed].map(({ origin }) => base.readContract({
+    address: vault, abi, functionName: 'authorizedRSCs', args: [rsc], blockNumber: origin.blockNumber,
+  })));
+  requireCheck(permissions.every(Boolean), 'Vault permission was missing at an eligible source block.');
+
+  const expected = new Set([first.reaction.transactionHash, resumed.reaction.transactionHash]);
+  const seen: Hash[] = [];
+  const end = resumed.reaction.blockNumber;
+  requireCheck(end - first.reaction.blockNumber <= 3_000n, 'The trial spans more than 3,000 Lasna blocks. Use a shorter dedicated trial.');
+  for (let from = first.reaction.blockNumber; from <= end; from += 100n) {
+    const logs = await reactive.getLogs({ address: rsc, events: cooldownCallbackEvents, fromBlock: from,
+      toBlock: from + 99n < end ? from + 99n : end, strict: true });
+    for (const log of logs) {
+      if (transactionAfter(first.reaction, log) || transactionAfter(log, resumed.reaction)) continue;
+      requireCheck(log.eventName === 'OmniCallbackRequested' && expected.has(log.transactionHash) &&
+        !seen.includes(log.transactionHash), 'An unexpected or duplicate callback appeared during the BP-11 trial.');
+      seen.push(log.transactionHash);
+    }
+  }
+  requireCheck(seen.length === 2, 'The Lasna log scan did not confirm both expected callback requests.');
+  const evidence = {
+    acceptance: 'BP-11', status: 'VERIFIED_COOLDOWN_ON_TESTNET', verifiedAt: new Date().toISOString(),
+    pair, vault, rsc, cooldownSeconds: cooldown.toString(), priceThreshold: threshold.toString(),
+    sourceFinalizedBlock: finalized.number.toString(),
+    reactions: [first, blocked, resumed].map(({ origin, reaction, logIndex, timestamp, requests }) => ({
+      origin: { chainId: baseChain, txHash: origin.transactionHash, blockHash: origin.blockHash, logIndex,
+        explorerUrl: `https://sepolia.basescan.org/tx/${origin.transactionHash}` },
+      reactive: { chainId: lasnaChain, txHash: reaction.transactionHash, blockHash: reaction.blockHash,
+        timestamp: timestamp.toString(), requests, explorerUrl: `https://lasna.reactscan.net/tx/${reaction.transactionHash}` },
+    })),
+  };
+  const output = resolve(process.env.FULL_LOOP_EVIDENCE_DIR ?? resolve(__dirname, '..'), `COOLDOWN_EVIDENCE.${hashes[0]}.json`);
+  writeFileSync(output, JSON.stringify(evidence, null, 2) + '\n', { flag: 'wx' });
+  console.log(`Verified BP-11 cooldown evidence: ${output}`);
+}
+
 async function waitFor<T>(description: string, read: () => Promise<T | undefined>): Promise<T> {
   const deadline = Date.now() + 180_000;
   while (Date.now() < deadline) {
@@ -201,6 +342,12 @@ async function main() {
   const expectSkip = args[0] === '--expect-skipped';
   if (expectSkip) args.shift();
   const replay = args[0] === '--verify-existing';
+  if (!expectSkip && args[0] === '--verify-cooldown') {
+    requireCheck(args.length === 7 && args.slice(1).every(hash => /^0x[0-9a-fA-F]{64}$/.test(hash)),
+      'Usage: test-full-loop.ts --verify-cooldown FIRST_BASE FIRST_LASNA SECOND_BASE SECOND_LASNA THIRD_BASE THIRD_LASNA');
+    await verifyCooldown(args.slice(1) as Hash[]);
+    return;
+  }
   requireCheck((!expectSkip && (args.length === 0 || (args.length === 1 && ['--preflight', '--execute', '--execute-skip'].includes(args[0])))) ||
     (replay && (expectSkip ? [3, 4, 5] : [3, 4]).includes(args.length) &&
       args.slice(1).every(hash => /^0x[0-9a-fA-F]{64}$/.test(hash))),
@@ -396,13 +543,11 @@ async function verifyLoop(
   requireCheck(await matchingDelivery(callbackHash), 'Proxy calldata does not match the Lasna callback.');
   console.log(`Destination: https://sepolia.basescan.org/tx/${callbackHash}`);
   const destination = await base.waitForTransactionReceipt({ hash: callbackHash, timeout: 180_000, checkReplacement: false });
-  const after = (left: TransactionReceipt, right: TransactionReceipt) => left.blockNumber > right.blockNumber ||
-    (left.blockNumber === right.blockNumber && left.transactionIndex > right.transactionIndex);
   requireCheck(destination.status === 'success' && destination.to && isAddressEqual(destination.to, proxy) &&
-    after(destination, origin), 'Destination receipt did not succeed through the configured proxy.');
+    transactionAfter(destination, origin), 'Destination receipt did not succeed through the configured proxy.');
   if (reboundHash) {
     const rebound = await base.getTransactionReceipt({ hash: reboundHash });
-    requireCheck(rebound.status === 'success' && after(rebound, origin) && after(destination, rebound),
+    requireCheck(rebound.status === 'success' && transactionAfter(rebound, origin) && transactionAfter(destination, rebound),
       'The rebound transaction did not settle between the origin Sync and Vault delivery.');
     const rises = parseEventLogs({ abi, eventName: 'Sync', logs: rebound.logs.filter(log => isAddressEqual(log.address, pair)) });
     requireCheck(rises.length === 1 && rises[0].args.reserve0 > 0n &&
