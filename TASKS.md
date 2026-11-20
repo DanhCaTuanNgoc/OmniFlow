@@ -15,9 +15,17 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 24 | 24 | 0 | **100%** |
-| **Đánh giá cạnh tranh & bằng chứng dự thi** | 18/11/2026 | 8 | 3 | 0 | **37.5%** |
-| **TỔNG CỘNG** | **21 Ngày** | **68** | **63** | **0** | **92.6%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 24 | 23 | 0 | **95.8%** |
+| **Đánh giá cạnh tranh, bằng chứng và tính năng mở rộng** | 18–19/11/2026 | 8 | 5 | 0 | **62.5%** |
+| **Vận hành Workspace & nghiệm thu dự thi** | Ghi nhận 20/11/2026 | 7 | 0 | 0 | **0%** |
+| **TỔNG CỘNG** | **Đối chiếu 20/11/2026** | **75** | **64** | **0** | **85.3%** |
+
+Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **11 mục `TODO`**.
+
+* **On-chain:** Lượt stop-loss ngày 19/11 dùng pool và token thử nghiệm trên testnet. Đã đọc lại cả ba receipt qua RPC ngày 20/11 và xác nhận đều thành công. [Bằng chứng full loop](FULL_LOOP_EVIDENCE.json)
+* **Workspace:** Commit `155d62f` bỏ dữ liệu mẫu, `872a381` kiểm tra Vault/RSC cấu hình sẵn, và `f8c3410` đồng bộ giao diện năm màn hình. Deployer hiện chỉ hỗ trợ các node của luồng stop-loss. Xác thực theo ví, lưu pipeline và phục hồi deploy nằm ở `TASK-333` đến `TASK-335`.
+* **Kiểm tra tại `f8c3410`:** Build frontend và backend thành công, backend qua 34/34 test. Chưa chạy lại Foundry do môi trường kiểm tra thiếu `forge`. Chưa nghiệm thu luồng trên cloud.
+* **Hồ sơ dự thi:** Repo đã public, có địa chỉ hợp đồng và ba hash. Cần xác nhận URL demo, nghiệm thu luồng Studio đến callback trên UI, hoàn thiện video và xác nhận nộp bài. [Checklist](PROJECT_BLUEPRINT.md#102-checklist-chuẩn-bị-nộp-bài-chính-thức-submission-ready)
 
 ---
 
@@ -175,13 +183,13 @@
 * **Ngày hoàn thành:** 14/11/2026 18:51
 * **Trạng thái:** `DONE`
 
-#### `TASK-105` [DONE] — Bộ Unit & Fork Tests Đạt 100% Độ Phủ (Foundry)
+#### `TASK-105` [DONE] — Bộ kiểm thử Foundry ban đầu
 * **Module / Màn hình:** `contracts/test/`
 * **Mục đích:** Chứng minh tính đúng đắn và an toàn của hợp đồng trước khi deploy.
 * **Chi tiết thực thi:**
   * Viết `ActionVault.t.sol` (8 tests): kiểm tra Non-custodial, authorization, panic button, SafeSweep chuyển ví lạnh, và cơ chế Skip khi giá hồi phục.
-  * Viết `StopLoss_Pipeline.t.sol` (5 tests): kiểm tra lọc địa chỉ pair, ngưỡng giá, và chứng minh **Stateless Cooldown chặn đứng 100% các block 200ms dội dập mà tự động mở lại sau 300s không bị Deadlock**.
-  * Chạy `forge test -vvv`: **13/13 tests PASS 100%** trong 13.40ms.
+  * Viết `StopLoss_Pipeline.t.sol` (5 tests) để kiểm tra lọc địa chỉ pair, ngưỡng giá và cooldown.
+  * Kết quả ghi nhận ngày 14/11: `forge test -vvv` qua 13/13 test.
 * **Ngày tạo:** 14/11/2026 17:35
 * **Ngày hoàn thành:** 14/11/2026 18:53
 * **Trạng thái:** `DONE`
@@ -190,6 +198,7 @@
 * **Module / Màn hình:** Base Sepolia (`84532`) & Reactive Lasna (`5318007`)
 * **Mục đích:** Triển khai hạ tầng hợp đồng on-chain thật chuẩn bị cho tương tác full loop theo luật Reactive Buildathon.
 * **Chi tiết thực thi:**
+  * Các địa chỉ dưới đây thuộc đợt triển khai ban đầu. Địa chỉ Vault/RSC dùng trong lượt full loop ngày 19/11 nằm trong [FULL_LOOP_EVIDENCE.json](FULL_LOOP_EVIDENCE.json).
   * Xây dựng kịch bản triển khai chuẩn mực Foundry tại `contracts/script/Deploy.s.sol`.
   * **Base Sepolia (Chain ID: 84532):**
     * `MockWETH`: `0x6ecfc31ef5199d82bad83a469f7434785858d7dd` (Tx: `0x35125b90e3a53adbb250ee163abb6316312932b9d4885b4ba2d6701cd4968f62`)
@@ -212,11 +221,10 @@
 * **Mục đích:** Kích hoạt giao dịch swap trên Base Sepolia $\rightarrow$ Lasna React $\rightarrow$ Base Callback Vault.
 * **Chi tiết thực thi:**
   * Xây dựng script kiểm thử tự động `scripts/test-full-loop.ts` kết nối trực tiếp RPC Base Sepolia và Reactive Lasna.
-  * Kích hoạt Origin Event: Giao dịch `0x29b31cc9e38050c6051d07b76bc27634031159c7523e7706f2ddabddf5e8d457` trên Base Sepolia (Block `#60317870`), ép giá rớt xuống $1,500 < $1,800.
-  * Lắng nghe và xác minh Reactive execution trên Lasna: Giao dịch `0xec28373c12498a272027da2b40ade8fa72af3eba8d7569c4b98de2792a2b7ea5` (Block `#8633526`), phát ra 4 logs gồm `ConditionTriggered`, `Callback` và gọi hệ thống `requestCallbackV_1_0` trên `0x8888888888888888888888888888888888888888`.
-  * Xuất file bằng chứng chuẩn `FULL_LOOP_EVIDENCE.json` với đầy đủ liên kết Basescan và Reactscan.
+  * Lượt 18/11 xác nhận sự kiện nguồn và bước xử lý trên Lasna. Lượt 19/11 xác nhận thêm `StopLossExecuted` và chuyển token thử nghiệm đến chủ Vault trong receipt đích.
+  * [FULL_LOOP_EVIDENCE.json](FULL_LOOP_EVIDENCE.json) lưu ba giao dịch của lượt 19/11 cùng địa chỉ hợp đồng. Xem `TASK-326` để đối chiếu từng bước.
 * **Ngày tạo:** 14/11/2026 17:35
-* **Ngày hoàn thành:** 18/11/2026 14:08
+* **Ngày hoàn thành:** 19/11/2026
 * **Trạng thái:** `DONE`
 
 #### `TASK-108` [DONE] — Xuất ABIs & Types Sang `packages/shared/`
@@ -332,13 +340,13 @@
 
 #### `TASK-206` [DONE] — Pipeline Graph Parser & Pre-compiled Bytecode Deployer API
 * **Module / Màn hình:** `backend/src/services/deployer.service.ts` & `routes/pipeline.route.ts`
-* **Mục đích:** Validate đồ thị JSON, trích xuất parameters và deploy RSC qua Viem với 1.0 lREACT gas tài trợ trong 1s.
+* **Mục đích:** Validate đồ thị stop-loss, trích xuất tham số và deploy RSC qua Viem với 1.0 lREACT gas tài trợ.
 * **Chi tiết thực thi:**
   * Xây dựng `PipelineGraphSchema` với Zod đảm bảo kiểm tra cấu trúc nodes, edges, và metadata owner.
   * Viết `DeployerService` trích xuất tham số: `pairAddress`, `priceThresholdWei`, `cooldownSeconds`, `percentToSwap`, `actionVaultAddress`.
   * Tích hợp `walletClient.deployContract` tự động nạp `{ value: parseEther('1.0') }` cho RSC.
   * Cung cấp REST endpoint `POST /api/pipeline/compile-and-deploy`.
-  * Test live API trả về `200 OK` với đầy đủ `pipelineId`, địa chỉ hợp đồng và link explorer.
+  * API đợi receipt Lasna trước khi trả `pipelineId`, địa chỉ hợp đồng và link explorer. Deployer từ chối node ngoài phạm vi stop-loss. Nghiệm thu luồng gọi từ Studio trên cloud nằm ở `TASK-337`.
 * **Ngày tạo:** 14/11/2026 17:52
 * **Ngày hoàn thành:** 14/11/2026 18:40
 * **Trạng thái:** `DONE`
@@ -356,14 +364,12 @@
 * **Ngày hoàn thành:** 14/11/2026 18:37
 * **Trạng thái:** `DONE`
 
-#### `TASK-208` [DONE] — Event Stream Listener & Fallback Initial Data Seed
+#### `TASK-208` [DONE] — Buffer Activity Logs, REST API và WebSocket
 * **Module / Màn hình:** `backend/src/services/eventListener.service.ts` & `routes/logs.route.ts`
-* **Mục đích:** Lắng nghe event on-chain từ RPC, lưu buffer sự kiện và cung cấp dữ liệu seed ban đầu cho Activity Logs.
+* **Mục đích:** Cung cấp buffer và đường phân phối sự kiện cho Activity Logs.
 * **Chi tiết thực thi:**
-  * Khởi tạo file `data/fallbackLogs.ts` với 3 bản ghi giao dịch on-chain thật (có đầy đủ txHash Basescan, Reactscan, latency ms và các status SUCCESS/SKIPPED).
-  * Xây dựng `EventListenerService` với In-Memory FIFO Ring Buffer lưu trữ 50 events và broadcast tức thì qua `WebSocketGateway`.
-  * Cung cấp REST endpoint `GET /api/logs` (hỗ trợ lọc theo `pipelineId`).
-  * Test live API trả về 3 logs thành công 100%.
+  * `EventListenerService` giữ tối đa 50 bản ghi trong bộ nhớ và phát qua `WebSocketGateway` khi nhận bản ghi mới. `GET /api/logs` hỗ trợ lọc theo `pipelineId`.
+  * Dữ liệu seed ban đầu đã được gỡ tại `TASK-327`. Luồng đọc sự kiện trực tiếp từ RPC và đọc bù sau restart nằm ở `TASK-336`.
 * **Ngày tạo:** 14/11/2026 17:52
 * **Ngày hoàn thành:** 14/11/2026 18:38
 * **Trạng thái:** `DONE`
@@ -393,15 +399,12 @@
 * **Ngày hoàn thành:** 18/11/2026 14:46
 * **Trạng thái:** `DONE`
 
-#### `TASK-211` [DONE] — Xây dựng Màn hình Active Automations & Gas Gauge
+#### `TASK-211` [DONE] — Xây dựng Màn hình Active Automations
 * **Module / Màn hình:** Màn hình 2 — Active Automations (`frontend/src/app/workspace/active/page.tsx`)
-* **Mục đích:** Giám sát trạng thái RSC đang chạy, đo lượng gas lREACT còn lại và nút Refuel.
+* **Mục đích:** Hiển thị deployment stop-loss đã xác minh và quyền RSC trên Vault.
 * **Chi tiết thực thi:**
-  * Giám sát hợp đồng phản ứng RSC `StopLoss_Pipeline.sol` (`0x8c2d098617102a64925cc683d9b444f938a96082`) chạy on-chain 24/7 trên Reactive Lasna Testnet (#5318007).
-  * Đọc số dư `lREACT` gas thực tế từ Lasna RPC qua Wagmi `useBalance` (Zero-Mock Policy).
-  * Thanh Gas Gauge trực quan hóa 3 mức năng lượng: Xanh (>0.5 lREACT), Vàng (0.1 - 0.5 lREACT), Đỏ (<0.1 lREACT) kèm tính toán số lượt callbacks còn lại (~5,000 calls / 1.0 lREACT).
-  * Tích hợp Modal Refuel cho phép nạp thêm lREACT trực tiếp cho RSC trên Lasna, kèm liên kết đến Reactive Faucet chính thức.
-  * Tích hợp liên kết ReactScan thời gian thực và điều hướng Pause Non-Custodial về Vault Manager.
+  * Commit `872a381` đối chiếu chủ Vault, Vault đích của RSC và quyền callback cho một cặp Vault/RSC cấu hình sẵn. Màn hình có link explorer và trạng thái lỗi đọc.
+  * Số dư gas và thao tác Refuel theo deployment được theo dõi ở `TASK-329`.
 * **Ngày tạo:** 14/11/2026 17:35
 * **Ngày hoàn thành:** 18/11/2026 14:47
 * **Trạng thái:** `DONE`
@@ -509,14 +512,12 @@
 * **Ngày hoàn thành:** 18/11/2026 14:52
 * **Trạng thái:** `DONE`
 
-#### `TASK-302` [DONE] — Xây dựng Màn hình Activity Logs & Cross-Chain Explorer
+#### `TASK-302` [DONE] — Xây dựng màn hình Activity Logs
 * **Module / Màn hình:** Màn hình 5 — Activity Logs (`frontend/src/app/workspace/logs/page.tsx`)
-* **Mục đích:** Hiển thị dòng chảy sự kiện trực tiếp và bộ Fallback Initial Data Seed kèm link explorer thật.
+* **Mục đích:** Cung cấp màn hình lịch sử trong Workspace.
 * **Chi tiết thực thi:**
-  * Kết nối WebSocket Gateway thời gian thực (`/stream`) tự động hiển thị logs khi có giao dịch mới mà không cần F5 trang.
-  * Cập nhật `FALLBACK_ACTIVITY_LOGS` và frontend seed bằng các mã giao dịch on-chain thật 100% từ `FULL_LOOP_EVIDENCE.json` (Origin Tx `#60317870`, Lasna RVM Tx `#8633526`, ActionVault Tx `#60317785`).
-  * Bổ sung bộ lọc đa chuỗi: All Chains, Base Sepolia (84532), Reactive Lasna (5318007) và bộ lọc trạng thái Executed/Defended.
-  * Tích hợp Modal xem chi tiết và copy toàn bộ JSON Audit Proof cho từng giao dịch.
+  * Màn hình hiện hiển thị trạng thái kết nối ví hoặc lịch sử chưa khả dụng, kèm liên kết sang bằng chứng testnet công khai.
+  * Việc gỡ seed đã hoàn tất ở `TASK-327`. Đọc lịch sử từ REST, cập nhật qua WebSocket và hiển thị liên kết từng giao dịch nằm ở `TASK-336`.
 * **Ngày tạo:** 14/11/2026 17:35
 * **Ngày hoàn thành:** 18/11/2026 14:55
 * **Trạng thái:** `DONE`
@@ -532,38 +533,26 @@
 * **Ngày hoàn thành:** 17/11/2026 09:55
 * **Trạng thái:** `DONE`
 
-#### `TASK-304` [DONE] — Đóng gói Docker & Triển khai Cloud (Vercel & Railway)
+#### `TASK-304` [TODO] — Đóng gói Docker & Triển khai Cloud (Vercel & Railway)
 * **Module / Màn hình:** Hạ tầng Cloud Deploy (`backend/Dockerfile`, `frontend/Dockerfile`, `backend/railway.json`, `frontend/vercel.json`, `docker-compose.yml`)
 * **Mục đích:** Đưa toàn bộ hệ thống lên môi trường production sẵn sàng cho BGK truy cập.
 * **Chi tiết thực thi:**
   * Xây dựng `backend/Dockerfile` multi-stage (Node 20 Alpine builder $\rightarrow$ runner tinh gọn) tích hợp healthcheck tự động vào `/health`.
   * Cấu hình `backend/railway.json` chuẩn schema Railway với restart policy và timeout probe.
   * Xây dựng `frontend/Dockerfile` tối ưu và `frontend/vercel.json` thiết lập tiêu chuẩn bảo mật (CSP, X-Frame-Options, X-Content-Type nosniff).
-  * Xây dựng `docker-compose.yml` monorepo cho phép khởi chạy đồng bộ toàn bộ backend và frontend chỉ với 1 lệnh `docker compose up`.
+  * Repo có `docker-compose.yml` để chạy frontend và backend cùng nhau.
+  * **Còn lại:** Xác nhận URL Vercel và Railway, kiểm tra `/health` kết nối được cả hai RPC, và kiểm tra REST/WebSocket từ frontend cloud. Chưa có URL demo cloud được xác minh tại lần đối chiếu 20/11.
 * **Ngày tạo:** 14/11/2026 17:35
-* **Ngày hoàn thành:** 18/11/2026 14:56
-* **Trạng thái:** `DONE`
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công bước xác minh cloud.
+* **Trạng thái:** `TODO`
 
-#### `TASK-305` [DONE] — Kiểm thử Toàn diện & Rà soát Tiêu chuẩn WCAG 2.1 AA
+#### `TASK-305` [DONE] — Thêm kiểm tra RPC, bằng chứng và CSS
 * **Module / Màn hình:** Toàn bộ Frontend & Smart Contracts (`scripts/verify-all.ts`, `globals.css`)
-* **Mục đích:** Đảm bảo hệ thống mượt mà, zero-bug, độ tương phản cao và tuân thủ Web Guidelines.
+* **Mục đích:** Thêm script rà soát cấu hình triển khai, tệp bằng chứng và một số dấu hiệu trợ năng trong CSS.
 * **Chi tiết thực thi:**
-  * Xây dựng và thực thi bộ kiểm thử tự động toàn diện `scripts/verify-all.ts` đạt kết quả 15/15 checks PASS (100%):
-    1. Base Sepolia RPC Connectivity: Hoạt động (Block #60334xxx).
-    2. Reactive Lasna RPC Connectivity: Hoạt động (Block #8636xxx).
-    3. ActionVault Contract Bytecode trên Base Sepolia: Hợp lệ tại `0x005d4cb896c9e0B07Bbf961FDC26b098D84079d7`.
-    4. MockUniswapV2Pair Bytecode trên Base Sepolia: Hợp lệ tại `0x9a796b794999cabcd10d08f777b24ceb76e34b3e`.
-    5. StopLoss_Pipeline RSC Bytecode trên Reactive Lasna: Hợp lệ tại `0x8c2d098617102a64925cc683d9b444f938a96082`.
-    6. ActionVault Live Funded Collateral: 0.002 ETH.
-    7. StopLoss RSC Funded lREACT Gas: 0.05 lREACT.
-    8. `FULL_LOOP_EVIDENCE.json`: File tồn tại và trạng thái `VERIFIED_100%_ONCHAIN_REAL`.
-    9. Origin Tx Hash recorded: Step 1 (Origin DEX Swap) `0x29b31cc9...`
-    10. Reactive Tx Hash recorded: Step 2 (Reactive Execution) `0xec28373c...`
-    11. Destination Proxy Config Tx recorded: Step 3 (ActionVault RSC Auth) `0xdaddfcad...`
-    12. WCAG 2.1 AA: Định nghĩa chuẩn `:focus-visible` ring (`outline: 2px solid #8B5CF6`) cho trợ năng bàn phím trong `globals.css`.
-    13. High-contrast Obsidian Palette `#08090D` tuân thủ tỷ lệ tương phản >= 4.5:1.
-  * Foundry Suite: 18/18 test cases smart contract PASS 100%.
-  * TypeScript Checking: `pnpm --filter frontend exec tsc --noEmit` và `pnpm --filter backend build` đạt 0 lỗi.
+  * `scripts/verify-all.ts` kiểm tra kết nối RPC, bytecode của các địa chỉ được cấu hình trong script và trường dữ liệu trong tệp bằng chứng. Địa chỉ deployment của lượt stop-loss đã xác minh nằm trong `FULL_LOOP_EVIDENCE.json`.
+  * Phần trợ năng kiểm tra dấu hiệu focus và bảng màu trong CSS. Nghiệm thu bằng bàn phím và đo độ tương phản trên bản demo nằm ở `TASK-337`.
 * **Ngày tạo:** 14/11/2026 17:35
 * **Ngày hoàn thành:** 18/11/2026 15:02
 * **Trạng thái:** `DONE`
@@ -614,6 +603,7 @@
   * Tinh chỉnh `BuildCards.tsx`: Chuyển đổi các thẻ runtime sang 3 giai đoạn pipeline OmniFlow (`Trigger: Uniswap Swap`, `Reactive Omni RSC Core`, `ActionVault Callback Execution`).
   * Tinh chỉnh `MeasureChart.tsx` và `MeasureChartView.tsx`: Đổi dải màu cột sang tím amethyst/violet và hiển thị độ trễ full loop end-to-end (~1.4s).
   * Tinh chỉnh `SmokeChecks.tsx`: Cập nhật các bước kiểm tra tự động sang xác minh full-loop Reactive Omni.
+* **Trạng thái:** `DONE`
 
 #### `TASK-309` [DONE] — Tinh chỉnh & May đo Toàn diện UI Landing Page theo Blueprint
 * **Module / Màn hình:** Landing Page (`/`), `HeaderBar`, `HeaderPanelView`, `Hero`, `Checks` (Security), `Simpler` (Studio CTA), `GetStarted`, `Features`, `Faq`, `Wall`
@@ -722,10 +712,7 @@
 * **Module / Màn hình:** Landing Page (`OnChainProofLedger.tsx`, `MultiChainTelemetry.tsx`, `motion-landing.css`)
 * **Mục đích:** Cập nhật toàn bộ bảng bằng chứng on-chain từ trạng thái Pending sang 100% Live & Verified với liên kết thật tới Basescan và Reactscan, tích hợp bộ chuyển tab (3-Leg Matrix, Raw FULL_LOOP_EVIDENCE.json, Honesty Table) và nút copy tiện lợi.
 * **Chi tiết thực thi:**
-  * **Cập nhật `OnChainProofLedger.tsx`:** Ghi nhận 3 leg execution thật:
-    1. *Origin DEX Pair:* `0x9a796b...` trên Base Sepolia, Tx: `0x29b31cc9...` (Block #60317870).
-    2. *Reactive RSC:* `0x8c2d09...` trên Reactive Lasna, Tx: `0xec28373c...` (Block #8633526).
-    3. *Destination ActionVault:* `0x005d4c...` trên Base Sepolia, RSC Auth Tx: `0xdaddfcad...`, Proxy Deposit Tx: `0x419d8dd4...`.
+  * `OnChainProofLedger.tsx` đọc ba bước của lượt 19/11 từ `FULL_LOOP_EVIDENCE.json`. Bước đích liên kết đến receipt chứa `StopLossExecuted`. Xem `TASK-326` để đối chiếu.
   * **Thêm 3 tabs tương tác:** Bảng 3-Leg Pipeline Proof, Trình xem JSON trực tiếp `FULL_LOOP_EVIDENCE.json`, Bảng cam kết trung thực Honesty Table.
   * **Cập nhật `MultiChainTelemetry.tsx`:** Gắn link Basescan và Reactscan trực tiếp cho `ActionVault.sol` và `StopLoss_Pipeline.sol`.
   * **Cập nhật CSS trong `motion-landing.css`:** Thêm các styles cho tab controls, block-confirmed, tx-link, và JSON code viewer.
@@ -786,14 +773,12 @@
 * **Ngày hoàn thành:** 18/11/2026 15:18
 * **Trạng thái:** `DONE`
 
-#### `TASK-320` [DONE] — Đồng Bộ Runner Kiểm Thử Toàn Diện Xác Nhận 76/76 Test Cases PASS
+#### `TASK-320` [DONE] — Thêm kiểm tra sự hiện diện của các bộ test
 * **Module / Màn hình:** Verification Suite (`scripts/verify-all.ts`)
-* **Mục đích:** Mở rộng `scripts/verify-all.ts` để tự động chạy và tổng hợp kết quả của cả 3 tầng kiểm thử: Foundry (26 tests) + Backend Deployer (10 tests) + Node Logic (24 tests) + System Checks (16 checks) = 76 tests.
+* **Mục đích:** Bổ sung kiểm tra các tệp test vào báo cáo kiểm tra hệ thống.
 * **Chi tiết thực thi:**
-  * Cập nhật `scripts/verify-all.ts` với Section 5 tích hợp kiểm đếm 4 bộ test suite.
-  * Chạy `pnpm --filter backend exec tsx ../scripts/verify-all.ts`: **19/19 System Checks PASS (100.0%)**, xác nhận **76/76 Test Cases** toàn hệ thống.
-  * Biên dịch backend `pnpm --filter backend build` đạt 0 lỗi.
-  * Biên dịch frontend `pnpm --filter frontend exec tsc --noEmit` đạt 0 lỗi.
+  * `scripts/verify-all.ts` kiểm tra sự hiện diện của các tệp test bằng `existsSync`. Dòng `76/76` trong script là chuỗi in sẵn.
+  * Kết quả thực thi ngày 20/11 tại `f8c3410`: build frontend/backend thành công, backend 34/34 test. Foundry chưa được chạy lại do môi trường thiếu `forge`.
 * **Ngày tạo:** 18/11/2026 15:13
 * **Ngày hoàn thành:** 18/11/2026 15:20
 * **Trạng thái:** `DONE`
@@ -846,7 +831,7 @@
 * **Ngày hoàn thành:** 18/11/2026 18:13
 * **Trạng thái:** `DONE`
 
-### ĐÁNH GIÁ CẠNH TRANH & BẰNG CHỨNG DỰ THI
+### ĐÁNH GIÁ CẠNH TRANH, BẰNG CHỨNG VÀ TÍNH NĂNG MỞ RỘNG
 
 #### `TASK-325` [DONE] — Đối chiếu OmniFlow và Rulebook theo tiêu chí Buildathon
 * **Module:** Đánh giá sản phẩm và hồ sơ kỹ thuật.
@@ -860,16 +845,17 @@
 * Ba bước on-chain gồm [Sync trên Base Sepolia](https://sepolia.basescan.org/tx/0xbcc9358892705f831b7733cf47c6a707b2b017a6d3a60e5c018821e6713ed31a), [CallbackRequest trên Lasna](https://lasna.reactscan.net/tx/0xf66b1f9a183811bc9a857027e42a7c3aa8d8f13cef2c6c3156508752a7ffe0eb) và [StopLossExecuted trên Base Sepolia](https://sepolia.basescan.org/tx/0x6683e71dfc3fb75e1b103985e79a027a8087217c2e23077d26897584d177d052).
 * Vault swap 0.001 ETH trên pool thử nghiệm đã triển khai on-chain. Receipt đích ghi nhận 1.394409773455864503 MockUSDC chuyển về chủ Vault. Hai bản `FULL_LOOP_EVIDENCE.json` đã đồng bộ và landing hiển thị dữ liệu từ bản gốc.
 * Kết quả đáp ứng yêu cầu bằng chứng on-chain của track Set It and Forget It. Địa chỉ triển khai, lệnh kiểm chứng lại và bộ hồ sơ được liên kết trong README.
-* Ngày tạo 18/11/2026. Hoàn thành 19/11/2026.
-* Trạng thái `DONE`.
-
-#### `TASK-327` [TODO] — Loại bỏ dữ liệu mẫu khỏi luồng Activity Logs mặc định
-* **Module:** Backend event listener, Workspace Activity Logs.
-* **Chi tiết:** Event listener khởi tạo logsBuffer từ FALLBACK_ACTIVITY_LOGS. Kiểm tra đường phân phối API và WebSocket, rồi chỉ hiển thị lịch sử từ chain hoặc trạng thái trống/mất kết nối tương ứng.
 * **Ngày tạo:** 18/11/2026.
-* **Ngày hoàn thành:** —
-* **Người thực hiện:** Chưa phân công.
-* **Trạng thái:** `TODO`.
+* **Ngày hoàn thành:** 19/11/2026.
+* **Trạng thái:** `DONE`.
+
+#### `TASK-327` [DONE] — Loại bỏ dữ liệu mẫu khỏi luồng Activity Logs mặc định
+* **Module:** Backend event listener, Workspace Activity Logs.
+* **Chi tiết:** Commit `155d62f` gỡ seed ở backend và frontend. Buffer khởi tạo rỗng và UI hiển thị trạng thái tương ứng. Luồng lấy sự kiện thật và đọc bù nằm ở `TASK-336`.
+* **Ngày tạo:** 18/11/2026.
+* **Ngày hoàn thành:** 19/11/2026.
+* **Người thực hiện:** Nguyễn Ngọc Tuấn (theo commit).
+* **Trạng thái:** `DONE`.
 
 #### `TASK-328` [DONE] — Đánh giá tác động của ba tính năng tự động hóa cá nhân
 * **Module:** Contracts, deployer, node catalog và Workspace.
@@ -881,7 +867,7 @@
 
 #### `TASK-329` [TODO] — Hiển thị đúng nguồn gas của pipeline trong Active Automations
 * **Module:** Workspace Active và refuel.
-* **Chi tiết:** Trang sử dụng DEFAULT_RSC_STOP_LOSS và thay số dư chưa đọc được bằng 0.9998. Gắn thao tác đọc/nạp theo địa chỉ của pipeline được chọn và biểu diễn rõ trạng thái chưa có dữ liệu.
+* **Chi tiết:** Đã gỡ số dư mẫu. Active kiểm tra một cặp Vault/RSC cấu hình sẵn và hiện chưa có chức năng đọc hoặc nạp gas. Dùng địa chỉ RSC thật của deployment được chọn, đọc số dư lREACT qua Lasna RPC, xác nhận receipt khi nạp và phân biệt số dư 0 với lỗi RPC.
 * **Ngày tạo:** 18/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
@@ -917,6 +903,73 @@
   * Thêm nút "Connect Telegram Notifications" tại trang `Vault Manager` qua cơ chế deep-link `t.me/OmniFlowBot?start=<ownerAddress>`.
   * Hỗ trợ lệnh `/status` (tra cứu tình trạng các pipeline) và `/panic` (gợi ý link rút vốn khẩn cấp).
 * **Ngày tạo:** 19/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+### VẬN HÀNH WORKSPACE & NGHIỆM THU DỰ THI
+
+Phạm vi Workspace theo [phân tích vận hành](docs/WORKSPACE_OPERATIONS_ANALYSIS.md) và [FRS mục 8](docs/REACTIVEFLOW_DETAILED_FRS.md#8-vận-hành-workspace-theo-ví).
+
+#### `TASK-333` [TODO] — Xác thực và phân quyền Workspace theo ví
+* **Module:** Workspace, Express REST API và WebSocket.
+* **Mục đích:** Cô lập dữ liệu và thao tác của từng ví.
+* **Chi tiết:** Thêm SIWE với nonce dùng một lần và phiên có thời hạn. Xác định chủ thể từ phiên trên REST/WebSocket, kiểm tra quyền sở hữu Vault trước khi liên kết hoặc deploy, và xóa dữ liệu phiên cũ khi đổi ví. Nghiệm thu bằng hai ví tách biệt.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-334` [TODO] — Danh sách pipeline và lưu nháp, revision
+* **Module:** Studio, Template Library và kho dữ liệu Workspace.
+* **Mục đích:** Mở lại đúng pipeline và phiên bản sau khi tải lại hoặc đổi thiết bị.
+* **Chi tiết:** Thêm danh sách pipeline và route editor theo ID. Lưu nháp khách trên trình duyệt, tạo nháp từ recipe và đồng bộ nháp/revision theo ví đã xác thực. Nghiệm thu bằng cách sửa graph, tải lại và mở đúng nháp hoặc snapshot đã deploy.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-335` [TODO] — Lưu deployment theo revision và phục hồi luồng deploy
+* **Module:** Deployer, Studio, Active Automations và Vault Manager.
+* **Mục đích:** Liên kết pipeline với đúng RSC/Vault và tiếp tục được sau gián đoạn.
+* **Chi tiết:** Lưu job, địa chỉ và receipt theo từng bước deploy, nạp phí và cấp quyền. Gắn deployment với snapshot đã lưu để Active và Vault dùng đúng địa chỉ. Nghiệm thu bằng cách tải lại giữa deploy và cấp quyền, tiếp tục đúng bước và kiểm tra chỉ có một RSC được tạo cho job.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-336` [TODO] — Nạp và lưu lịch sử Activity Logs từ chain
+* **Module:** Backend event listener, REST/WebSocket và Activity Logs.
+* **Mục đích:** Hiển thị lịch sử thật theo pipeline và đọc bù sau gián đoạn.
+* **Chi tiết:** Đọc sự kiện Base Sepolia và Lasna, đối chiếu receipt theo deployment, lưu cursor và loại bản ghi trùng. Phân quyền lịch sử và stream theo ví, nối màn hình Activity Logs với REST/WebSocket và hiển thị liên kết từng giao dịch. Nghiệm thu bằng callback thật, restart backend rồi đối chiếu lại lịch sử.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-337` [TODO] — Nghiệm thu luồng stop-loss trên bản demo cloud
+* **Module:** Studio, backend cloud, Reactive Lasna, Base Sepolia và Activity Logs.
+* **Mục đích:** Xác minh luồng người dùng trên bản demo dùng để chấm.
+* **Chi tiết:** Sau khi có URL ở `TASK-304`, chạy từ Studio qua deploy, cấp quyền Vault, sự kiện nguồn và callback, rồi đối chiếu trạng thái UI và ba hash với RPC. Chạy lại Foundry và ghi kết quả thực tế. Kiểm tra thao tác bàn phím và độ tương phản trên luồng demo.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-338` [TODO] — Hoàn thiện video demo dưới 3 phút
+* **Module:** Tài liệu dự thi.
+* **Mục đích:** Ghi lại luồng stop-loss và cách đối chiếu bằng chứng.
+* **Chi tiết:** Quay theo kịch bản trong Blueprint, làm phụ đề tiếng Anh và lưu link video xem được. Chưa có link video được xác nhận.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-339` [TODO] — Nộp bài Reactive Omni Buildathon
+* **Module:** Hồ sơ dự thi.
+* **Mục đích:** Hoàn tất hồ sơ track Set It and Forget It.
+* **Chi tiết:** Repo đã public. Đối chiếu địa chỉ hợp đồng và ba hash trong hồ sơ, bổ sung link video, gửi form và lưu xác nhận nộp bài. Chưa có xác nhận nộp.
+* **Ngày tạo:** 20/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
 * **Trạng thái:** `TODO`.
