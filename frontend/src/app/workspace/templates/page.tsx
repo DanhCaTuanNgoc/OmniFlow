@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { WorkspacePageHeader } from '@/components/common/WorkspaceUI';
+import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import Link from 'next/link';
 import { 
   Library, 
@@ -265,11 +265,21 @@ export default function TemplateLibraryPage() {
   }, [activeCategory, searchQuery]);
 
   return (
-    <div className="ws-page">
-      <WorkspacePageHeader title="Template Library" description="Start from a recipe and configure it in Pipeline Studio." />
+    <div className="ws-page space-y-5">
+      <WorkspacePageHeader
+        title="Template Library"
+        description="Browse battle-tested cross-chain automation blueprints and hydrate them into Pipeline Studio."
+        icon={<Library className="size-4" />}
+        actions={
+          <Link href="/workspace/studio" className="ws-button ws-button-primary inline-flex items-center gap-1.5">
+            <Zap className="size-3.5" />
+            <span>Open Studio</span>
+          </Link>
+        }
+      />
 
       {/* Filter Chips & Search Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 ws-panel">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-2.5">
         {/* Category Pills */}
         <div className="flex items-center gap-1.5 flex-wrap">
           {categories.map((cat) => (
@@ -277,16 +287,18 @@ export default function TemplateLibraryPage() {
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
               aria-pressed={activeCategory === cat.id}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 text-xs rounded-md transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                 activeCategory === cat.id
-                  ? 'bg-white text-black font-semibold shadow-sm'
-                  : 'text-[#8e8e8e] hover:text-white bg-[#14151a] border border-white/5'
+                  ? 'bg-[var(--ws-accent-bg)] text-[var(--ws-accent)] font-semibold'
+                  : 'text-[var(--ws-muted)] hover:bg-white/5 hover:text-white'
               }`}
             >
               <span>{cat.label}</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                activeCategory === cat.id ? 'bg-black/10 text-black' : 'bg-white/[0.08] text-slate-400'
-              }`}>
+              <span
+                className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                  activeCategory === cat.id ? 'bg-[var(--ws-accent)]/20 text-[var(--ws-accent)]' : 'bg-white/[0.08] text-zinc-400'
+                }`}
+              >
                 {cat.count}
               </span>
             </button>
@@ -294,123 +306,134 @@ export default function TemplateLibraryPage() {
         </div>
 
         {/* Search Input */}
-        <div className="relative w-full md:w-64">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="relative flex-1 max-w-xs">
+          <Search className="size-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search recipes, tags..."
-            className="w-full bg-[#14151a] border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
+            className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] pl-9 pr-7 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-[var(--ws-accent)] focus:outline-none"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
             >
-              <X className="w-3 h-3" />
+              <X className="size-3" />
             </button>
           )}
         </div>
       </div>
 
       {/* Recipes Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredRecipes.map((recipe) => {
-          const Icon = recipe.icon;
-          return (
-            <div
-              key={recipe.id}
-              className="ws-panel p-4 sm:p-5 space-y-4 flex flex-col justify-between transition-colors hover:border-[#51496b] group"
-            >
-              <div className="space-y-3.5">
-                {/* Header: Icon, Title, Tags, Nodes Count */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2.5 rounded-xl border ${recipe.tagColor} shadow-sm shrink-0`}>
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-white tracking-tight group-hover:text-[var(--ws-accent)] transition-colors">
-                        {recipe.title}
-                      </h3>
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        {recipe.tags.map((t) => (
-                          <span
-                            key={t}
-                            className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-[#14151a] text-slate-300 border border-white/10"
-                          >
-                            {t}
-                          </span>
-                        ))}
+      {filteredRecipes.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredRecipes.map((recipe) => {
+            const Icon = recipe.icon;
+            return (
+              <div
+                key={recipe.id}
+                className="rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-4 sm:p-5 space-y-4 flex flex-col justify-between transition-all duration-200 hover:border-[var(--ws-accent)]/70 hover:shadow-lg hover:shadow-[var(--ws-accent-bg)]/20 hover:-translate-y-0.5 group"
+              >
+                <div className="space-y-3.5">
+                  {/* Header: Icon, Title, Tags, Nodes Count */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2.5 rounded-xl border ${recipe.tagColor} shadow-sm shrink-0`}>
+                        <Icon className="size-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-white tracking-tight group-hover:text-[var(--ws-accent)] transition-colors">
+                          {recipe.title}
+                        </h3>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {recipe.tags.map((t) => (
+                            <span
+                              key={t}
+                              className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-[#14151a] text-zinc-300 border border-white/10"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
+
+                    <span className="text-[11px] font-mono text-zinc-400 tabular-nums font-semibold px-2 py-1 rounded-md bg-[#14151a] border border-white/5 shrink-0">
+                      {recipe.nodesCount} Nodes
+                    </span>
                   </div>
 
-                  <span className="text-[11px] font-mono text-slate-400 tabular-nums font-semibold px-2 py-1 rounded-md bg-[#14151a] border border-white/5 shrink-0">
-                    {recipe.nodesCount} Nodes
-                  </span>
+                  {/* Description */}
+                  <p className="text-xs text-[var(--ws-muted)] leading-relaxed">
+                    {recipe.description}
+                  </p>
+
+                  {/* Architectural Flow Strip */}
+                  <div className="p-2.5 rounded-xl bg-[#12141c] border border-white/[0.06] text-[11px] font-mono space-y-1">
+                    <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-semibold">
+                      Template Logic Flow
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap text-zinc-300">
+                      <span className="text-cyan-300 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20 truncate max-w-[140px]" title={recipe.flow.trigger}>
+                        {recipe.flow.trigger}
+                      </span>
+                      <span className="text-zinc-600">&rarr;</span>
+                      <span className="text-violet-300 bg-violet-500/10 px-1.5 py-0.5 rounded border border-violet-500/20 truncate max-w-[140px]" title={recipe.flow.condition}>
+                        {recipe.flow.condition}
+                      </span>
+                      <span className="text-zinc-600">&rarr;</span>
+                      <span className="text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 truncate max-w-[140px]" title={recipe.flow.action}>
+                        {recipe.flow.action}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Template defaults & Cooldown */}
+                  <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 pt-1">
+                    <div className="flex items-center gap-1">
+                      <ShieldAlert className="size-3 text-amber-500" />
+                      <span className="truncate">{recipe.metrics.cooldown}</span>
+                    </div>
+                    <span className="text-[10px] text-zinc-500">
+                      {recipe.id === 'stop-loss' ? 'Production Ready' : 'Template Blueprint'}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Description */}
-                <p className="text-xs text-[#8e8e8e] leading-relaxed">
-                  {recipe.description}
-                </p>
+                {/* Bottom Action Bar */}
+                <div className="pt-3 border-t border-[var(--ws-border)] flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setInspectingRecipe(recipe)}
+                    className="ws-button inline-flex items-center gap-1.5 text-xs"
+                  >
+                    <Code2 className="size-3.5 text-cyan-400" />
+                    <span>Inspect Specs</span>
+                  </button>
 
-                {/* Architectural Flow Strip */}
-                <div className="p-2.5 rounded-xl bg-[#12141c] border border-white/[0.06] text-[11px] font-mono space-y-1">
-                  <div className="text-[9px] uppercase tracking-wider text-slate-500 font-semibold">
-                    Template Logic
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-wrap text-slate-300">
-                    <span className="text-cyan-300 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20 truncate max-w-[140px]" title={recipe.flow.trigger}>
-                      {recipe.flow.trigger}
-                    </span>
-                    <span className="text-slate-600">&rarr;</span>
-                    <span className="text-violet-300 bg-violet-500/10 px-1.5 py-0.5 rounded border border-violet-500/20 truncate max-w-[140px]" title={recipe.flow.condition}>
-                      {recipe.flow.condition}
-                    </span>
-                    <span className="text-slate-600">&rarr;</span>
-                    <span className="text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 truncate max-w-[140px]" title={recipe.flow.action}>
-                      {recipe.flow.action}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Template defaults */}
-                <p className="text-[10px] text-slate-400">{recipe.id === 'stop-loss' ? 'Configure a compatible Vault before deploying.' : 'Draft preset. Deployment is unavailable.'}</p>
-                <div className="text-[10px] font-mono text-slate-400 pt-1">
-                  <div className="flex items-center gap-1">
-                    <ShieldAlert className="w-3 h-3 text-amber-500" />
-                    <span className="truncate">{recipe.metrics.cooldown}</span>
-                  </div>
+                  <Link
+                    href={`/workspace/studio?recipe=${recipe.id}`}
+                    prefetch={true}
+                    className="ws-button ws-button-primary flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-semibold"
+                  >
+                    <Zap className="size-3.5" />
+                    <span>Hydrate onto Canvas</span>
+                    <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
                 </div>
               </div>
-
-              {/* Bottom Action Bar */}
-              <div className="pt-3 border-t border-white/[0.06] flex items-center gap-2">
-                <button
-                  onClick={() => setInspectingRecipe(recipe)}
-                  className="px-3.5 py-2 text-xs font-medium rounded-lg bg-[#14151a] hover:bg-[#202126] text-slate-300 hover:text-white border border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Code2 className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Inspect Specs</span>
-                </button>
-
-                <Link
-                  href={`/workspace/studio?recipe=${recipe.id}`}
-                  prefetch={true}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-white hover:bg-slate-200 text-black transition-colors duration-150 cursor-pointer shadow-sm"
-                >
-                  <Zap className="w-3.5 h-3.5 fill-black" />
-                  <span>Hydrate onto Canvas</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        <WorkspaceState
+          title="No recipes found."
+          description="No automation blueprints match your search criteria. Try clearing the search or switching category filters."
+          icon={<Library className="size-6" />}
+        />
+      )}
 
       {/* Slide-Over Architecture Preview Drawer */}
       {inspectingRecipe && (

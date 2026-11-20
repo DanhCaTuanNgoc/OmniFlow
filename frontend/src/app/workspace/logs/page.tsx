@@ -1,9 +1,24 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import type { Address } from 'viem';
+import { 
+  Activity, 
+  Search, 
+  RefreshCw, 
+  ExternalLink, 
+  CheckCircle2, 
+  Clock, 
+  AlertCircle, 
+  Layers, 
+  Zap, 
+  Radio,
+  Wifi,
+  WifiOff
+} from 'lucide-react';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import { useWebSocket, WebSocketProvider } from '@/components/providers/WebSocketProvider';
 import { getWorkspaceSessionToken, workspaceRequest } from '@/lib/workspaceSession';
@@ -20,29 +35,59 @@ export type Execution = {
   details: { reason?: string };
 };
 
-const outcome = {
-  PENDING: 'Pending confirmation', UNVERIFIED: 'Reconciling receipts', REORGED: 'Reorganized',
-  SUCCESS: 'Executed', SKIPPED: 'Skipped', FAILED: 'Failed',
+const outcome: Record<string, string> = {
+  PENDING: 'Pending confirmation',
+  UNVERIFIED: 'Reconciling receipts',
+  REORGED: 'Reorganized',
+  SUCCESS: 'Executed',
+  SKIPPED: 'Skipped',
+  FAILED: 'Failed',
 };
 
-type History = { logs: Execution[]; indexer: { checkedAt: string; error: boolean } | null;
-  next: { timestamp: string; sequence: number } | null };
+type History = {
+  logs: Execution[];
+  indexer: { checkedAt: string; error: boolean } | null;
+  next: { timestamp: string; sequence: number } | null;
+};
 
 export default function ActivityLogsPage() {
-  return <Suspense fallback={<WorkspaceState title="Loading Activity Logs…" />}><LogsRoute /></Suspense>;
+  return (
+    <Suspense fallback={<WorkspaceState title="Loading Activity Logs…" icon={<Activity className="size-6 animate-pulse" />} />}>
+      <LogsRoute />
+    </Suspense>
+  );
 }
 
 function LogsRoute() {
   const { address, isConnected } = useAccount();
   const id = useSearchParams().get('deployment');
+
   return (
-    <div className="ws-page">
-      <WorkspacePageHeader title="Activity Logs" description="Follow source events, Reactive requests and verified destination receipts." />
+    <div className="ws-page space-y-5">
+      <WorkspacePageHeader
+        title="Activity Logs"
+        description="Follow live on-chain events, Reactive RSC requests, and verified destination Vault receipts."
+        icon={<Activity className="size-4" />}
+        actions={
+          <Link href="/workspace/active" className="ws-button ws-button-primary inline-flex items-center gap-1.5">
+            <Layers className="size-3.5" />
+            <span>Active Automations</span>
+          </Link>
+        }
+      />
+
       {isConnected && address ? (
         <WebSocketProvider key={`${address}:${id ?? 'all'}`}>
           <WalletHistory owner={address} deploymentId={id} />
         </WebSocketProvider>
-      ) : <WorkspaceState title="Connect a wallet to view your activity." />}
+      ) : (
+        <WorkspaceState
+          title="Connect your wallet to inspect activity logs."
+          description="View live cross-chain execution receipts between Base Sepolia and Reactive Omni Lasna."
+          icon={<Activity className="size-6" />}
+          action={{ label: 'Open Pipeline Studio', href: '/workspace/studio' }}
+        />
+      )}
     </div>
   );
 }
@@ -54,19 +99,24 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
   const { addListener, sendMessage, status } = useWebSocket();
   const path = deploymentId ? `/logs?pipelineId=${encodeURIComponent(deploymentId)}` : '/logs';
 
+  // Filter & Search
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SUCCESS' | 'PENDING' | 'FAILED'>('ALL');
+
   const load = useCallback(async () => {
     setPending(true);
     setError(undefined);
     try {
       setHistory(await workspaceRequest<History>(owner, path));
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Unable to open activity.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to open activity.');
     } finally {
       setPending(false);
     }
   }, [owner, path]);
 
   const hasHistory = history !== undefined;
+
   async function loadEarlier() {
     const next = history?.next;
     if (!next) return;
@@ -75,21 +125,22 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
     try {
       const params = new URLSearchParams({ before: next.timestamp, sequence: String(next.sequence) });
       const page = await workspaceRequest<History>(owner, `${path}${deploymentId ? '&' : '?'}${params}`);
-      setHistory(current => current && {
+      setHistory((current) => current && {
         ...page,
-        logs: [...current.logs, ...page.logs.filter(entry => !current.logs.some(currentEntry => currentEntry.id === entry.id))],
+        logs: [...current.logs, ...page.logs.filter((entry) => !current.logs.some((c) => c.id === entry.id))],
       });
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Unable to load earlier receipts.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load earlier receipts.');
     } finally {
       setPending(false);
     }
   }
+
   useEffect(() => {
     if (status !== 'CONNECTED' || !hasHistory || !deploymentId) return;
     const token = getWorkspaceSessionToken(owner);
     if (!token) return;
-    const remove = addListener(message => {
+    const remove = addListener((message) => {
       if (getWorkspaceSessionToken(owner) !== token) return;
       if (message.type === 'AUTHENTICATED') {
         sendMessage({ type: 'SUBSCRIBE_PIPELINE', pipelineId: deploymentId });
@@ -97,9 +148,9 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
         void load();
       } else if (message.type === 'EXECUTION_UPDATED' && message.pipelineId === deploymentId) {
         const update = message.data as Execution;
-        setHistory(current => current && {
+        setHistory((current) => current && {
           ...current,
-          logs: [update, ...current.logs.filter(entry => entry.id !== update.id)]
+          logs: [update, ...current.logs.filter((entry) => entry.id !== update.id)]
             .sort((left, right) => right.timestamp.localeCompare(left.timestamp)),
         });
       }
@@ -111,41 +162,219 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
     };
   }, [addListener, deploymentId, hasHistory, load, owner, sendMessage, status]);
 
+  const filteredLogs = useMemo(() => {
+    if (!history?.logs) return [];
+    return history.logs.filter((entry) => {
+      // Search
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = entry.pipelineName.toLowerCase().includes(q);
+        const matchReason = entry.details?.reason?.toLowerCase().includes(q);
+        const matchOrigin = entry.originTxHash?.toLowerCase().includes(q);
+        const matchReactive = entry.reactiveTxHash?.toLowerCase().includes(q);
+        const matchDest = entry.destinationTxHash?.toLowerCase().includes(q);
+        if (!matchName && !matchReason && !matchOrigin && !matchReactive && !matchDest) return false;
+      }
+      // Status
+      if (statusFilter === 'SUCCESS') return entry.status === 'SUCCESS';
+      if (statusFilter === 'PENDING') return entry.status === 'PENDING' || entry.status === 'UNVERIFIED';
+      if (statusFilter === 'FAILED') return entry.status === 'FAILED' || entry.status === 'REORGED' || entry.status === 'SKIPPED';
+      return true;
+    });
+  }, [history?.logs, searchQuery, statusFilter]);
+
   return (
-    <>
-      <div className="flex flex-wrap items-center gap-3">
-        <button type="button" className="ws-button" disabled={pending} onClick={() => void load()}>
-          {pending ? 'Checking activity…' : history ? 'Refresh activity' : 'Load my activity'}
-        </button>
-        {deploymentId && status === 'DISCONNECTED' && <span role="status" className="text-xs text-[var(--ws-muted)]">Live updates disconnected</span>}
-      </div>
-      {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}
-      {history?.indexer?.error && <p role="status" className="text-sm text-amber-200">Some receipts could not be refreshed.</p>}
-      {history && (!history.logs.length ? (
-        <WorkspaceState title={deploymentId && !history.indexer ? 'Waiting for the first history check.' : 'No matching execution receipts yet.'}
-          action={{ label: 'Back to Active', href: deploymentId ? `/workspace/active?deployment=${encodeURIComponent(deploymentId)}` : '/workspace/active' }} />
-      ) : (
-        <ol className="ws-panel divide-y divide-[var(--ws-border)]">
-          {history.logs.map(entry => (
-            <li key={entry.id} className="space-y-2 px-4 py-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold">{entry.pipelineName}</p>
-                <span className="ws-badge">{outcome[entry.status]}</span>
-                <time className="text-xs tabular-nums text-[var(--ws-muted)]" dateTime={entry.timestamp}>{new Date(entry.timestamp).toLocaleString()}</time>
-              </div>
-              {entry.details.reason && <p className="text-sm text-[var(--ws-muted)]">{entry.details.reason}</p>}
-              <div className="flex flex-wrap gap-4 text-sm">
-                <a className="ws-address" href={`https://sepolia.basescan.org/tx/${entry.originTxHash}`}>Source Sync</a>
-                {entry.reactiveTxHash && <a className="ws-address" href={`https://lasna.reactscan.net/tx/${entry.reactiveTxHash}`}>Reactive receipt</a>}
-                {entry.destinationTxHash && <a className="ws-address" href={`https://sepolia.basescan.org/tx/${entry.destinationTxHash}`}>Vault callback</a>}
-              </div>
-            </li>
+    <div className="space-y-4">
+      {/* Toolbar: Search, Filters & Live Telemetry Indicator */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-2.5">
+        <div className="relative flex-1 max-w-md">
+          <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search activity by pipeline, tx hash, or reason..."
+            className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] pl-9 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-[var(--ws-accent)] focus:outline-none"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto text-xs">
+          {(
+            [
+              { key: 'ALL', label: `All (${history?.logs.length ?? 0})` },
+              { key: 'SUCCESS', label: 'Executed' },
+              { key: 'PENDING', label: 'Pending' },
+              { key: 'FAILED', label: 'Failed/Skipped' },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setStatusFilter(tab.key)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+                statusFilter === tab.key
+                  ? 'bg-[var(--ws-accent-bg)] text-[var(--ws-accent)] font-semibold'
+                  : 'text-[var(--ws-muted)] hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              {tab.label}
+            </button>
           ))}
-        </ol>
-      ))}
-      {history?.next && <button type="button" className="ws-button self-start" disabled={pending} onClick={() => void loadEarlier()}>
-        Load earlier receipts
-      </button>}
-    </>
+
+          <div className="h-4 w-px bg-[var(--ws-border)] mx-1" />
+
+          {status === 'CONNECTED' ? (
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 px-2 py-1 text-[11px] text-emerald-300 font-mono">
+              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Live WS</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-zinc-500/10 border border-zinc-500/30 px-2 py-1 text-[11px] text-zinc-400 font-mono">
+              <WifiOff className="size-3" />
+              <span>Polling</span>
+            </span>
+          )}
+
+          <button
+            type="button"
+            className="ws-button inline-flex items-center gap-1.5 shrink-0"
+            disabled={pending}
+            onClick={() => void load()}
+            title="Refresh activity logs"
+          >
+            <RefreshCw className={`size-3 text-zinc-400 ${pending ? 'animate-spin' : ''}`} />
+            <span>{pending ? 'Checking…' : history ? 'Refresh' : 'Load Activity'}</span>
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div role="alert" className="flex items-center gap-2 rounded-lg border border-rose-900/60 bg-rose-950/30 p-3 text-xs text-rose-300">
+          <AlertCircle className="size-4 shrink-0 text-rose-400" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {history?.indexer?.error && (
+        <p role="status" className="text-xs text-amber-200 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-lg">
+          Some recent receipts could not be indexed yet. Pull to refresh.
+        </p>
+      )}
+
+      {/* Logs List */}
+      {history && (
+        filteredLogs.length === 0 ? (
+          <WorkspaceState
+            title={history.logs.length === 0 ? 'No matching execution receipts yet.' : 'No activity matches your search filter.'}
+            description={history.logs.length === 0 ? 'Trigger a DEX trade or deposit to ActionVault to produce verifiable Reactive callbacks.' : undefined}
+            icon={<Activity className="size-6" />}
+            action={{ label: 'Back to Active Automations', href: deploymentId ? `/workspace/active?deployment=${encodeURIComponent(deploymentId)}` : '/workspace/active' }}
+          />
+        ) : (
+          <div className="space-y-3">
+            {filteredLogs.map((entry) => {
+              const isSuccess = entry.status === 'SUCCESS';
+              const isPendingStatus = entry.status === 'PENDING' || entry.status === 'UNVERIFIED';
+
+              return (
+                <div
+                  key={entry.id}
+                  className="rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-4 space-y-3 transition-colors hover:border-[var(--ws-accent)]/50"
+                >
+                  {/* Top row: Pipeline name, status badge, timestamp */}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-white tracking-tight">
+                        {entry.pipelineName}
+                      </h3>
+                      {isSuccess ? (
+                        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300">
+                          <CheckCircle2 className="size-2.5" />
+                          <span>EXECUTED</span>
+                        </span>
+                      ) : isPendingStatus ? (
+                        <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
+                          <Clock className="size-2.5" />
+                          <span>{entry.status}</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded bg-rose-500/10 border border-rose-500/30 px-1.5 py-0.5 text-[10px] font-medium text-rose-300">
+                          <AlertCircle className="size-2.5" />
+                          <span>{outcome[entry.status] || entry.status}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <time className="text-xs font-mono text-[var(--ws-muted)] tabular-nums" dateTime={entry.timestamp}>
+                      {new Date(entry.timestamp).toLocaleString()}
+                    </time>
+                  </div>
+
+                  {/* Details or Reason */}
+                  {entry.details.reason && (
+                    <div className="rounded-md border border-[var(--ws-border)] bg-[#111318] p-2.5 text-xs font-mono text-zinc-300 leading-relaxed">
+                      {entry.details.reason}
+                    </div>
+                  )}
+
+                  {/* Verifiable 3-tier Transaction Hashes */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1 text-xs font-mono">
+                    <a
+                      className="inline-flex items-center gap-1.5 rounded border border-[var(--ws-border)] bg-[#111318] px-2.5 py-1 text-zinc-300 hover:text-white hover:border-[var(--ws-accent)] transition-colors"
+                      href={`https://sepolia.basescan.org/tx/${entry.originTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <span className="size-1.5 rounded-full bg-cyan-400" />
+                      <span>Origin: {entry.originTxHash.slice(0, 8)}...</span>
+                      <ExternalLink className="size-2.5 text-zinc-500" />
+                    </a>
+
+                    {entry.reactiveTxHash && (
+                      <a
+                        className="inline-flex items-center gap-1.5 rounded border border-[var(--ws-border)] bg-[#111318] px-2.5 py-1 text-zinc-300 hover:text-white hover:border-[var(--ws-accent)] transition-colors"
+                        href={`https://lasna.reactscan.net/tx/${entry.reactiveTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <span className="size-1.5 rounded-full bg-purple-400" />
+                        <span>RSC Lasna: {entry.reactiveTxHash.slice(0, 8)}...</span>
+                        <ExternalLink className="size-2.5 text-zinc-500" />
+                      </a>
+                    )}
+
+                    {entry.destinationTxHash && (
+                      <a
+                        className="inline-flex items-center gap-1.5 rounded border border-[var(--ws-border)] bg-[#111318] px-2.5 py-1 text-zinc-300 hover:text-white hover:border-[var(--ws-accent)] transition-colors"
+                        href={`https://sepolia.basescan.org/tx/${entry.destinationTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <span className="size-1.5 rounded-full bg-emerald-400" />
+                        <span>Callback Vault: {entry.destinationTxHash.slice(0, 8)}...</span>
+                        <ExternalLink className="size-2.5 text-zinc-500" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {history?.next && (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  className="ws-button text-xs"
+                  disabled={pending}
+                  onClick={() => void loadEarlier()}
+                >
+                  Load Earlier Receipts
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      )}
+    </div>
   );
 }
