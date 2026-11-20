@@ -25,8 +25,9 @@ import { useAccount } from 'wagmi';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { APP_CONFIG } from '@/lib/constants';
-import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, studioGraph } from '@/lib/pipelineDraft';
+import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph } from '@/lib/pipelineDraft';
 import { workspaceRequest } from '@/lib/workspaceSession';
+import { useStudioHeaderStore } from '@/lib/studioHeaderStore';
 
 import {
   WatchDEXPriceNode,
@@ -107,6 +108,27 @@ function StudioCanvasInner() {
   const localParam = searchParams.get('local');
   const isSnapshot = Boolean(deploymentParam && !savedDraft);
   const draftName = pipelineName.trim() || RECIPE_PRESETS[activeRecipeId]?.title || 'Custom pipeline';
+
+  const { setStudioHeader, clearStudioHeader } = useStudioHeaderStore();
+
+  const handleRenameFromHeader = useCallback((newName: string) => {
+    setPipelineName(newName);
+    if (localParam) {
+      renameBrowserDraft(localParam, newName);
+    }
+  }, [localParam]);
+
+  // Synchronize active pipeline name and rename handler with top Workspace Header breadcrumb
+  useEffect(() => {
+    setStudioHeader({
+      pipelineName: draftName,
+      isEditable: !isSnapshot,
+      onRename: handleRenameFromHeader,
+    });
+    return () => {
+      clearStudioHeader();
+    };
+  }, [draftName, isSnapshot, handleRenameFromHeader, setStudioHeader, clearStudioHeader]);
 
   // Hydrate preset from query parameter ?recipe=...
   useEffect(() => {
@@ -381,27 +403,14 @@ function StudioCanvasInner() {
 
       <div className="relative flex h-full min-w-0 flex-1 flex-col" ref={reactFlowWrapper}>
         <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--ws-border)] bg-[var(--ws-rail)] px-3 py-2.5 sm:px-4">
-          <div className="flex min-w-0 items-center gap-2">
-            {!isSnapshot && <button type="button" className="ws-button lg:hidden" aria-expanded={isPaletteOpen} aria-controls="studio-node-palette"
-              onClick={() => setPaletteOpen(open => !open)}>Add nodes</button>}
+          <div className="flex min-w-0 items-center">
             <Link className="ws-button inline-flex items-center gap-1.5" href="/workspace/studio" title="Back to pipeline list">
               <ArrowLeft className="size-3.5" />
-              <span>Pipelines</span>
+              <span>Back</span>
             </Link>
-            <h1 className="truncate text-sm font-semibold">{draftName}</h1>
           </div>
 
           <div className="ws-actions">
-            {!isSnapshot && (
-              <input
-                aria-label="Pipeline name"
-                placeholder="Pipeline name"
-                value={pipelineName}
-                maxLength={120}
-                onChange={(event) => setPipelineName(event.target.value)}
-                className="ws-button max-w-[11rem]"
-              />
-            )}
             <button
               type="button"
               className="ws-button"
