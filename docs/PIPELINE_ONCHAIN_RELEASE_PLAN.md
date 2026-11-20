@@ -36,7 +36,7 @@ Mỗi hàng cần một deployment có thể mở lại trong Active, một lư�
 | Giai đoạn | Flow | Tiêu chí để đánh dấu đã hoạt động |
 |---|---|---|
 | A | **Flash Crash Stop-Loss**, Blueprint 01 và 11 | Cùng RSC/Vault có lượt bán và payout, lượt giá hồi có `OrderSkipped`, hai trigger trong cooldown chỉ tạo một callback. Kiểm chứng từng tham số preset riêng nếu tỷ lệ/cooldown khác nhau. Với chế độ một lần, chỉ khóa sau settlement thành công, thử skip rồi kích hoạt lại và callback lặp không bán lần hai. TASK-340/342. |
-| B | **Take-Profit**, Blueprint 03 | Rail swap kiểm tra `>=` ở cùng chain. Giá vẫn đạt ngưỡng thì bán, giá tụt trước callback thì Vault bỏ qua. TASK-345. |
+| B | **Take-Profit**, Blueprint 03 | Vault kiểm tra `>=` ở cùng chain. Giá vẫn đạt ngưỡng thì bán, giá tụt trước callback thì Vault bỏ qua. TASK-345. |
 | B | **Cross-Chain Hedge** | Hai quan sát Unichain trong cửa sổ khởi tạo velocity dẫn tới swap Base. Độ giảm thiếu, cửa sổ hết hạn hoặc chỉ chạm giá tĩnh không kích hoạt chế độ velocity-only. Ghi đúng chain, pool, proxy và payout. TASK-346. |
 | C | **Anti-Drainer SafeSweep**, Blueprint 05 | Dùng rule owner đã duyệt trên emitter xác thực, kiểm chứng phép lọc chuyển ra và điều kiện rõ như đích ngoài danh sách hoặc vượt mức. Giao dịch thường không sweep, tín hiệu hợp lệ chuyển đúng tài sản được hỗ trợ tới địa chỉ dự phòng. Bảo vệ giới hạn trong Vault. TASK-349. |
 | C | **Payday Auto-Splitter** và **trích khoản nhận USDC** | Trước hết một khoản USDC vào Vault tạo đúng một khoản trích. Sau đó nghiệm thu preset Payday đầy đủ với phân bổ 20/30/50 trên khoản nhận, trong đó 20% dùng để mua ETH/WETH theo cấu hình, 30% đi ví tiết kiệm, 50% giữ lại. Dùng một action hợp thành để tránh hai callback tài chính tranh số dư. Kiểm tra sai token, thiếu vốn, slippage/lỗi giữa chừng và replay. TASK-347. |
@@ -62,3 +62,80 @@ Mỗi hàng cần một deployment có thể mở lại trong Active, một lư�
 4. **Xác minh hosting sau khi vượt cổng pre-cloud.** Dùng đúng commit đã nghiệm thu, trước hết Railway và Vercel ở môi trường kiểm thử. Kiểm tra `/health`, RPC cho các chain trong manifest, REST/CORS, WebSocket, phiên ví, migrations, khôi phục cursor và URL Studio/Active. Chạy smoke từ URL đã host và so với dữ liệu RPC trước khi công bố. Giữ cấu hình/commit có thể rollback và không đổi địa chỉ triển khai đã xác minh trong lúc nghiệm thu. TASK-304/337/353.
 
 **Điểm quyết định tiến độ.** Chạy A trước rồi làm nền chung Vault, quyền và Active song song với runtime B/C/D theo quan hệ phụ thuộc. Phần mở rộng cron, định tuyến hai chiều, nhiều nhánh và chuyển tài sản cần dự trù theo tuần, trong khi TASK-340 riêng vẫn ước tính 2–4 ngày công. Chốt lịch sau khi đã khảo sát từng runtime và thử preflight testnet. Điều kiện tất cả flow đạt có thể đẩy lịch cloud, kể cả khi stop-loss đã sẵn sàng.
+
+## 6. Gói triển khai và điều kiện bàn giao
+
+Kế hoạch này đặt **độ bao phủ 100% trên các cấu hình được phép Deploy**. Mỗi node trong catalog cần ít nhất một lượt chạy thực sự sử dụng node đó. Mỗi recipe, kịch bản Blueprint và biến thể nêu tại mục 8 cần đủ bằng chứng theo kỳ vọng riêng. Một lỗi còn mở làm sai kết quả, sai quyền, sai số tiền hoặc lệch deployment sẽ giữ cổng release ở trạng thái chờ. Đồ thị tự ghép đi qua cùng bộ xác thực với preset và chỉ chạy trong phạm vi template có runtime tương ứng.
+
+| Gói | Công việc theo thứ tự | Điều kiện bàn giao |
+|---|---|---|
+| 0. Chốt hợp đồng giữa canvas và runtime | Chụp catalog và triển khai demo hiện tại. Lập manifest capability theo template và version. Chuẩn hóa dữ liệu node, topology, chain, quyền và đơn vị. Xử lý import graph cũ, sau đó chặn các graph có ý nghĩa chưa được hỗ trợ qua cả UI và API. | Lưu fixture đại diện cho mọi graph chuẩn và graph bị từ chối. Preview và thông số constructor khớp. Flow, bằng chứng và URL cũ còn truy cập được. TASK-341/342. |
+| 1. Hoàn chỉnh một lượt từ ví mới | Hoàn thiện xác thực ví, tạo/liên kết Vault, lưu revision, deploy và cấp quyền. Chạy hai lượt stop-loss trên deployment cô lập và ghi kết quả theo receipt. Mở lại deployment trong Active và đối soát vốn, gas, quyền và history. | Từ ví mới qua Studio local đến callback thật và mở lại đúng dòng Active. Có receipt cho cả hai nhánh. Khi reload giữa các bước, tiếp tục đúng job. TASK-329/333–336/340/350. |
+| 2. Lệnh theo giá và nhiều tín hiệu | Sau gói 0, triển khai Take-Profit, Cross-Chain Hedge, one-shot và bậc thang. Thêm resolver cho các điều kiện AND/OR theo template. Chỉ kích hoạt graph nhiều tín hiệu sau khi chốt quy tắc freshness và tiêu chí độ trễ. | Test biên so sánh, đơn vị giá, nhiều bậc, log cũ, replay và sai chain. Lưu proof từng mode, đối chiếu constraints tại Vault và trạng thái Active. TASK-345/346/351. |
+| 3. Transfer, chia tiền và quyền dừng | Viết parser Transfer và test alert-only trước khi cho callback chi tiền. Bổ sung trích USDC rồi Payday hợp thành và SafeSweep. Flow Pause độc lập về quyền và chỉ đưa lên UI sau khi proof timelock đạt. | Mỗi callback tài chính khớp đúng sự kiện, tài sản, trần chi và đích. Payout/alert đúng một lần. Pause đúng deployment, callback cũ hết quyền sau khi re-arm, owner vẫn rút được. TASK-343/344/347/349/351. |
+| 4. Lịch và tái cân bằng | Dùng cron hệ thống Lasna, chốt cách tính kỳ và giới hạn độ cũ trước. Nghiệm thu cảnh báo số dư, rút lãi theo ngưỡng rồi tái cân bằng hai chiều. | Có tick và callback thật trên cấu hình testnet, kiểm thử không chạy hai lần một kỳ, hết phí, ngoài biên hai phía, giá thay đổi và giới hạn chi. TASK-348/351. |
+| 5. Đối soát toàn bộ và phát hành | Chạy từng hàng mục 8 với cùng phiên bản runtime và manifest release. So dữ liệu Studio, Active và Logs với RPC. Thử retry, reorg, rollback, đổi ví và restart. Chốt pre-cloud trước khi publish. | Tất cả hàng ở trạng thái `PASS`, hash kiểm chứng được, đủ phiên bản và thông số. Sau đó mới triển khai bản kiểm thử trên Railway/Vercel và chạy smoke. TASK-352/353 → TASK-304/337. |
+
+## 7. Quy tắc triển khai để tránh hồi quy
+
+### 7.1 Graph, ABI và phiên bản
+
+- Giữ graph nguồn cùng revision bất biến và tính hash trên dữ liệu đã chuẩn hóa. Tách thông số runtime khỏi vị trí, tên và trạng thái hiển thị của node. Resolver phải trả đủ template/version, chain pair, emitter, bộ lọc, action và quyền yêu cầu. Mọi node và cạnh cần có vai trò runtime rõ. Khi graph có nhiều cách diễn giải hoặc giá trị chưa hỗ trợ, trả lỗi có node và trường cụ thể.
+- Dùng một nguồn canonical cho origin và destination. Nếu graph cũ chứa cả `chainId` và `originChainId` xung đột, yêu cầu sửa graph trước deploy. Kiểm tra địa chỉ, chain, thứ tự token, decimals, topic, operator, giá và số lượng bằng đơn vị nguyên. Phân biệt giá trị thiếu, giá trị 0 hợp lệ và chế độ tắt ngưỡng tĩnh. Render giới hạn swap từ capability/giá trị on-chain đã đối chiếu.
+- Mỗi template version mới có ABI và bytecode được build cùng commit. Giữ khả năng đọc deployment cũ. Các thay đổi về quyền, callback hoặc cách tính tỷ lệ tạo revision mới và opt-in của owner. Khi chuyển phiên bản, giữ log cũ gắn đúng revision và chỉ dừng quyền cũ theo thao tác đã được owner xác nhận. Chốt sai khác Blueprint/FRS về tỷ lệ và chính sách trước khi cập nhật preset.
+
+### 7.2 Giao dịch, quyền và nhiều lần thử
+
+- Kiểm tra danh tính ví từ phiên ở REST và WebSocket. Đọc owner, bytecode/capability, proxy, RSC và địa chỉ đích từ chain trước khi chọn đường ký. Quyền callback giới hạn đến deployment, hành động, token, khoản chi tối đa và đích do owner duyệt khi capability yêu cầu. Vault xác thực proxy và danh tính Reactive được proxy chuyển tới. Pause, sweep, swap và alert có phạm vi quyền riêng. Chủ Vault giữ đường rút trực tiếp.
+- Định danh job theo ví, môi trường, revision và khóa idempotency. Ghi intent và dữ liệu đối soát signer/nonce trước khi broadcast. Một worker nhận mỗi bước. Nếu mất phản hồi ngay sau broadcast, đối soát hash và nonce trước khi thử lại. Giao dịch do owner ký cần kiểm tra receipt và trạng thái on-chain sau khi mở lại. Khi đổi ví hoặc chain giữa luồng, hủy thao tác đang chờ của UI và giữ job đã phát sinh để đối soát.
+- Dùng khóa execution gắn với chain nguồn, tx, log index, deployment/version và action hoặc kỳ. Vault chặn chi trùng ngay cả khi receipt đến chậm hoặc callback được gửi lại. Trạng thái tiêu thụ ngân sách, one-shot và bậc thang phải nhất quán với settlement trong cùng giao dịch. Nếu action thất bại giữa chừng, rollback phần tài chính và ghi nhận thất bại qua receipt/proxy. Khi nhiều deployment chia sẻ Vault, tái kiểm số dư và quyền ngay trước từng lần thực thi.
+- Dùng Vault/RSC/pool và quỹ riêng cho mỗi suite testnet. Kiểm tra principal, native lREACT, phí thực thi và credit/debt callback theo cấu hình hiện hành. Dừng ở lỗi nạp phí, sai proxy hoặc sai subscription. Retry có giới hạn, chỉ phát lại khi đã xác định kết quả lượt cũ.
+
+### 7.3 Active, lịch sử và triển khai có thể khôi phục
+
+- Tách trạng thái **deployment** khỏi **mỗi lần chạy**. Deployment chờ deploy, cấp quyền, nạp phí, sẵn sàng, dừng hoặc chưa xác minh. Execution chờ Reactive, chờ callback, đã thực thi, bỏ qua, thất bại hoặc đang đối soát. Đọc số 0 và lỗi RPC thành hai trạng thái khác nhau. Nếu có số đọc gần nhất, ghi thời điểm đọc và đánh dấu dữ liệu cũ.
+- Đối chiếu origin log với receipt Lasna và callback đích bằng khóa định danh của hệ thống hoặc run ID được thiết kế cho runtime mới. Khi phải scan fallback, kiểm tra chain, block, địa chỉ, proxy calldata và event đích. Nếu chưa ghép duy nhất được, giữ trạng thái đang đối soát. Với reorg, xử lý lại từ block hash cuối còn canonical, đánh dấu dữ liệu bị thay và đọc bù. WebSocket phát sau khi ghi dữ liệu và kiểm tra quyền thuê bao. Reload lấy snapshot và cursor trước khi nhận cập nhật tiếp.
+- Với webhook, xác nhận log trước enqueue. Dùng outbox có khóa duy nhất, lưu số lần thử và trạng thái giao. Gửi kèm khóa idempotency cố định để điểm nhận có thể loại trùng. Kiểm tra giới hạn endpoint và đích kết nối qua mọi lần chuyển hướng. Giữ signer, khóa webhook, dữ liệu phiên và URL có thông tin xác thực ngoài manifest công khai.
+- Migration theo hướng thêm trường, điền dữ liệu đã đối chiếu rồi mới chuyển nguồn đọc. Giữ dữ liệu cũ đủ để rollback UI/API. Với contract đã deploy, rollback ứng dụng không hoàn tác quyền hay giao dịch. Khi cần dừng, dùng quyền owner được cấp trên đúng Vault/deployment và ghi lại receipt. Thử khôi phục API/worker cùng cursor trên môi trường cô lập trước khi công bố.
+
+## 8. Danh sách ca nghiệm thu bắt buộc
+
+Các mã dưới đây là khóa nghiệm thu trong kế hoạch. Mỗi mã cần ghi cấu hình, commit/bytecode, block/hash, deployment, kết quả kỳ vọng, kết quả thấy được qua RPC và đối chiếu trên Active. Nếu fixture testnet dùng token thử nghiệm hoặc lịch rút ngắn, ghi rõ trong kết quả. Lượt đối chứng chỉ kết thúc ở Lasna khi đã xác nhận quyết định bỏ qua tại RSC và đối soát trong cửa sổ kiểm tra; kết quả bỏ qua tại Vault cần receipt đích.
+
+| Mã | Flow hoặc cấu hình | Ca phải đạt |
+|---|---|---|
+| BP-01 | Flash Crash Stop-Loss | Bán với payout, giá hồi thì `OrderSkipped` không chi, đúng RSC/Vault và mở lại đúng Active. |
+| BP-02 | Cắt lỗ bậc thang | Đi qua từng bậc, nhảy qua nhiều bậc, thất bại rồi thử lại, cùng bậc chỉ tính một lần. |
+| BP-03 | Take-Profit | Vượt hoặc bằng ngưỡng thì bán, tụt trước callback thì skip, toán tử và số lượng đúng trên UI. |
+| BP-04 | Dust Guard | Giá đạt nhưng thiếu vốn thì skip, cả hai đạt thì bán. Rút vốn giữa trigger và callback vẫn giữ giới hạn chi. |
+| BP-05 | Anti-Drainer SafeSweep | Tín hiệu hợp lệ và đích cố định đưa tài sản hỗ trợ về ví dự phòng. Sự kiện bình thường, nhầm emitter hoặc replay không sweep. Owner vẫn rút được. |
+| BP-06 | Cảnh báo chuyển ra | Emitter, token, ví và hướng đúng dẫn đến receipt cảnh báo. Sai token/from không hợp lệ. Mất kết nối webhook không đổi kết quả on-chain. |
+| BP-07 | Cảnh báo cá voi | Khoản đạt ngưỡng với đúng đơn vị tài sản tạo cảnh báo. Khoản nhỏ, log trùng và nhiều log trong một tx cho kết quả đúng theo quy tắc. |
+| BP-08 | Thoát theo tín hiệu cá voi | Transfer và quan sát giá cùng đạt trong cửa sổ thì bán. Một vế sai, sai thứ tự hoặc giá quá cũ thì skip. |
+| BP-09 | Daily Rebalancer | Tick thật. Trong biên giữ nguyên, lệch hai phía đổi đúng chiều. Test slippage, rút vốn, lặp tick và giới hạn giao dịch. |
+| BP-10 | Rút lãi hàng tuần | Tick đúng kỳ và giá đạt thì bán đúng phần. Sai ngưỡng, hết kỳ, tick lặp hoặc giá tụt tại Vault được xử lý theo quy tắc. |
+| BP-11 | Chống giằng co quanh ngưỡng | Nhiều log trong cooldown chỉ có một callback. Sau cooldown, chỉ tiếp tục khi giá và quyền còn hợp lệ. |
+| BP-12 | Cảnh báo Vault sắp cạn | Đủ vốn không báo, dưới ngưỡng có receipt cảnh báo, tick lặp không gửi thêm cùng kỳ. |
+| EXT-01 | Cross-Chain Hedge | Unichain → Lasna → Base. Kiểm tra giảm đủ, cửa sổ hết hạn, chỉ chạm giá tĩnh, sai chain và số tiền thực nhận. |
+| EXT-02 | Stop-loss một lần | Skip trước settlement vẫn cho kích hoạt lại. Sau lần bán thành công, event mới hoặc callback lặp không bán lần hai. |
+| EXT-03 | Trích khoản nhận USDC | Tính theo số nhận và decimals. Hai log cùng tx xử lý riêng. Replay không chi lại. Thiếu số dư thì có kết quả rõ. |
+| EXT-04 | Payday Auto-Splitter | Phân bổ đúng 20/30/50 sau làm tròn được định nghĩa, đúng đích và thứ tự. Nếu một bước tài chính lỗi thì toàn bộ phần tài chính rollback. |
+| EXT-05 | Pause Pipeline | Lịch thay đổi không liên quan có swap đối chứng. Lịch liên quan dừng trước ETA, callback cũ và muộn có trạng thái đúng. Swap tiếp theo bị chặn và owner còn quyền rút. |
+| CAP-01 | Logic Gate OR | Một vế hợp lệ là đủ theo template đã công bố. Cả hai sai, dữ liệu quá cũ và hai vế cùng đúng có đối chứng. Cả hai cùng đúng chỉ thực thi một lần cho cùng lượt. |
+
+Mỗi preset trong catalog phát hành phải chỉ ra mã ca tương ứng và cấu hình đã chạy. Hai flow có cùng kiểu node nhưng khác chain, ABI, loại tài sản hoặc ngữ nghĩa phần trăm cần nghiệm thu cấu hình riêng. Báo cáo release đếm số ca đã đạt trên tổng số ca bắt buộc, đồng thời liệt kê rõ các ca đang chờ hoặc thất bại.
+
+## 9. Vướng mắc còn mở và điều kiện xử lý
+
+| Vướng | Vì sao còn mở | Phần có thể làm trước và điều kiện đóng |
+|---|---|---|
+| Hai kết quả stop-loss trên cùng RSC/Vault | Lượt giá hồi phụ thuộc thứ tự giao dịch trên testnet. Verifier hiện tìm event bán và coi skip là lỗi. | Thêm xác minh hai kết quả, giữ bằng chứng từng lượt. Sau khung thử đã chốt, nếu thiếu receipt thì ghi mốc block/hash và để BP-01 mở. |
+| Thiếu Vault onboarding và liên kết revision | Deploy hiện cần một Vault tương thích do ví sở hữu. Active dùng cặp cấu hình sẵn. | Hoàn thành gói 1 với ví mới, đối soát sau reload/restart. Lượt script với địa chỉ cố định vẫn dùng để kiểm tra hợp đồng. |
+| Cron và phí testnet | Chưa đo tick, tần suất đủ dùng và chi phí thực tế của deployment OmniFlow. Nguồn phí có thể cạn giữa lượt. | Build và test logic kỳ trước. Chốt subscription/tick thật, đọc fee/debt và cấp quỹ demo riêng trước khi nghiệm thu cron. |
+| SafeSweep và Whale Alert phụ thuộc nguồn tín hiệu | Transfer ERC-20 chỉ chứng minh tài sản đã chuyển. Nó không tự chứng minh chuyển trái phép hoặc quan sát trực tiếp mọi chuyển ETH native. | Chốt emitter và chính sách đã chủ ví duyệt. Nếu nguồn chưa có bằng chứng, giữ flow chờ và ghi chính xác loại sự kiện thiếu. Không đổi nhãn tài sản hay loại tín hiệu để đánh dấu pass. |
+| Rebalance, bậc thang và tỷ lệ chia | Thiếu quyết định về tỷ trọng, giá tham chiếu, khoản giữ lại khi làm tròn, thứ tự khi nhiều điều kiện đúng và mẫu số cho các mức phần trăm. | Viết cấu hình có ví dụ số và test biên. Chốt quy tắc với Blueprint/FRS trước khi cấp quyền chi. |
+| Pause Pipeline đúng thời điểm | Cần timelock thực sự điều khiển dependency và callback đến trước ETA đã xác minh. Chưa có proof với runtime dự án. | Thử tích hợp trực tiếp trong testbed riêng. Nếu callback đến muộn, lưu receipt như ca lỗi thời điểm rồi giữ EXT-05 mở. |
+| Webhook và receipt đích | Khi dịch vụ nhận mất kết nối, kết quả giao có thể không xác định. Hai bên chưa có giao thức đối soát theo event ID. | Hoàn thiện outbox và endpoint test nhận idempotency key. Chứng minh on-chain riêng, giữ trạng thái delivery chưa xác nhận đến khi đủ bằng chứng. |
+| Thiếu môi trường hoặc công cụ | Foundry chưa có ở lần kiểm tra trước. RPC, faucet và môi trường preview cần xác nhận lúc thực hiện. | Kiểm tra sớm và ghi lỗi cụ thể nếu không chạy được. Quay lại các bước độc lập trong cùng gói. Chỉ cập nhật cổng release khi có kết quả thật của phần bị chặn. |
+
+Khi một mục vướng, ghi lý do, phạm vi ảnh hưởng, chứng cứ, người phụ trách hoặc phụ thuộc bên ngoài, mốc dừng và điều kiện mở lại. Vẫn hoàn thành các gói độc lập. Giữ ca tương ứng ở `BLOCKED` hoặc `FAIL` trong bảng nghiệm thu, giữ nút Deploy của capability đó ở trạng thái phù hợp và giữ `TASK-353` mở.
