@@ -18,9 +18,10 @@ import {
   AlertTriangle,
   Loader2,
   ShieldAlert,
-  Coins
+  Coins,
+  Zap
 } from 'lucide-react';
-import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract, useSwitchChain } from 'wagmi';
 import { parseEther, formatEther, isAddress, isAddressEqual, type Address } from 'viem';
 import { CONTRACT_ADDRESSES } from '@/lib/constants';
 import { truncateAddress } from '@/lib/utils';
@@ -96,6 +97,7 @@ function VaultSelection({ owner, id }: { owner?: Address; id: string }) {
 
 function VaultForWallet({ userAddress, vaultAddress, rscAddress }: { userAddress?: Address; vaultAddress: Address; rscAddress: Address }) {
   const { chainId } = useAccount();
+  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
   const isConnected = Boolean(userAddress);
   const [depositAmount, setDepositAmount] = useState('0.001');
   const [isPanicConfirmOpen, setIsPanicConfirmOpen] = useState(false);
@@ -256,6 +258,34 @@ function VaultForWallet({ userAddress, vaultAddress, rscAddress }: { userAddress
           description="Manage collateral and Reactive contract permissions on Base Sepolia."
           icon={<Lock className="size-4" />}
         />
+        {isConnected && !isCorrectChain && (
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle className="size-4 text-rose-400 shrink-0" />
+              <span>
+                Your wallet is currently on Chain ID {chainId}. Please switch to Base Sepolia (84532) to interact with ActionVault.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => switchChain?.({ chainId: 84532 })}
+              disabled={isSwitchingChain}
+              className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs px-3 py-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+            >
+              {isSwitchingChain ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  <span>Switching...</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="size-3.5" />
+                  <span>Switch to Base Sepolia</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
         <WorkspaceState
           title={
             !isConnected
@@ -319,12 +349,36 @@ function VaultForWallet({ userAddress, vaultAddress, rscAddress }: { userAddress
           <span className="font-mono text-[10px] text-amber-400 font-semibold uppercase">Wallet Disconnected</span>
         </div>
       ) : !isCorrectChain ? (
-        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-center justify-between">
+        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="size-4 text-rose-400 shrink-0" />
-            <span>Please switch your wallet to Base Sepolia (Chain ID: 84532) to interact with ActionVault.</span>
+            <span>
+              Please switch your wallet to Base Sepolia (Chain ID: 84532) to interact with ActionVault. (Current: {chainId ?? 'Unknown'})
+            </span>
           </div>
-          <span className="font-mono text-[10px] text-rose-400 font-semibold uppercase">Wrong Network ({chainId})</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="font-mono text-[10px] text-rose-400 font-semibold uppercase">
+              Wrong Network
+            </span>
+            <button
+              type="button"
+              onClick={() => switchChain?.({ chainId: 84532 })}
+              disabled={isSwitchingChain}
+              className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs px-3 py-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {isSwitchingChain ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  <span>Switching...</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="size-3.5" />
+                  <span>Switch to Base Sepolia</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       ) : null}
 
