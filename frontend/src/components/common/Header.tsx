@@ -83,7 +83,7 @@ export function Header() {
                 onBlur={handleCommitEdit}
                 onKeyDown={handleKeyDown}
                 maxLength={120}
-                className="rounded border border-[var(--ws-accent)] bg-[#0d0e15] px-2 py-0.5 text-xs text-white font-medium focus:outline-none focus:ring-1 focus:ring-[var(--ws-accent)] max-w-[14rem] sm:max-w-[20rem]"
+                className="rounded border border-[var(--ws-accent)] bg-[#0d0e15] px-2 py-0.5 text-xs text-white font-medium focus:outline-none max-w-[14rem] sm:max-w-[20rem]"
               />
             ) : (
               <button

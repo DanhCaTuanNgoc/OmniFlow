@@ -131,7 +131,7 @@ export function NewPipelineModal({
                 value={pipelineName}
                 onChange={(e) => setPipelineName(e.target.value)}
                 placeholder="e.g. My Arbitrage Pipeline"
-                className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-3 py-2 text-xs text-white placeholder-zinc-500 focus:border-[var(--ws-accent)] focus:outline-none"
+                className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-3 py-2 text-xs text-white placeholder-zinc-500 focus:border-[var(--ws-accent)] focus:outline-none focus:ring-0"
               />
             </div>
             <p className="text-xs text-[var(--ws-muted)] leading-relaxed">

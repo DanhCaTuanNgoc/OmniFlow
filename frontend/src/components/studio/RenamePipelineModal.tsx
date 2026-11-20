@@ -97,7 +97,7 @@ export function RenamePipelineModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Stop-Loss ETH / USDC"
-              className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-3 py-2 text-xs text-white placeholder-zinc-500 focus:border-[var(--ws-accent)] focus:outline-none"
+              className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-3 py-2 text-xs text-white placeholder-zinc-500 focus:border-[var(--ws-accent)] focus:outline-none focus:ring-0"
             />
           </div>
 
@@ -112,7 +112,7 @@ export function RenamePipelineModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add runbook notes or description for this pipeline..."
-              className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-3 py-2 text-xs text-white placeholder-zinc-500 focus:border-[var(--ws-accent)] focus:outline-none resize-none"
+              className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-3 py-2 text-xs text-white placeholder-zinc-500 focus:border-[var(--ws-accent)] focus:outline-none focus:ring-0 resize-none"
             />
           </div>
 

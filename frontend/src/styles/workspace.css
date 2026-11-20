@@ -12,9 +12,19 @@
   color-scheme: dark;
 }
 
-.ws-shell :is(a, button, input, select, textarea, summary):focus-visible {
+/* Focus visible for interactive navigational controls (buttons, links) */
+.ws-shell :is(a, button, summary):focus-visible {
   outline: 2px solid var(--ws-accent);
-  outline-offset: 3px;
+  outline-offset: 2px;
+}
+
+/* Form controls (input, select, textarea): single thin light purple border on focus, no weird outer offset outline */
+.ws-shell :is(input, select, textarea):focus,
+.ws-shell :is(input, select, textarea):focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  border-color: var(--ws-accent) !important;
+  box-shadow: none !important;
 }
 
 .ws-page {

@@ -52,10 +52,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* WCAG 2.1 AA Compliant Keyboard Navigation Focus Visible Ring */
-:focus-visible {
+/* WCAG 2.1 AA Compliant Keyboard Navigation Focus Visible Ring for buttons and links */
+:is(a, button, summary):focus-visible {
   outline: 2px solid #8B5CF6;
   outline-offset: 2px;
+}
+
+/* Form controls (input, select, textarea): single thin light purple border on focus, no weird outer offset outline */
+:is(input, textarea, select):focus,
+:is(input, textarea, select):focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
 }
 
 /* Custom Sleek Obsidian FinTech Scrollbar */
