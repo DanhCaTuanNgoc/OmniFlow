@@ -18,9 +18,10 @@
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 24 | 23 | 0 | **95.8%** |
 | **Đánh giá cạnh tranh, bằng chứng và tính năng mở rộng** | 18–19/11/2026 | 8 | 5 | 0 | **62.5%** |
 | **Vận hành Workspace & nghiệm thu dự thi** | Ghi nhận 20/11/2026 | 8 | 0 | 0 | **0%** |
-| **TỔNG CỘNG** | **Đối chiếu 20/11/2026** | **76** | **64** | **0** | **84.2%** |
+| **Khả năng deploy của preset & flow theo dõi nâng cấp** | Ghi nhận 20/11/2026 | 9 | 0 | 0 | **0%** |
+| **TỔNG CỘNG** | **Đối chiếu 20/11/2026** | **85** | **64** | **0** | **75.3%** |
 
-Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **12 mục `TODO`**.
+Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **16 mục `TODO`** và **5 mục `BACKLOG`**. Mẫu số gồm cả backlog ngoài phạm vi demo.
 
 * **On-chain:** Lượt stop-loss ngày 19/11 dùng pool và token thử nghiệm trên testnet. Đã đọc lại cả ba receipt qua RPC ngày 20/11 và xác nhận đều thành công. [Bằng chứng full loop](FULL_LOOP_EVIDENCE.json)
 * **Workspace:** Commit `155d62f` bỏ dữ liệu mẫu, `872a381` kiểm tra Vault/RSC cấu hình sẵn, và `f8c3410` đồng bộ giao diện năm màn hình. Deployer hiện chỉ hỗ trợ các node của luồng stop-loss. Xác thực theo ví, lưu pipeline và phục hồi deploy nằm ở `TASK-333` đến `TASK-335`.
@@ -950,7 +951,7 @@ Phạm vi Workspace theo [phân tích vận hành](docs/WORKSPACE_OPERATIONS_ANA
 #### `TASK-337` [TODO] — Nghiệm thu luồng stop-loss trên bản demo cloud
 * **Module:** Studio, backend cloud, Reactive Lasna, Base Sepolia và Activity Logs.
 * **Mục đích:** Xác minh luồng người dùng trên bản demo dùng để chấm.
-* **Chi tiết:** Sau khi có URL ở `TASK-304`, chạy từ Studio qua deploy, cấp quyền Vault, sự kiện nguồn và callback, rồi đối chiếu trạng thái UI và ba hash với RPC. Dùng kịch bản hai kết quả ở `TASK-340` khi đủ bằng chứng. Chạy lại Foundry và ghi kết quả thực tế. Kiểm tra thao tác bàn phím và độ tương phản trên luồng demo.
+* **Chi tiết:** Sau khi có URL ở `TASK-304`, chạy từ Studio qua deploy, cấp quyền Vault, sự kiện nguồn và callback, rồi đối chiếu trạng thái UI và ba hash với RPC. Dùng kịch bản hai kết quả ở `TASK-340` khi đủ bằng chứng. Nếu chọn flow theo dõi nâng cấp, nghiệm thu lại kết quả đối chứng và trạng thái dừng trên bản cloud ở `TASK-344`. Chạy lại Foundry và ghi kết quả thực tế. Kiểm tra thao tác bàn phím và độ tương phản trên luồng demo.
 * **Ngày tạo:** 20/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
@@ -959,7 +960,7 @@ Phạm vi Workspace theo [phân tích vận hành](docs/WORKSPACE_OPERATIONS_ANA
 #### `TASK-338` [TODO] — Hoàn thiện video demo dưới 3 phút
 * **Module:** Tài liệu dự thi.
 * **Mục đích:** Ghi lại luồng stop-loss và cách đối chiếu bằng chứng.
-* **Chi tiết:** Quay theo kịch bản trong Blueprint, làm phụ đề tiếng Anh và lưu link video xem được. Chưa có link video được xác nhận.
+* **Chi tiết:** Quay theo kịch bản trong Blueprint, làm phụ đề tiếng Anh và lưu link video xem được. Dùng kết quả stop-loss đã xác minh ở `TASK-340`. Chỉ đưa flow theo dõi nâng cấp vào video sau khi `TASK-343` và `TASK-344` đạt nghiệm thu. Chưa có link video được xác nhận.
 * **Ngày tạo:** 20/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
@@ -968,7 +969,7 @@ Phạm vi Workspace theo [phân tích vận hành](docs/WORKSPACE_OPERATIONS_ANA
 #### `TASK-339` [TODO] — Nộp bài Reactive Omni Buildathon
 * **Module:** Hồ sơ dự thi.
 * **Mục đích:** Hoàn tất hồ sơ track Set It and Forget It.
-* **Chi tiết:** Repo đã public. Đối chiếu địa chỉ hợp đồng và ba hash trong hồ sơ, bổ sung link video, gửi form và lưu xác nhận nộp bài. Chưa có xác nhận nộp.
+* **Chi tiết:** Repo đã public. Đối chiếu địa chỉ hợp đồng và ba hash cho mỗi full loop đưa vào hồ sơ, bổ sung link video, gửi form và lưu xác nhận nộp bài. Chưa có xác nhận nộp.
 * **Ngày tạo:** 20/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
@@ -986,3 +987,86 @@ Phạm vi Workspace theo [phân tích vận hành](docs/WORKSPACE_OPERATIONS_ANA
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
 * **Trạng thái:** `TODO`.
+
+### KHẢ NĂNG DEPLOY CỦA PRESET & FLOW THEO DÕI NÂNG CẤP
+
+**Thứ tự dự thi:** Chạy `TASK-340` với cấu hình stop-loss đã đối chiếu trên chain. Hoàn thành `TASK-341` và `TASK-342` trước khi nghiệm thu demo công khai ở `TASK-337`. Sau `TASK-340`, chỉ bắt đầu `TASK-343` khi còn khoảng 4–7 ngày công cho hợp đồng, bằng chứng và UI. `TASK-344` bắt đầu sau khi có full loop đạt nghiệm thu. Nếu thiếu thời gian hoặc chưa xác minh được callback, dùng stop-loss cho video và hồ sơ. Copilot, Telegram và năm mục backlog đứng sau phạm vi này.
+
+#### `TASK-341` [TODO] — Giới hạn Deploy theo khả năng thực thi của preset và graph
+* **Module:** Studio, Template Library, schema và deployer.
+* **Mục đích:** Graph người dùng thấy phải khớp với cấu hình được triển khai.
+* **Chi tiết:** Dùng chung thông tin về khả năng thực thi cho catalog, canvas và kiểm tra deploy phía API. Giữ Flash Crash Stop-Loss là preset chính. Giữ Take-Profit và Cross-Chain Hedge ở nhóm cấu hình nâng cao chưa deploy được. Rút Anti-Drainer, Daily Rebalancer và Payday khỏi luồng Deploy dự thi. Giữ khả năng mở nháp và link preset cũ với trạng thái phù hợp. Kiểm tra topology theo template đã hỗ trợ, gồm cổng, cạnh, số node theo loại, nhánh và tham số. Từ chối graph mà deployer hiện sẽ chỉ lấy node đầu tiên hoặc dùng mặc định làm đổi nghĩa.
+* **Nghiệm thu:** Graph stop-loss chuẩn qua kiểm tra. Graph sai cổng, nhiều action, toán tử chưa hỗ trợ hoặc sai chain bị chặn trước khi ký hay broadcast qua cả UI và API. Các preset mở được chỉ ở chế độ phù hợp với khả năng đã xác minh.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-342` [TODO] — Đồng bộ thông số stop-loss giữa Studio và Vault
+* **Module:** Inspector, preset, Deploy Modal và ActionVault.
+* **Mục đích:** Người dùng duyệt đúng điều kiện và mức chi trước khi chạy.
+* **Chi tiết:** Đối chiếu tham số với RSC/Vault của deployment. Vault hiện dùng trần slippage cố định 5% từ báo giá router, trong khi preset ghi 1%. Hiển thị theo hợp đồng và khóa cấu hình chưa được hỗ trợ. Giải thích tỷ lệ swap áp vào số dư ETH Vault tại lúc thực thi và cooldown cho phép lượt tiếp theo sau thời gian chờ. One-shot là thay đổi nghiệp vụ riêng.
+* **Nghiệm thu:** So khớp giá trị preview, tham số deploy và dữ liệu on-chain của cùng một lượt. UI thể hiện giá trị thực và trạng thái chưa xác minh nếu RPC lỗi.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-343` [TODO] — Chứng minh callback dừng pipeline khi adapter được lên lịch thay đổi
+* **Module:** Timelock và adapter thử nghiệm, RSC trên Lasna, Vault opt-in trên Base Sepolia và script nghiệm thu.
+* **Mục đích:** Kiểm chứng flow mới bằng receipt trước khi đầu tư UI.
+* **Chi tiết:** Dùng timelock thực sự quản lý một adapter thử nghiệm và theo dõi `CallScheduled`. RSC chỉ khớp chain, emitter, target và selector đã cấu hình. Vault xác thực proxy và RSC, chỉ dừng deployment đã được owner cho phép, và giữ hành vi idempotent với callback lặp. Giữ quyền rút của owner. Dùng vault và quỹ demo riêng, tập trung vào một swap tự chọn. Hai bên cần ràng buộc phiên bản cấu hình hoặc dùng quyền mới khi kích hoạt lại để callback cũ không dừng phiên bản mới.
+* **Nghiệm thu:** Thao tác không liên quan để swap đối chứng tiếp tục. Lịch đổi đúng adapter tạo ba receipt nguồn → Lasna → Vault và trạng thái dừng trước khi thay đổi có hiệu lực. Trigger tiếp theo bị chặn ở Vault, owner vẫn rút được. Kiểm thử callback lặp, sai nguồn/quyền và đến muộn. Lượt callback đến muộn không được tính là đã bảo vệ trước nâng cấp.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-344` [TODO] — Đưa flow theo dõi nâng cấp vào Studio và demo
+* **Module:** Custom Event Watcher, bộ lọc thao tác, action Pause Pipeline và Active Automations.
+* **Mục đích:** Người dùng cấu hình, mở lại và hiểu vì sao đúng pipeline đã dừng.
+* **Chi tiết:** Sau khi `TASK-343` đạt, tái sử dụng Custom Event Watcher và thêm action chuyên biệt chỉ dành cho Vault opt-in. Preview hiển thị timelock, thao tác, adapter và deployment bị ảnh hưởng. Đọc trạng thái từ Vault, lưu tham chiếu theo deployment và hiển thị lý do, operation ID và ba link receipt. Chỉ hiển thị đã dừng sau receipt và đối soát trạng thái. Tái sử dụng nghiệm thu mở lại, đổi ví và lỗi RPC của `TASK-340`. Nêu rõ phạm vi bảo vệ gồm các thay đổi đi qua timelock được cấu hình và callback được giao kịp.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `TODO`.
+
+#### `TASK-345` [BACKLOG] — Thêm Take-Profit vào nhóm lệnh theo giá
+* **Module:** Price Threshold Guard, deployer, RSC và Vault.
+* **Chi tiết:** Gộp Take-Profit vào nhóm lệnh theo giá. Thực thi và đọc lại giá đích theo đúng chiều `>=`, có test cho giá rơi xuống dưới ngưỡng trước callback. Chỉ bật Deploy khi có bằng chứng hai nhánh.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-346` [BACKLOG] — Sửa binding và nghiệm thu Cross-Chain Hedge
+* **Module:** Chain selector, Deploy Modal, schema, deployer và RSC.
+* **Chi tiết:** Thống nhất trường origin chain giữa preset, payload và constructor. Xác minh pool thuộc Unichain Sepolia. Với chế độ velocity-only, biểu diễn rõ ngưỡng tĩnh bị tắt để không tự chèn $1.800. Nghiệm thu giao dịch Unichain → Lasna → Base và lượt đối chứng chỉ chạm ngưỡng tĩnh nhưng không đạt velocity.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-347` [BACKLOG] — Thiết kế lại Payday Auto-Splitter
+* **Module:** Transfer watcher, Vault và graph thực thi.
+* **Chi tiết:** Xác định khoản nhận theo từng event và đúng token/địa chỉ nhận, rồi chi từ tài khoản có quyền hợp lệ. Tính tỷ lệ trên khoản vừa nhận, bảo toàn phần giữ lại, thay action `ALL` bằng hành động chia đúng phần và phát thông báo sau receipt. Xử lý log trùng, payout thất bại và thứ tự thực thi.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-348` [BACKLOG] — Thiết kế lại Daily Rebalancer theo tỷ trọng
+* **Module:** Cron, tính tỷ trọng và Vault swap.
+* **Chi tiết:** Xác định tỷ trọng mục tiêu, ngưỡng lệch, giá sử dụng, quy tắc swap theo hai chiều và giới hạn giao dịch. Nghiệm thu danh mục trong biên được bỏ qua, lệch hai phía được đưa về gần mục tiêu và các tick lặp không bán dần một chiều.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-349` [BACKLOG] — Xác định lại phạm vi Anti-Drainer SafeSweep
+* **Module:** Watcher và quyền sweep của Vault.
+* **Chi tiết:** Chỉ xem xét đưa preset trở lại sau khi có tín hiệu đáng tin, điều kiện bất thường kiểm chứng được và đích dự phòng do owner cấu hình. Mô tả chính xác tài sản và quyền của Vault. Kiểm thử chuyển tiền hợp lệ, nhầm tín hiệu, log lặp và quyền rút của owner trước khi bật chức năng.
+* **Ngày tạo:** 20/11/2026.
+* **Ngày hoàn thành:** —
+* **Người thực hiện:** Chưa phân công.
+* **Trạng thái:** `BACKLOG`.
