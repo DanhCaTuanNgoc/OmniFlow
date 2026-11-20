@@ -80,6 +80,8 @@ export function resolveStopLoss(graph: StopLossGraph) {
     'stop-loss requires a less-than-or-equal price threshold.');
   check((action.data.fromToken ?? 'ETH') === 'ETH' && (action.data.toToken ?? 'USDC') === 'USDC',
     'the stop-loss Vault supports ETH to USDC.');
+  check(action.data.executionPolicy === undefined || action.data.executionPolicy === 'REPEAT',
+    'one-shot and ladder orders require the Phase 2 Vault and testnet acceptance.');
   check(action.data.maxSlippagePercent === undefined ||
     action.data.maxSlippagePercent === STOP_LOSS_TEMPLATE.maxSlippageBps / 100,
   'this Vault has a fixed 5% slippage cap. Apply the Vault limit in the DEX Swap inspector.');

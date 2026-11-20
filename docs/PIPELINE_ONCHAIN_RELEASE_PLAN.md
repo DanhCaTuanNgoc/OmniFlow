@@ -1,4 +1,4 @@
-# Kế hoạch triển khai và nghiệm thu toàn bộ Pipeline Studio trên testnet
+﻿# Kế hoạch triển khai và nghiệm thu toàn bộ Pipeline Studio trên testnet
 
 ## 1. Hiện trạng và phạm vi
 
@@ -36,12 +36,13 @@ Mỗi hàng cần một deployment có thể mở lại trong Active, một lư�
 | Giai đoạn | Flow | Tiêu chí để đánh dấu đã hoạt động |
 |---|---|---|
 | A | **Flash Crash Stop-Loss**, Blueprint 01 và 11 | Cùng RSC/Vault có lượt bán và payout, lượt giá hồi có `OrderSkipped`, hai trigger trong cooldown chỉ tạo một callback. Kiểm chứng từng tham số preset riêng nếu tỷ lệ/cooldown khác nhau. Với chế độ một lần, chỉ khóa sau settlement thành công, thử skip rồi kích hoạt lại và callback lặp không bán lần hai. TASK-340/342. |
-| B | **Take-Profit**, Blueprint 03 | Vault kiểm tra `>=` ở cùng chain. Giá vẫn đạt ngưỡng thì bán, giá tụt trước callback thì Vault bỏ qua. TASK-345. |
-| B | **Cross-Chain Hedge** | Hai quan sát Unichain trong cửa sổ khởi tạo velocity dẫn tới swap Base. Độ giảm thiếu, cửa sổ hết hạn hoặc chỉ chạm giá tĩnh không kích hoạt chế độ velocity-only. Ghi đúng chain, pool, proxy và payout. TASK-346. |
+| B | **Take-Profit**, Blueprint 03 | Vault kiểm tra `>=` ở cùng chain. Giá vẫn đạt ngưỡng thì bán, giá tụt trước callback thì Vault bỏ qua. Phase 2 local contract test có equality, revalidation và replay. TASK-345. |
+| B | **Cross-Chain Hedge** | Hai quan sát Unichain trong cửa sổ dẫn tới swap Base, chỉ khi quan sát sau thấp hơn quan sát đầu ít nhất ngưỡng BPS. Phase 2 local test có thứ tự log và biên cửa sổ. Testnet còn chờ gas Unichain và pool thật. TASK-346. |
 | C | **Anti-Drainer SafeSweep**, Blueprint 05 | Dùng rule owner đã duyệt trên emitter xác thực, kiểm chứng phép lọc chuyển ra và điều kiện rõ như đích ngoài danh sách hoặc vượt mức. Giao dịch thường không sweep, tín hiệu hợp lệ chuyển đúng tài sản được hỗ trợ tới địa chỉ dự phòng. Bảo vệ giới hạn trong Vault. TASK-349. |
 | C | **Payday Auto-Splitter** và **trích khoản nhận USDC** | Trước hết một khoản USDC vào Vault tạo đúng một khoản trích. Sau đó nghiệm thu preset Payday đầy đủ với phân bổ 20/30/50 trên khoản nhận, trong đó 20% dùng để mua ETH/WETH theo cấu hình, 30% đi ví tiết kiệm, 50% giữ lại. Dùng một action hợp thành để tránh hai callback tài chính tranh số dư. Kiểm tra sai token, thiếu vốn, slippage/lỗi giữa chừng và replay. TASK-347. |
 | C | **Báo động chuyển ra** và **Cảnh báo cá voi**, Blueprint 06–07 | Dùng Watch Transfers với token cụ thể như WETH/ERC‑20, lọc from/to/amount và cooldown. Chứng minh event xác nhận ở đích, webhook giao thành công, và retry không gửi trùng. Tên và đơn vị trong UI khớp loại tài sản được theo dõi. |
-| D | **Cắt lỗ bậc thang**, Blueprint 02 | Mỗi bậc chỉ chạy tối đa một lần theo chính sách. Định rõ tỷ lệ tính trên vốn ban đầu hay số dư còn lại và quy tắc nếu một log vượt nhiều bậc. Kiểm thử gap, lỗi callback và nhiều log liên tiếp. |
+| D | **Cắt lỗ bậc thang**, Blueprint 02 | Mỗi bậc chạy tối đa một lần. Tỷ lệ tính trên vốn ETH ban đầu, chốt khi owner cấu hình ladder sau khi nạp vốn. Nếu một quan sát vượt nhiều bậc, gộp toàn bộ bậc chưa khớp thành một lần bán; chỉ đánh dấu bậc sau khi swap thành công. Phase 2 local test có gap, rollback và log liên tiếp. |
+| D | **Logic Gate (AND / OR)** | Ghép hai pool Base Sepolia độc lập, mỗi pool phát một log Sync riêng. Đo freshness khi Lasna nhận log để tránh sai lệch đồng hồ giữa chain. AND yêu cầu cả hai tín hiệu còn mới và đúng ngưỡng; OR yêu cầu một tín hiệu. Mỗi episode chỉ tạo một callback; Vault đọc lại cả hai pool trước swap. Phase 2 local test có AND/OR, freshness, revalidation và callback lặp. |
 | D | **Dust Guard** và **Thoát theo tín hiệu cá voi**, Blueprint 04 và 08 | Chứng minh AND với một vế sai và hai vế đúng. Đọc số dư thực tại Vault cho Dust Guard. Với flow cá voi, chỉ kết hợp transfer với quan sát giá trong cửa sổ xác định, kiểm thử dữ liệu hết hạn và bảo vệ min-out. |
 | D | **Daily Autonomous Rebalancer**, Blueprint 09 | Tick thật, tỷ trọng trong biên thì skip, lệch hai phía dẫn đến swap đúng chiều trong hạn mức. Đọc lại tỷ trọng và vốn trước swap. Nghiệm thu lịch production theo timestamp và chạy ngắn trên testnet với cùng logic. TASK-348. |
 | D | **Rút lãi hàng tuần** và **Cảnh báo Vault sắp cạn**, Blueprint 10 và 12 | Dùng tick hệ thống và kỳ xác định. Rút lãi chỉ khi threshold đạt, đọc lại giá tại Vault. Cảnh báo một lần trong kỳ khi thấp ngưỡng, thử cả đủ vốn và hết vốn. Hỗ trợ pause/refuel theo capability. |
@@ -200,3 +201,31 @@ Khi một mục vướng, ghi lý do, phạm vi ảnh hưởng, chứng cứ, ng
 | Nghiệm thu Phase 1 | `0xB901813B01774b7b3915D8D48e54974bA47C2134` | `0x1BC254F93D3C66ffeC721c8763f85b2fC4bd51fE` | `0x0dB39b1c06Da72d08CBF5FfEd2C815381e7b38aA` |
 
 Khi đủ quỹ và có bộ địa chỉ riêng, đặt `PAIR_ADDRESS`, `VAULT_ADDRESS`, `RSC_ADDRESS` cho script. Chạy `pnpm test:full-loop --preflight` trước khi trigger. `pnpm test:full-loop --execute-skip` gửi hai giao dịch giảm và hồi. `--execute` chạy nhánh payout sau khi cooldown kết thúc. Khi chỉ mục callback chưa có, dùng `--verify-existing` với hash nguồn và Lasna sau khi Base finalized. Thêm `--expect-skipped` trước `--verify-existing` cho nhánh bỏ qua. `--verify-cooldown` nhận ba cặp hash Base và Lasna theo thứ tự trước, trong và sau cooldown. Verifier ghi kết quả vào `FULL_LOOP_EVIDENCE.json` theo hash nguồn. Có thể đặt `FULL_LOOP_EVIDENCE_DIR` để ghi hồ sơ vào thư mục riêng khi chạy kiểm tra lại.
+## 12. Nhật ký Phase 2
+
+**Trạng thái 20/11/2026 · Đã triển khai logic hợp đồng và compiler local, chưa nghiệm thu full-stack hoặc live testnet.** Phạm vi Phase 2 hiện gồm Take-Profit, Cross-Chain Hedge Unichain Sepolia → Lasna → Base Sepolia, one-shot, ladder và Logic Gate AND/OR. Không tính các flow độc lập của Phase 3/4.
+
+| Hạng mục | Kết quả và giới hạn |
+|---|---|
+| Price Order RSC/Vault | Đã thêm `PriceOrderPipeline` và `PriceOrderVault` cho các mode. Callback chỉ được nhận từ Reactive proxy/System ACL, RSC phải được owner cấp quyền. Vault kiểm tra lại giá Base cho Take-Profit/Stop-Loss, giới hạn slippage 5%, khóa replay theo execution ID và chỉ hoàn thành one-shot sau settlement. |
+| Cross-Chain Hedge | Hai log Sync có thứ tự trên Unichain Sepolia tạo điều kiện giảm giá theo BPS trong cửa sổ. Callback chỉ bán ETH trong Vault Base Sepolia; giá nguồn không được dùng như giá thực thi Base. Cần pool Unichain thật và gas native Unichain cho signer tạo event. |
+| Ladder | Owner cấu hình sau khi Vault đã nạp principal. Phần trăm tính trên snapshot vốn ban đầu. Một log vượt nhiều ngưỡng gộp thành một swap; mỗi bậc chỉ khóa khi swap thành công. Tổng tỷ lệ không vượt 100%. |
+| AND/OR | Đề xuất chọn hai pool Base Sepolia độc lập làm nguồn A/B, mỗi nguồn là log riêng. Cửa sổ freshness đo theo thời điểm Lasna nhận quan sát, tối đa 180 giây. AND cần cả hai; OR cần một. Episode chống callback trùng và Vault đọc lại reserve hai pool trước khi swap. Đây là quyết định triển khai để có demo cross-pool rõ ràng, chưa phải biểu thức Logic Gate tổng quát cho mọi node. |
+| Foundry | 33/33 pass sau khi thêm các hợp đồng Phase 2. Các test local bao gồm equality/revalidation/replay, ladder gap và rollback, velocity Unichain, AND/OR, freshness và callback authorization. Đây là test harness local, không thay cho xác nhận Reactive system trên Lasna thật. |
+| ABI/bytecode | `forge build` thành công; `node scripts/extract-abis.js --check` xác nhận ABI/bytecode/source artifacts sinh từ Solidity khớp. Shared, backend và frontend production build đã chạy; backend build pass. |
+| Deploy/backend | Deployer, runtime preflight, authorization/configuration transaction sequence, Active và execution indexer hiện vẫn giả định một `StopLoss_Pipeline` và `ActionVault`. Phase 2 chưa mở nút Deploy. Preview hiện là cấu hình/source candidate, chưa encode constructor deployment Phase 2 qua luồng Studio. |
+| Vault compatibility | `PriceOrderVault` là contract đích phiên bản mới. Vault Phase 1 không có registry permission phù hợp cho policy ladder/gate; không thể dùng nguyên bước `setAuthorizedRSC` đơn giao dịch để khai báo policy Phase 2. Cần onboarding có bước configure policy rồi authorize, lưu receipt từng bước và idempotency. |
+| Full-loop và evidence | Chưa chạy RSC Phase 2 trên Lasna, chưa có Base callback/payout thật, chưa thêm verifier Phase 2 vào `FULL_LOOP_EVIDENCE.json`. Không đánh dấu B hoặc toàn Phase 2 là PASS cho tới khi từng mode có receipt nguồn/Lasna/Base và trạng thái Active/Logs đối chiếu được. |
+
+### Điều kiện mở lại để nghiệm thu Phase 2
+
+1. Hoàn thành contract `PriceOrderVault` onboarding an toàn trong Studio, gồm tạo/liên kết Vault đúng runtime, cấu hình immutable policy, cấp quyền RSC và lưu/khôi phục receipt qua reload.
+2. Thêm template registry có version, constructor encoder, runtime fingerprint và kiểm tra subscription 1 nguồn hoặc 2 nguồn. Deployer phải từ chối graph Phase 2 nếu bất cứ trường chain, pool, policy hoặc Vault nào không khớp snapshot.
+3. Mở DeployModal cho Phase 2 sau khi support nhiều giao dịch owner trên Base; không báo deployment sẵn sàng chỉ dựa trên receipt Lasna trước khi Vault được cấu hình và cấp quyền.
+4. Dạy Active/preflight đọc loại Vault, policy, ladder snapshot, principal, phí callback và phí Reactive. Thêm indexer/verifier cho event `OrderSettled`, `OrderSkipped`, `LadderStepsSettled` và execution ID; không diễn giải chúng thành `StopLossExecuted`.
+5. Tạo testnet fixture riêng, kiểm tra lại số dư Unichain Sepolia signer và funding Lasna/Base. Faucet trước chỉ khi preflight cho thấy thiếu. Chạy Take-Profit, Hedge, ladder gap/replay và AND/OR stale/current trên chain thật; xác nhận finality và thêm đầy đủ receipt vào manifest evidence.
+6. Chạy `forge test -vvv`, backend tests/build, frontend build và ABI check sau khi hoàn tất tích hợp full-stack. Sau đó có thể đánh dấu PASS theo từng mode với giới hạn RPC/faucet/testnet ghi rõ.
+
+**Không có vướng mắc nghiệp vụ cần hỏi thêm để tiếp tục.** Các lựa chọn người dùng đã chốt: ladder tính trên vốn ban đầu và gộp các bậc cùng chạm thành một lần bán. AND/OR dùng hai quan sát riêng từ hai pool độc lập, freshness tính tại Lasna. Điểm cần làm tiếp là kỹ thuật tích hợp và có thể tự kiểm tra bằng preflight; chưa cần người dùng cung cấp thêm gì cho phần local.
+
+

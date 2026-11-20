@@ -8,6 +8,11 @@ const check = process.argv.includes('--check');
 
 const vaultArtifact = JSON.parse(read('contracts/out/ActionVault.sol/ActionVault.json'));
 const pipelineArtifact = JSON.parse(read('contracts/out/StopLoss_Pipeline.sol/StopLoss_Pipeline.json'));
+const phaseTwoContracts = [
+  ['PriceOrderVault', 'PRICE_ORDER_VAULT'],
+  ['PriceOrderPipeline', 'PRICE_ORDER_PIPELINE'],
+  ['PriceGatePipeline', 'PRICE_GATE_PIPELINE'],
+];
 
 function runtimeFingerprint({ deployedBytecode }) {
   const bytes = Buffer.from(deployedBytecode.object.slice(2), 'hex');
@@ -35,6 +40,17 @@ const files = {
   'packages/shared/src/abis/StopLossPipelineSource.ts':
     `export const STOP_LOSS_PIPELINE_SOURCE = ${JSON.stringify(source)};\n`,
 };
+
+for (const [contract, symbol] of phaseTwoContracts) {
+  const artifact = JSON.parse(read(`contracts/out/${contract}.sol/${contract}.json`));
+  const source = read(`contracts/src/${contract}.sol`).replace(/\r\n/g, '\n');
+  files[`packages/shared/src/abis/${contract}.ts`] = [
+    `export const ${symbol}_ABI = ${JSON.stringify(artifact.abi, null, 2)} as const;`,
+    `export const ${symbol}_BYTECODE = '${artifact.bytecode.object}' as const;`,
+    `export const ${symbol}_SOURCE = ${JSON.stringify(source)};`,
+    '',
+  ].join('\n\n');
+}
 
 for (const [file, content] of Object.entries(files)) {
   if (check) {

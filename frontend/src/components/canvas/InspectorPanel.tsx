@@ -15,6 +15,8 @@ interface InspectorPanelProps {
   onClose: () => void;
   owner?: Address;
   originPool?: unknown;
+  phaseTwo: boolean;
+  crossChain: boolean;
 }
 
 export function InspectorPanel({
@@ -24,10 +26,13 @@ export function InspectorPanel({
   onClose,
   owner,
   originPool,
+  phaseTwo,
+  crossChain,
 }: InspectorPanelProps) {
   if (!selectedNode) return null;
 
   const { id, type, data } = selectedNode;
+  const ladder = data.executionPolicy === 'LADDER';
 
   const handleChange = (field: string, value: any) => {
     onUpdateNodeData(id, {
@@ -100,8 +105,11 @@ export function InspectorPanel({
             <div>
               <label className="block text-slate-400 mb-1 font-medium">Origin Chain</label>
               <select
-                value={Number(data.chainId || 84532)}
-                onChange={(e) => handleChange('chainId', parseInt(e.target.value))}
+                value={Number(data.originChainId ?? data.chainId ?? 84532)}
+                onChange={(e) => {
+                  const chainId = Number(e.target.value);
+                  onUpdateNodeData(id, { chainId, originChainId: chainId });
+                }}
                 className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 text-white font-mono text-xs focus:outline-none focus:border-violet-500"
               >
                 <option value={84532}>Base Sepolia (84532)</option>
@@ -333,7 +341,25 @@ export function InspectorPanel({
               </div>
             </div>
 
-            <div>
+            <label className="block space-y-1 text-slate-300">
+              <span>Execution policy</span>
+              <select value={String(data.executionPolicy ?? 'REPEAT')}
+                onChange={e => handleChange('executionPolicy', e.target.value)}
+                className="w-full rounded-xl border border-white/[0.08] bg-[#07080D] p-2.5 text-slate-100">
+                <option value="REPEAT">Repeat after cooldown</option>
+                <option value="ONE_SHOT">Stop after first successful sale</option>
+                <option value="LADDER">Ladder using initial principal</option>
+              </select>
+            </label>
+
+            {ladder ? <label className="block space-y-1 text-slate-300">
+              <span>Ladder thresholds and percentages</span>
+              <input type="text" value={String(data.ladderSchedule ?? '')}
+                onChange={e => handleChange('ladderSchedule', e.target.value)}
+                placeholder="1800:20,1600:30,1400:50"
+                className="w-full rounded-xl border border-white/[0.08] bg-[#07080D] p-2.5 font-mono text-slate-100" />
+              <span className="block">Use descending thresholds. Percentages apply to the initial Vault principal.</span>
+            </label> : <div>
               <div className="flex justify-between items-center mb-1">
                 <label className="text-slate-400 font-medium">Vault Liquidation Amount</label>
                 <span className="font-bold text-emerald-400 tabular-nums font-mono">
@@ -349,7 +375,7 @@ export function InspectorPanel({
                 onChange={(e) => handleChange('amountPercentage', parseInt(e.target.value))}
                 className="w-full accent-emerald-400 cursor-pointer"
               />
-            </div>
+            </div>}
 
             <div>
               <div className="flex justify-between items-center mb-1">
@@ -358,7 +384,7 @@ export function InspectorPanel({
                   {STOP_LOSS_TEMPLATE.maxSlippageBps / 100}%
                 </span>
               </div>
-              <p className="text-slate-400">The supported stop-loss Vault uses a fixed limit based on its router quote.</p>
+              <p className="text-slate-400">The Vault uses a fixed limit based on its router quote.</p>
               {data.maxSlippagePercent !== undefined && data.maxSlippagePercent !== STOP_LOSS_TEMPLATE.maxSlippageBps / 100 && (
                 <button type="button" className="ws-button mt-2"
                   onClick={() => handleChange('maxSlippagePercent', STOP_LOSS_TEMPLATE.maxSlippageBps / 100)}>
@@ -376,7 +402,14 @@ export function InspectorPanel({
                 className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 font-mono text-[11px] text-slate-200 focus:outline-none focus:border-violet-500"
               />
             </div>
-            {owner && typeof originPool === 'string' && isAddress(originPool) && (
+            {crossChain && <label className="block space-y-1 text-slate-300">
+              <span>Base Sepolia settlement pool</span>
+              <input type="text" value={String(data.destinationPoolAddress ?? '')}
+                onChange={e => handleChange('destinationPoolAddress', e.target.value.trim())}
+                className="w-full rounded-xl border border-white/[0.08] bg-[#07080D] p-2.5 font-mono text-slate-100" />
+            </label>}
+            {phaseTwo && <p className="text-slate-300">Phase 2 uses a versioned Price Order Vault. Deploy opens after testnet acceptance.</p>}
+            {!phaseTwo && owner && typeof originPool === 'string' && isAddress(originPool) && (
               <VaultSetup key={`${id}:${owner}:${originPool}`} owner={owner} pair={originPool}
                 currentVault={String(data.actionVaultAddress || '')} onLinked={vault => handleChange('actionVaultAddress', vault)} />
             )}
@@ -386,6 +419,14 @@ export function InspectorPanel({
         {/* 5. Logic Gate */}
         {type === 'logicGate' && (
           <div className="space-y-3">
+            <label className="block space-y-1 text-slate-300">
+              <span>Signal freshness (seconds)</span>
+              <input type="number" min={1} max={180}
+                value={String(data.freshnessSeconds ?? 15)}
+                onChange={e => handleChange('freshnessSeconds', Number(e.target.value))}
+                className="w-full rounded-xl border border-white/[0.08] bg-[#07080D] p-2.5 font-mono text-slate-100" />
+              <span className="block">Measured from when Lasna receives each observation.</span>
+            </label>
             <div>
               <label className="block text-slate-400 mb-1 font-medium">Boolean Gate Operation</label>
               <select

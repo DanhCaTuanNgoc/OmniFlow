@@ -23,7 +23,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useAccount } from 'wagmi';
 import { RECIPE_PRESETS } from '@/lib/recipes';
-import { resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
+import { isPhaseTwoGraph, resolvePhaseTwo, resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { APP_CONFIG } from '@/lib/constants';
 import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph } from '@/lib/pipelineDraft';
 import { workspaceRequest } from '@/lib/workspaceSession';
@@ -191,7 +191,12 @@ function StudioCanvasInner() {
     setDraftBusy(true);
     setValidationWarning(null);
     try {
-      const graph = studioGraph(nodes, edges, draftNetworks ?? STOP_LOSS_TEMPLATE.networks);
+      const watcher = nodes.find(node => node.type === 'watchDEXPrice');
+      const originChainId = watcher?.data.originChainId ?? watcher?.data.chainId;
+      const graph = studioGraph(nodes, edges, draftNetworks ?? {
+        ...STOP_LOSS_TEMPLATE.networks,
+        originChainId: typeof originChainId === 'number' ? originChainId : STOP_LOSS_TEMPLATE.networks.originChainId,
+      });
       if (isConnected && address) {
         const result = await workspaceRequest<{ id: string; updatedAt: number }>(address, '/pipeline/drafts', {
           method: 'POST', body: JSON.stringify({
@@ -215,6 +220,8 @@ function StudioCanvasInner() {
   }
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
+  const phaseTwo = isPhaseTwoGraph({ nodes, edges });
+  const crossChain = nodes.some(node => node.type === 'priceVelocityGuard');
 
   // DAG & Port Constraint Enforcement
   const isValidConnection = useCallback(
@@ -357,6 +364,11 @@ function StudioCanvasInner() {
   };
 
   const handleUpdateNodeData = (id: string, updatedData: Record<string, any>) => {
+    if (typeof updatedData.originChainId === 'number'
+      && nodes.filter(node => node.type === 'watchDEXPrice').length === 1
+      && nodes.some(node => node.id === id && node.type === 'watchDEXPrice')) {
+      setDraftNetworks({ ...STOP_LOSS_TEMPLATE.networks, originChainId: updatedData.originChainId });
+    }
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === id) {
@@ -379,7 +391,14 @@ function StudioCanvasInner() {
   const handleOpenDeploy = () => {
     if (!isConnected) return;
     try {
-      resolveStopLoss({ nodes, edges, networks: draftNetworks });
+      const graph = { nodes, edges, networks: draftNetworks };
+      if (phaseTwo) {
+        resolvePhaseTwo(graph);
+        setValidationWarning('Phase 2 validation passed. Deployment remains disabled until the versioned Vault policy setup is available.');
+        setTimeout(() => setValidationWarning(null), 6000);
+        return;
+      }
+      resolveStopLoss(graph);
     } catch (error) {
       setValidationWarning(error instanceof Error ? error.message : 'Unable to validate this graph.');
       setTimeout(() => setValidationWarning(null), 4000);
@@ -502,6 +521,8 @@ function StudioCanvasInner() {
         <InspectorPanel
           selectedNode={selectedNode}
           owner={isConnected ? address : undefined}
+          phaseTwo={phaseTwo}
+          crossChain={crossChain}
           originPool={nodes.find(node => node.type === 'watchDEXPrice')?.data.pairAddress}
           onUpdateNodeData={handleUpdateNodeData}
           onDeleteNode={handleDeleteNode}

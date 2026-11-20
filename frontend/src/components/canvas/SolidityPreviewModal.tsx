@@ -5,6 +5,7 @@ import { Check, Code2, Copy, Download, X } from 'lucide-react';
 import { formatEther } from 'viem';
 import {
   resolveStopLoss, stopLossConstructorArgs, STOP_LOSS_PIPELINE_ABI, STOP_LOSS_PIPELINE_SOURCE,
+  isPhaseTwoGraph, resolvePhaseTwo, PRICE_ORDER_PIPELINE_SOURCE, PRICE_GATE_PIPELINE_SOURCE,
   STOP_LOSS_TEMPLATE, type StopLossGraph,
 } from '@omniflow/shared';
 
@@ -15,6 +16,23 @@ interface SolidityPreviewModalProps extends StopLossGraph {
 
 function previewGraph(graph: StopLossGraph) {
   try {
+    if (isPhaseTwoGraph(graph)) {
+      const candidate = resolvePhaseTwo(graph);
+      const gate = candidate.type === 'price-gate';
+      const name = gate ? 'PriceGatePipeline' : 'PriceOrderPipeline';
+      const args = Object.entries(candidate.config).map(([key, value]) => `// ${key}: ${value}`);
+      return {
+        filename: `${name}.sol`,
+        text: [
+          `// ${name} constructor configuration`,
+          '// Phase 2 candidate. Studio deployment requires verified testnet receipts.',
+          `// Base Vault pool: ${candidate.vaultPool}`,
+          ...args,
+          '',
+          gate ? PRICE_GATE_PIPELINE_SOURCE : PRICE_ORDER_PIPELINE_SOURCE,
+        ].join('\n'),
+      };
+    }
     const config = resolveStopLoss(graph);
     const args = stopLossConstructorArgs(config);
     const constructor = STOP_LOSS_PIPELINE_ABI.find(item => item.type === 'constructor');
@@ -23,6 +41,7 @@ function previewGraph(graph: StopLossGraph) {
     }
     const summary = constructor.inputs.map((input, i) => `// ${input.name}: ${args[i]}`).join('\n');
     return {
+      filename: 'StopLoss_Pipeline.sol',
       text: [
         '// Constructor arguments for the precompiled StopLoss_Pipeline',
         `// Template: ${STOP_LOSS_TEMPLATE.id} v${STOP_LOSS_TEMPLATE.version}`,
@@ -58,7 +77,7 @@ export function SolidityPreviewModal({ isOpen, onClose, nodes, edges, networks }
     const url = URL.createObjectURL(new Blob([preview.text], { type: 'text/plain' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'StopLoss_Pipeline.sol';
+    link.download = preview.filename ?? 'StopLoss_Pipeline.sol';
     link.click();
     URL.revokeObjectURL(url);
   };

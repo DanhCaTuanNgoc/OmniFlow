@@ -108,7 +108,7 @@ export class DeployerService {
       throw new Error(`DAG Validation Failed: ${validation.errors.join('; ')}`);
     }
 
-    const params = this.extractParams(graph);
+    const resolved = this.extractParams(graph);
     const ownerAddress = graph.metadata.ownerAddress.toLowerCase() as Address;
     const graphJson = graphSnapshot(graph);
     const existing = requestKey ? deploymentStore().get(ownerAddress, deploymentEnvironment, requestKey) : undefined;
@@ -128,10 +128,12 @@ export class DeployerService {
       throw new DeploymentConflict('The workspace pipeline is unavailable.');
     }
 
+    const vaultAddress = resolved.actionVaultAddress;
+    const vaultPool = resolved.pairAddress;
     const [reactiveChain, omniCode] = await Promise.all([
       chainService.lasnaPublicClient.getChainId(),
       chainService.lasnaPublicClient.getCode({ address: STOP_LOSS_TEMPLATE.omniSystem }),
-      verifyStopLossVault(params.actionVaultAddress, ownerAddress, params.pairAddress),
+      verifyStopLossVault(vaultAddress, ownerAddress, vaultPool),
     ]);
     if (reactiveChain !== STOP_LOSS_TEMPLATE.networks.reactiveChainId) {
       throw new Error('Deployment RPC must point to Lasna.');
@@ -143,7 +145,7 @@ export class DeployerService {
     const data = encodeDeployData({
       abi: STOP_LOSS_PIPELINE_ABI,
       bytecode: STOP_LOSS_PIPELINE_BYTECODE,
-      args: stopLossConstructorArgs(params),
+      args: stopLossConstructorArgs(resolved),
     });
     const lasna = chainService.lasnaPublicClient;
     const value = STOP_LOSS_TEMPLATE.fundingWei;
@@ -263,7 +265,8 @@ export class DeployerService {
 
   private present(intent: DeploymentIntent) {
     const graph = JSON.parse(intent.graphJson) as PipelineGraph;
-    const { actionVaultAddress } = this.extractParams(graph);
+    const resolved = this.extractParams(graph);
+    const actionVaultAddress = resolved.actionVaultAddress;
     return {
       success: intent.status === 'deployed',
       pipelineId: intent.id,

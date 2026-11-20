@@ -1,10 +1,10 @@
-import { describe, it } from 'node:test';
+﻿import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { chainService } from '../src/services/chain.service.js';
 import { deployerService } from '../src/services/deployer.service.js';
 import type { PipelineGraph } from '../src/schemas/pipeline.schema.js';
 import { STOP_LOSS_PIPELINE_BYTECODE } from '../src/abis/StopLossPipeline.js';
-import { STOP_LOSS_PIPELINE_ABI, stopLossConstructorArgs } from '@omniflow/shared';
+import { STOP_LOSS_PIPELINE_ABI, stopLossConstructorArgs, resolvePhaseTwo } from '@omniflow/shared';
 import { PipelineGraphSchema } from '../src/schemas/pipeline.schema.js';
 import { decodeAbiParameters, encodeDeployData, parseEther } from 'viem';
 
@@ -164,6 +164,22 @@ describe('DeployerService & DAG Compiler Suite', () => {
     assert.ok(STOP_LOSS_PIPELINE_ABI.some(entry => entry.type === 'event' && entry.name === 'OmniCallbackRequested'));
   });
 
+  it('compiles Take-Profit into the versioned price-order configuration', () => {
+    const graph = structuredClone(sampleValidGraph);
+    graph.nodes[1].data.operator = 'GREATER_THAN_OR_EQUAL';
+    graph.nodes[1].data.thresholdPriceUSD = '2800';
+    graph.nodes[1].data.confirmationHits = 1;
+    graph.nodes[2].data.cooldownSeconds = 0;
+    graph.nodes[3].data.maxSlippagePercent = 5;
+    graph.nodes[3].data.executionPolicy = 'REPEAT';
+    const resolved = resolvePhaseTwo(graph);
+    assert.equal(resolved.type, 'price-order');
+    if (resolved.type !== 'price-order') throw new Error('Expected a price-order template.');
+    assert.equal(resolved.config.mode, 1);
+    assert.equal(resolved.config.threshold, 2800n * 10n ** 18n);
+    assert.equal(resolved.config.originChainId, 84532n);
+  });
+
   const rejectedGraphs: {
     scenario: string;
     edit: (graph: PipelineGraph) => void;
@@ -254,3 +270,4 @@ describe('DeployerService & DAG Compiler Suite', () => {
     await assert.rejects(deployerService.deployPipeline(sampleValidGraph), /signer is not configured/);
   });
 });
+
