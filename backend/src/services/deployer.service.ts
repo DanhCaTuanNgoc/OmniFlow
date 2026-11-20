@@ -14,7 +14,8 @@ import {
 const subscriptionAbi = parseAbi([
   'event Subscribe(address indexed subscriber, uint256 indexed chainId, address indexed emitter, uint256 topic0, uint256 topic1, uint256 topic2, uint256 topic3)',
 ]);
-const reactiveIgnore = 0xa65f96fc951c3fa459f6b604ca206e910659a200aa377370725c5a4ea33d0229n;
+// Match REACTIVE_IGNORE in the vendored AbstractReactive used by the template.
+const reactiveIgnore = 0xa65f96fc951c35ead38878e0f0b7a3c744a6f5ccc1476b313353ce31712313adn;
 const template = `${STOP_LOSS_TEMPLATE.id}@${STOP_LOSS_TEMPLATE.version}`;
 
 export class DeployerService {
