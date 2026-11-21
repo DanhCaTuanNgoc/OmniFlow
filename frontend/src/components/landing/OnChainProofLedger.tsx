@@ -38,9 +38,9 @@ const HONESTY_CLAIMS = [
     evidence: "The demo uses an on-chain test pool and test tokens.",
   },
   {
-    claim: "26 Foundry tests passing",
-    status: "Passed locally",
-    evidence: "14 ActionVault tests and 12 StopLoss_Pipeline tests.",
+    claim: "Contract test coverage",
+    status: "Foundry test suite",
+    evidence: "The repository includes ActionVault and StopLoss_Pipeline tests.",
   },
   {
     claim: "Timestamp cooldown",
@@ -50,7 +50,7 @@ const HONESTY_CLAIMS = [
   {
     claim: "Non-custodial vault recovery",
     status: "Covered by tests",
-    evidence: "The owner can call emergencyWithdraw and executeSafeSweep.",
+    evidence: "The owner can call emergencyWithdraw to recover the vault's ETH.",
   },
 ];
 
@@ -72,14 +72,14 @@ export default function OnChainProofLedger() {
   };
 
   return (
-    <section className="motion-section proof-ledger-section" aria-label="On-Chain Proof & Honesty Table">
+    <section className="motion-section proof-ledger-section" aria-label="On-Chain Proof">
       <div className="motion-section-header scroll-reveal">
         <span className="motion-coord-tag">0x03 // ONCHAIN_PROOF_LEDGER</span>
         <div className="motion-badge-pill green">
           <span className="motion-badge-dot green" />
           <span>{fullLoopVerified ? "Full Loop Verified on Testnet" : "Destination Callback Pending"}</span>
         </div>
-        <h2 className="motion-section-title">Verifiable On-Chain Proof & Evidence Ledger</h2>
+        <h2 className="motion-section-title">On-Chain Proof</h2>
         <p className="motion-section-subhead">
           The stop-loss demo uses a deployed test pool on <strong>Base Sepolia</strong> and a reactive contract on <strong>Lasna</strong>.
         </p>
@@ -142,7 +142,7 @@ export default function OnChainProofLedger() {
             onClick={() => setActiveTab("honesty")}
           >
             <i className="fa-solid fa-shield-halved" />
-            <span>Honesty & Defensive Guarantees</span>
+            <span>Contract Verification</span>
           </button>
         </div>
 
@@ -256,7 +256,7 @@ export default function OnChainProofLedger() {
       <div className="honesty-table-card scroll-reveal scroll-stagger-2">
         <div className="honesty-header">
           <div>
-            <h3 className="honesty-title">Honesty Protocol: What is Live vs Verified</h3>
+            <h3 className="honesty-title">What We Verified</h3>
             <p className="honesty-subtitle">
               Source of Truth: FULL_LOOP_EVIDENCE.json, contracts/ test suite, and PROJECT_BLUEPRINT.md
             </p>

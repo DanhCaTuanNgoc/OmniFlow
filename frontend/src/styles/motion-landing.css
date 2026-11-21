@@ -395,7 +395,8 @@
   padding: 0;
   font-family: var(--font-display);
   color: #ffffff;
-  font-size: clamp(28px, 6.2vw, 80px);
+  max-width: 100%;
+  font-size: clamp(24px, 5.8vw, 80px);
   line-height: 1.12;
   letter-spacing: -0.04em;
   font-weight: 400;
@@ -404,8 +405,7 @@
 
 .motion-headline span {
   display: block;
-  white-space: nowrap;
-  overflow: hidden;
+  text-wrap: balance;
   opacity: 0;
   transform: translateY(14px);
   animation: motionHeadlineFade 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -444,6 +444,20 @@
 }
 
 /* CTA */
+.motion-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.motion-hero-actions .motion-cta-btn {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  animation: none;
+}
+
 .motion-cta-btn {
   display: inline-flex;
   align-items: center;

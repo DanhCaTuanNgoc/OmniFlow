@@ -4,9 +4,9 @@ import { Web3Provider } from '@/components/providers/Web3Provider';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
-  title: 'Intelligence Designed To Evolve',
+  title: 'OmniFlow | Cross-Chain Automation',
   description:
-    'Build applications that reason, adapt and collaborate using a modular AI platform designed for production.',
+    'Design and manage cross-chain automations with OmniFlow and Reactive Omni.',
   icons: {
     icon: '/favicon.ico',
   },

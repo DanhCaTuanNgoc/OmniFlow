@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import MotionLanding from "@/components/landing/MotionLanding";
 
 export const metadata: Metadata = {
-  title: "Intelligence Designed To Evolve",
+  title: "OmniFlow | No-Code Cross-Chain Automation",
   description:
-    "Build applications that reason, adapt and collaborate using a modular AI platform designed for production.",
+    "Build workflows that react to on-chain events with OmniFlow's visual pipeline builder, powered by Reactive Omni.",
 };
 
 export const viewport = {

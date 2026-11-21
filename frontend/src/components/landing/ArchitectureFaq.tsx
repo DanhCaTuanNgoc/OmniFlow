@@ -10,9 +10,9 @@ interface FaqItem {
 
 const FAQS: FaqItem[] = [
   {
-    question: "How does OmniFlow achieve zero off-chain keeper dependencies?",
+    question: "How does OmniFlow automate on-chain actions?",
     answer:
-      "Unlike Chainlink Automation or Gelato which rely on centralized off-chain bots polling RPC endpoints, Reactive Smart Contracts (RSC) on Reactive Omni subscribe to EVM log topics directly at the validator consensus level. The moment a matching event occurs on Base Sepolia, the RSC reacts autonomically and triggers an authenticated callback without any off-chain keeper server.",
+      "A Reactive Smart Contract subscribes to on-chain events. When a matching Base Sepolia event meets the configured conditions, it requests a callback through Reactive Omni.",
     tag: "Autonomic Architecture",
   },
   {
@@ -28,15 +28,15 @@ const FAQS: FaqItem[] = [
     tag: "Security Invariants",
   },
   {
-    question: "How does OmniFlow handle Base Sepolia's rapid 200ms Denim blocks?",
+    question: "How does OmniFlow limit repeated triggers?",
     answer:
-      "High-frequency micro-blocks can cause callback storms during DEX volatility spikes. OmniFlow smart contracts place a stateless cooldown guard at the very top of react(): if (block.timestamp - lastTriggeredTimestamp < cooldownSeconds) return;. This drops 100% of redundant triggers without writing expensive state.",
-    tag: "Denim 200ms Defense",
+      "After the stop-loss contract triggers, it uses block timestamps to skip further triggers until the configured cooldown expires.",
+    tag: "Cooldown",
   },
   {
     question: "Can I recover funds if the OmniFlow frontend is ever offline?",
     answer:
-      "Yes, absolutely. ActionVault is 100% non-custodial. The owner wallet retains unconditional on-chain authority to call emergencyWithdraw() or executeSafeSweep() at any time directly through BaseScan or any standard Web3 wallet with zero keeper or backend dependencies.",
+      "Yes. The owner can call emergencyWithdraw() directly on Base Sepolia to return the vault's ETH balance to the owner wallet.",
     tag: "Non-Custodial Guarantee",
   },
 ];

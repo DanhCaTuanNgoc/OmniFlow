@@ -15,16 +15,15 @@ export default function LandingFooter() {
             <span>Autonomous Web3 Workflows</span>
           </div>
           <h2 className="cta-banner-title">
-            Ready To Automate Without Keepers?
+            Build Your First Automation
           </h2>
           <p className="cta-banner-desc">
-            Deploy your first event-driven cross-chain pipeline in under two minutes.
-            Zero central servers, 100% non-custodial asset protection.
+            Start with a recipe or build an event-driven workflow in Pipeline Studio.
           </p>
 
           <div className="cta-banner-actions">
             <Link href="/workspace/studio" className="motion-cta-btn banner-btn-main">
-              Launch Pipeline Studio
+              Open Pipeline Studio
             </Link>
             <Link href="/workspace/templates" className="cta-btn-secondary">
               Explore Templates
@@ -75,7 +74,7 @@ export default function LandingFooter() {
                   </a>
                 </li>
                 <li>
-                  <a href="https://kopli.reactscan.net" target="_blank" rel="noreferrer">
+                  <a href="https://lasna.reactscan.net" target="_blank" rel="noreferrer">
                     Reactive Lasna (5318007) <i className="fa-solid fa-arrow-up-right-from-square text-[10px] ml-1" />
                   </a>
                 </li>
@@ -90,10 +89,8 @@ export default function LandingFooter() {
             <div className="footer-nav-col">
               <h4 className="footer-col-title">VERIFICATION</h4>
               <ul className="footer-link-list">
-                <li><span className="footer-static-link">Zero-Mock Protocol</span></li>
-                <li><span className="footer-static-link">Stateless 200ms Cooldown</span></li>
-                <li><span className="footer-static-link">100% Non-Custodial Vault</span></li>
-                <li><span className="footer-static-link">Foundry Test Suite (13/13)</span></li>
+                <li><a href="#proof">On-Chain Proof</a></li>
+                <li><a href="#security">Vault and Callback Safeguards</a></li>
               </ul>
             </div>
           </div>

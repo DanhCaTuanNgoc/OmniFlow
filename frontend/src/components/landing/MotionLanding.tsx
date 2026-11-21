@@ -190,31 +190,31 @@ export default function MotionLanding() {
 
   const stats = [
     {
-      glyph: "<",
-      target: 1.2,
-      suffix: "s",
-      decimals: 1,
-      label: "Full-Loop Latency",
+      glyph: "#",
+      target: 3,
+      suffix: "",
+      decimals: 0,
+      label: "Transaction Receipts",
       duration: 1500,
       delayMs: 480,
       animDelay: "0.5s",
     },
     {
-      glyph: "%",
-      target: 99.99,
-      suffix: "%",
-      decimals: 2,
-      label: "Callback Reliability",
+      glyph: "#",
+      target: 2,
+      suffix: "",
+      decimals: 0,
+      label: "Testnets",
       duration: 1580,
       delayMs: 570,
       animDelay: "0.58s",
     },
     {
       glyph: "*",
-      target: 24,
-      suffix: "/7",
+      target: 1,
+      suffix: "",
       decimals: 0,
-      label: "Autonomous RSC Runtime",
+      label: "Stop-Loss Demo",
       duration: 1660,
       delayMs: 660,
       animDelay: "0.66s",
@@ -222,7 +222,7 @@ export default function MotionLanding() {
     {
       glyph: "#",
       target: 10,
-      suffix: "+",
+      suffix: "",
       decimals: 0,
       label: "Visual Pipeline Nodes",
       duration: 1740,
@@ -277,19 +277,19 @@ export default function MotionLanding() {
               Product
             </a>
             <a href="#proof" className="motion-nav-link">
-              Honesty
+              On-Chain Proof
             </a>
             <a href="#faq" className="motion-nav-link">
               FAQ
             </a>
           </nav>
 
-          {/* Sign in Button */}
+          {/* Launch studio Button */}
           <Link
             href="/workspace/studio"
             className="motion-sign-in-btn"
           >
-            Sign in
+            Enter Studio
           </Link>
 
           {/* Mobile Burger Button */}
@@ -335,7 +335,7 @@ export default function MotionLanding() {
               className="motion-mobile-link"
               onClick={() => setMenuOpen(false)}
             >
-              Honesty
+              On-Chain Proof
             </a>
             <a
               href="#faq"
@@ -349,7 +349,7 @@ export default function MotionLanding() {
               className="motion-mobile-sign-in"
               onClick={() => setMenuOpen(false)}
             >
-              Sign in
+              Enter Studio
             </Link>
           </div>
         </>
@@ -365,8 +365,8 @@ export default function MotionLanding() {
     
           {/* Headline (Two Lines with BubbleDot Font) */}
           <h1 className="motion-headline">
-            <span className="line1">Intelligence</span>
-            <span className="line2">Designed To Evolve</span>
+            <span className="line1">Automate Across Chains</span>
+            <span className="line2">Without Code</span>
           </h1>
 
           {/* Subhead */}
@@ -374,22 +374,23 @@ export default function MotionLanding() {
             className="motion-subhead motion-anim"
             style={{ "--d": "0.28s" } as React.CSSProperties}
           >
-            Build applications that reason, adapt and collaborate using a
-            modular AI platform designed for production.
+            Build workflows that react to on-chain events with a visual pipeline builder
+            powered by Reactive Omni. See the stop-loss demo on Base Sepolia and Lasna.
           </p>
 
           {/* CTA Button */}
-          <Link
-            href="/workspace/studio"
-            className="motion-cta-btn"
-            style={{ "--d": "0.4s" } as React.CSSProperties}
-          >
-            Get Started
-          </Link>
+          <div className="motion-hero-actions motion-anim" style={{ "--d": "0.4s" } as React.CSSProperties}>
+            <Link href="/workspace/studio" className="motion-cta-btn">
+              Open Pipeline Studio
+            </Link>
+            <a href="#proof" className="cta-btn-secondary">
+              View On-Chain Proof
+            </a>
+          </div>
         </section>
 
         {/* 3) Stats Footer (Exact 4 Metrics) */}
-        <footer className="motion-stats-footer" aria-label="Key Performance Metrics">
+        <footer className="motion-stats-footer" aria-label="OmniFlow at a glance">
           {stats.map((s, idx) => (
             <StatMetric key={idx} {...s} />
           ))}

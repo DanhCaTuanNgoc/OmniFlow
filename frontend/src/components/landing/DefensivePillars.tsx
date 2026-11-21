@@ -26,26 +26,26 @@ const PILLARS: Pillar[] = [
     title: "Stateless Cooldown Protection",
     badge: "200ms Denim Armor",
     description:
-      "RSCs enforce a stateless timestamp check at the very beginning of react(). Drops 100% of redundant micro-block triggers during extreme DEX volatility across 200ms blocks.",
+      "The stop-loss contract uses block timestamps to skip new triggers during the configured cooldown window.",
     codeSnippet: "if (block.timestamp - lastTrigger < cooldown) return;",
     icon: "fa-solid fa-stopwatch-20",
   },
   {
     number: "03",
     title: "Live Price Re-Validation",
-    badge: "MEV Sandwich Barrier",
+    badge: "Slippage Limit",
     description:
-      "Destination execution re-verifies live pool reserves and slippage parameters before completing any swap. Eliminates flash-rebound traps and front-running sandwich attacks.",
+      "For local price triggers, the vault rechecks the pool price before swapping. The swap also specifies a minimum amount out.",
     codeSnippet: "require(amountOut >= minAmountOut, 'SlippageExceeded');",
     icon: "fa-solid fa-chart-line",
   },
   {
     number: "04",
-    title: "Non-Custodial Panic Sweep",
-    badge: "100% User Sovereignty",
+    title: "Owner-Controlled Withdrawal",
+    badge: "Non-Custodial Vault",
     description:
-      "Users retain unconditional ownership over all deposited collateral. emergencyWithdraw() and executeSafeSweep() can be called instantly by the owner without keeper consensus.",
-    codeSnippet: "vault.emergencyWithdraw(token) // Instant 0-keeper recovery",
+      "The owner can withdraw the vault's ETH on-chain using emergencyWithdraw(). An authorized callback can sweep ETH to the configured backup address.",
+    codeSnippet: "vault.emergencyWithdraw();",
     icon: "fa-solid fa-life-ring",
   },
 ];
@@ -61,8 +61,8 @@ export default function DefensivePillars() {
         </div>
         <h2 className="motion-section-title">4 Core Defensive Pillars</h2>
         <p className="motion-section-subhead">
-          Engineered for mission-critical institutional stability. Invariant guarantees enforced
-          at smart contract bytecode level across both chains.
+          How OmniFlow checks callbacks, limits repeated triggers, bounds swap slippage,
+          and lets vault owners withdraw funds.
         </p>
       </div>
 
