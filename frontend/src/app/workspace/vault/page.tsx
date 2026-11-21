@@ -27,7 +27,7 @@ import { CONTRACT_ADDRESSES } from '@/lib/constants';
 import { truncateAddress } from '@/lib/utils';
 import { ACTION_VAULT_ABI } from '@omniflow/shared';
 import { workspaceRequest } from '@/lib/workspaceSession';
-import { fetchDeployments, type DeploymentDetail } from '@/lib/deployments';
+import type { DeploymentDetail, DeploymentSummary } from '@/lib/deployments';
 
 export default function VaultManagerPage() {
   return <Suspense fallback={<WorkspaceState title="Loading Vault Manager…" />}><VaultRoute /></Suspense>;
@@ -164,7 +164,7 @@ function VaultForWallet({
   const [linkError, setLinkError] = useState<string | null>(null);
 
   // Target RSC to view & authorize
-  const [deployments, setDeployments] = useState<DeploymentDetail[]>([]);
+  const [deployments, setDeployments] = useState<DeploymentSummary[]>([]);
   const [targetRsc, setTargetRsc] = useState<Address>(
     initialRscAddress ?? CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS
   );
@@ -173,10 +173,11 @@ function VaultForWallet({
 
   useEffect(() => {
     if (!userAddress) return;
-    void fetchDeployments(userAddress).then(deps => {
+    void workspaceRequest<{ deployments: DeploymentSummary[] }>(userAddress, '/pipeline/deployments').then(({ deployments: deps }) => {
       setDeployments(deps);
-      if (!initialRscAddress && deps.length > 0 && deps[0].contracts?.rscAddress) {
-        setTargetRsc(deps[0].contracts.rscAddress);
+      const deployedRsc = deps.find(({ contracts }) => contracts.rscAddress)?.contracts.rscAddress;
+      if (!initialRscAddress && deployedRsc) {
+        setTargetRsc(deployedRsc);
       }
     }).catch(() => {});
   }, [userAddress, initialRscAddress]);
@@ -708,11 +709,13 @@ function VaultForWallet({
                   }}
                   className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-2.5 py-1.5 text-xs text-white focus:border-[var(--ws-accent)] focus:outline-none"
                 >
-                  {deployments.map((d) => (
-                    <option key={d.id} value={d.contracts.rscAddress}>
-                      {d.name} ({truncateAddress(d.contracts.rscAddress, 6)})
-                    </option>
-                  ))}
+                  {deployments.map(({ pipelineId, name, contracts: { rscAddress } }) =>
+                    rscAddress && (
+                      <option key={pipelineId} value={rscAddress}>
+                        {name} ({truncateAddress(rscAddress, 6)})
+                      </option>
+                    )
+                  )}
                   <option value={CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS}>
                     Default StopLoss RSC ({truncateAddress(CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS, 6)})
                   </option>
@@ -751,7 +754,11 @@ function VaultForWallet({
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xs font-semibold text-white flex items-center gap-2">
-                  <span>{deployments.find(d => isAddressEqual(d.contracts.rscAddress, targetRsc))?.name ?? 'Reactive RSC'}</span>
+                  <span>
+                    {deployments.find(({ contracts: { rscAddress } }) =>
+                      rscAddress && isAddressEqual(rscAddress, targetRsc)
+                    )?.name ?? 'Reactive RSC'}
+                  </span>
                   <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full border ${
                     isRscAuthorized === true
                       ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
