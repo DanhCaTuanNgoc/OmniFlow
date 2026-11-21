@@ -54,7 +54,9 @@ import {
   AlertTriangle,
   Code2,
   ShieldCheck,
-  Plus
+  Plus,
+  PanelLeftOpen,
+  PanelLeftClose
 } from 'lucide-react';
 
 // STABLE DEFINITIONS OUTSIDE COMPONENT SCOPE (Mandatory for XYFlow performance)
@@ -95,7 +97,7 @@ function StudioCanvasInner() {
 
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [isPaletteOpen, setPaletteOpen] = useState(false);
+  const [isPaletteOpen, setPaletteOpen] = useState(true);
   const [activeRecipeId, setActiveRecipeId] = useState<string>('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isDeployOpen, setIsDeployOpen] = useState(false);
@@ -490,19 +492,28 @@ function StudioCanvasInner() {
 
   return (
     <div className="relative flex h-full min-h-[24rem] w-full overflow-hidden">
-      {!isSnapshot && <div id="studio-node-palette" className={`absolute inset-y-0 left-0 z-30 w-full max-w-[17rem] shrink-0 flex-col bg-[var(--ws-rail)] lg:relative lg:flex ${isPaletteOpen ? 'flex' : 'hidden'}`}>
-        <div className="border-b border-[var(--ws-border)] p-2 lg:hidden">
-          <button type="button" className="ws-button" onClick={() => setPaletteOpen(false)}>Close nodes</button>
+      {!isSnapshot && (
+        <div
+          id="studio-node-palette"
+          className={`absolute inset-y-0 left-0 z-30 w-full max-w-[17.5rem] shrink-0 flex-col bg-[var(--ws-rail)] border-r border-[var(--ws-border)] transition-all duration-200 lg:relative ${
+            isPaletteOpen ? 'flex' : 'hidden'
+          }`}
+        >
+          <NodePalette
+            onClose={() => setPaletteOpen(false)}
+            onAddNode={(type, data) => {
+              handleAddNodeFromPalette(type, data);
+              if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                setPaletteOpen(false);
+              }
+            }}
+          />
         </div>
-        <NodePalette onAddNode={(type, data) => {
-          handleAddNodeFromPalette(type, data);
-          setPaletteOpen(false);
-        }} />
-      </div>}
+      )}
 
       <div className="relative flex h-full min-w-0 flex-1 flex-col" ref={reactFlowWrapper}>
         <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--ws-border)] bg-[var(--ws-rail)] px-3 py-2.5 sm:px-4">
-          <div className="flex min-w-0 items-center">
+          <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
               className="ws-button inline-flex items-center gap-1.5 cursor-pointer"
@@ -518,6 +529,18 @@ function StudioCanvasInner() {
               <ArrowLeft className="size-3.5" />
               <span>Back</span>
             </button>
+
+            {!isPaletteOpen && !isSnapshot && (
+              <button
+                type="button"
+                className="ws-button inline-flex items-center gap-1.5 cursor-pointer text-xs"
+                onClick={() => setPaletteOpen(true)}
+                title="Open Node Catalog"
+              >
+                <PanelLeftOpen className="size-3.5 text-[var(--ws-accent)]" />
+                <span>Node Catalog</span>
+              </button>
+            )}
           </div>
 
           <div className="ws-actions">

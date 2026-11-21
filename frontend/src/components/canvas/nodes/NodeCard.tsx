@@ -39,34 +39,34 @@ const CATEGORY_CONFIG: Record<NodeCategory, {
 }> = {
   trigger: {
     topBorder: 'border-t-2 border-t-cyan-400',
-    shadowGlow: 'shadow-[0_0_30px_-10px_rgba(34,211,238,0.25)]',
-    badge: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20',
+    shadowGlow: 'shadow-[0_4px_24px_-6px_rgba(34,211,238,0.25)]',
+    badge: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/25',
     text: 'text-cyan-400',
-    headerBg: 'bg-gradient-to-r from-cyan-950/25 via-[#111420] to-[#0E1017]',
+    headerBg: 'bg-gradient-to-r from-cyan-950/20 via-transparent to-transparent',
     handleClass: '!border-cyan-400 hover:!bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]',
   },
   condition: {
     topBorder: 'border-t-2 border-t-amber-400',
-    shadowGlow: 'shadow-[0_0_30px_-10px_rgba(251,191,36,0.2)]',
-    badge: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
+    shadowGlow: 'shadow-[0_4px_24px_-6px_rgba(251,191,36,0.2)]',
+    badge: 'bg-amber-500/10 text-amber-300 border-amber-500/25',
     text: 'text-amber-400',
-    headerBg: 'bg-gradient-to-r from-amber-950/25 via-[#16121D] to-[#0E1017]',
+    headerBg: 'bg-gradient-to-r from-amber-950/20 via-transparent to-transparent',
     handleClass: '!border-amber-400 hover:!bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]',
   },
   action: {
     topBorder: 'border-t-2 border-t-emerald-400',
-    shadowGlow: 'shadow-[0_0_30px_-10px_rgba(52,211,153,0.25)]',
-    badge: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
+    shadowGlow: 'shadow-[0_4px_24px_-6px_rgba(52,211,153,0.25)]',
+    badge: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25',
     text: 'text-emerald-400',
-    headerBg: 'bg-gradient-to-r from-emerald-950/25 via-[#0F171A] to-[#0E1017]',
+    headerBg: 'bg-gradient-to-r from-emerald-950/20 via-transparent to-transparent',
     handleClass: '!border-emerald-400 hover:!bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]',
   },
   logic: {
     topBorder: 'border-t-2 border-t-purple-400',
-    shadowGlow: 'shadow-[0_0_30px_-10px_rgba(168,85,247,0.25)]',
-    badge: 'bg-purple-500/10 text-purple-300 border-purple-500/20',
+    shadowGlow: 'shadow-[0_4px_24px_-6px_rgba(168,85,247,0.25)]',
+    badge: 'bg-purple-500/10 text-purple-300 border-purple-500/25',
     text: 'text-purple-400',
-    headerBg: 'bg-gradient-to-r from-purple-950/30 via-[#151122] to-[#0E1017]',
+    headerBg: 'bg-gradient-to-r from-purple-950/20 via-transparent to-transparent',
     handleClass: '!border-purple-400 hover:!bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.8)]',
   },
 };
@@ -152,15 +152,15 @@ export function NodeCard({
   return (
     <div
       className={cn(
-        'relative w-72 rounded-2xl bg-[#0E1017]/98 border border-white/[0.08] select-none transition-[border-color,box-shadow,transform] duration-150 transform-gpu',
+        'relative w-72 rounded-xl bg-[var(--ws-panel)] border border-[var(--ws-border)] select-none transition-[border-color,box-shadow,transform] duration-150 transform-gpu shadow-xl shadow-black/40',
         cat.topBorder,
         cat.shadowGlow,
         selected
-          ? 'ring-2 ring-indigo-500 border-white/20 scale-[1.01]'
-          : 'hover:border-white/[0.15]'
+          ? 'ring-2 ring-[var(--ws-accent)] border-[var(--ws-accent)]/60 scale-[1.01]'
+          : 'hover:border-white/20'
       )}
     >
-      {/* Target Handle(s) on Left - Precise Glowing Micro-Dot */}
+      {/* Target Handle(s) on Left - Glowing Micro-Dot with Precision Port */}
       {targetHandles ? (
         targetHandles.map((h, i) => (
           <Handle
@@ -170,7 +170,7 @@ export function NodeCard({
             position={Position.Left}
             style={{ top: `${h.topPercent ?? (i === 0 ? 35 : 65)}%` }}
             className={cn(
-              '!w-3 !h-3 !rounded-full !bg-[#0b0d14] !border-2 transition-transform hover:!scale-125',
+              '!w-3.5 !h-3.5 !rounded-full !bg-[var(--ws-panel)] !border-2 transition-transform hover:!scale-130 cursor-crosshair',
               cat.handleClass
             )}
           />
@@ -180,27 +180,27 @@ export function NodeCard({
           type="target"
           position={Position.Left}
           className={cn(
-            '!w-3 !h-3 !rounded-full !bg-[#0b0d14] !border-2 transition-transform hover:!scale-125',
+            '!w-3.5 !h-3.5 !rounded-full !bg-[var(--ws-panel)] !border-2 transition-transform hover:!scale-130 cursor-crosshair',
             cat.handleClass
           )}
         />
       ) : null}
 
       {/* Card Header */}
-      <div className={cn('px-4 py-3 rounded-t-2xl border-b border-white/[0.06] flex items-center justify-between', cat.headerBg)}>
+      <div className={cn('px-3.5 py-2.5 rounded-t-xl border-b border-[var(--ws-border)] flex items-center justify-between', cat.headerBg)}>
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="p-2 rounded-xl border border-white/[0.08] bg-[#07080d]/80 shadow-sm shrink-0">
+          <div className="p-2 rounded-lg border border-white/[0.08] bg-black/40 shadow-sm shrink-0">
             {icon}
           </div>
           <div className="truncate">
             <h4 className="text-xs font-bold text-white tracking-tight truncate">{title}</h4>
-            <p className="text-[11px] text-slate-400 truncate">{subtitle}</p>
+            <p className="text-[11px] text-[var(--ws-muted)] truncate">{subtitle}</p>
           </div>
         </div>
 
         <span
           className={cn(
-            'text-[10px] capitalize font-medium px-2 py-0.5 rounded-full border tracking-wide ml-2 shrink-0',
+            'text-[9.5px] uppercase font-mono font-semibold px-2 py-0.5 rounded-md border tracking-wider ml-2 shrink-0',
             cat.badge
           )}
         >
@@ -210,31 +210,31 @@ export function NodeCard({
 
       {/* Card Body / Custom Details */}
       {children && (
-        <div className="p-3 text-xs text-slate-300 space-y-2">
+        <div className="p-3 text-xs text-zinc-200 space-y-2">
           {children}
         </div>
       )}
 
       {/* Card Footer: Visual State Indicator with Soft Glow Dot */}
-      <div className="px-3.5 py-2 border-t border-white/[0.06] bg-[#090A10]/70 rounded-b-2xl flex items-center justify-between text-xs">
+      <div className="px-3.5 py-2 border-t border-[var(--ws-border)] bg-black/25 rounded-b-xl flex items-center justify-between text-xs">
         <div className="flex items-center gap-2">
           <span className={cn('status-dot', st.dotClass)} />
           <span className={cn('font-medium text-[11px]', st.textClass)}>
             {st.label}
           </span>
         </div>
-        <span className="text-[10px] text-slate-500 font-mono">
+        <span className="text-[10px] text-[var(--ws-muted)] font-mono uppercase tracking-wider">
           {category === 'trigger' ? 'Out Stream' : category === 'action' ? 'Callback End' : 'In / Out'}
         </span>
       </div>
 
-      {/* Source Handle on Right - Precise Glowing Micro-Dot */}
+      {/* Source Handle on Right - Glowing Micro-Dot with Precision Port */}
       {hasSourceHandle && (
         <Handle
           type="source"
           position={Position.Right}
           className={cn(
-            '!w-3 !h-3 !rounded-full !bg-[#0b0d14] !border-2 transition-transform hover:!scale-125',
+            '!w-3.5 !h-3.5 !rounded-full !bg-[var(--ws-panel)] !border-2 transition-transform hover:!scale-130 cursor-crosshair',
             cat.handleClass
           )}
         />
