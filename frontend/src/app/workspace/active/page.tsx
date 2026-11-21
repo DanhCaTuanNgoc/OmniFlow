@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import { runDeploymentAction, setVaultRscAuthorization, type DeploymentDetail, type DeploymentSummary } from '@/lib/deployments';
-import { workspaceRequest } from '@/lib/workspaceSession';
+import { WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspaceSession';
 
 const runtimeLabel = {
   unverified: 'RPC data unavailable',
@@ -367,6 +367,7 @@ function DeploymentPanel({
       setMessage({ text: 'Receipt verified and saved.', error: false });
       await reload();
     } catch (err) {
+      if (err instanceof WorkspaceWalletPromptCancelled) return;
       setMessage({ text: err instanceof Error ? err.message : 'Unable to complete the step.', error: true });
     } finally {
       setBusy(undefined);
@@ -390,6 +391,7 @@ function DeploymentPanel({
       }
       await reload();
     } catch (err) {
+      if (err instanceof WorkspaceWalletPromptCancelled) return;
       setMessage({ text: err instanceof Error ? err.message : 'Unable to resume the deployment.', error: true });
     } finally {
       setBusy(undefined);
@@ -489,6 +491,7 @@ function DeploymentPanel({
       });
       await reload();
     } catch (err) {
+      if (err instanceof WorkspaceWalletPromptCancelled) return;
       setMessage({ text: err instanceof Error ? err.message : 'Failed to update automation status.', error: true });
     } finally {
       setBusy(undefined);

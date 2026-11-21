@@ -34,7 +34,7 @@ import {
 } from '@/lib/pipelineDraft';
 import { STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 import type { DeploymentSummary } from '@/lib/deployments';
-import { workspaceRequest } from '@/lib/workspaceSession';
+import { WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspaceSession';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { PALETTE_ITEMS } from '@/components/canvas/NodePalette';
 
@@ -184,6 +184,7 @@ export function PipelineStudioHub() {
       setWalletDrafts(draftsRes.drafts || []);
     } catch (err) {
       refreshLocalDrafts();
+      if (err instanceof WorkspaceWalletPromptCancelled) return;
       setImportError(
         err instanceof Error
           ? `${err.message} (${importedCount} drafts imported before error).`

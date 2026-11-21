@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Sidebar } from '@/components/common/Sidebar';
 import { Header } from '@/components/common/Header';
+import { WorkspaceWalletModal } from '@/components/common/WorkspaceWalletModal';
 import '@/styles/workspace.css';
 
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
@@ -11,6 +12,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
         <Header />
         <main className="relative min-h-0 flex-1 overflow-auto">{children}</main>
       </div>
+      <WorkspaceWalletModal />
     </div>
   );
 }
