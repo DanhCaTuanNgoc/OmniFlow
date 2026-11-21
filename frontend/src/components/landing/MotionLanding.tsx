@@ -191,10 +191,10 @@ export default function MotionLanding() {
   const stats = [
     {
       glyph: "<",
-      target: 120,
-      suffix: "ms",
-      decimals: 0,
-      label: "Inference Time",
+      target: 1.2,
+      suffix: "s",
+      decimals: 1,
+      label: "Full-Loop Latency",
       duration: 1500,
       delayMs: 480,
       animDelay: "0.5s",
@@ -204,7 +204,7 @@ export default function MotionLanding() {
       target: 99.99,
       suffix: "%",
       decimals: 2,
-      label: "Platform Uptime",
+      label: "Callback Reliability",
       duration: 1580,
       delayMs: 570,
       animDelay: "0.58s",
@@ -214,17 +214,17 @@ export default function MotionLanding() {
       target: 24,
       suffix: "/7",
       decimals: 0,
-      label: "Autonomous Runtime",
+      label: "Autonomous RSC Runtime",
       duration: 1660,
       delayMs: 660,
       animDelay: "0.66s",
     },
     {
       glyph: "#",
-      target: 2.4,
-      suffix: "M",
-      decimals: 1,
-      label: "Context Windows",
+      target: 10,
+      suffix: "+",
+      decimals: 0,
+      label: "Visual Pipeline Nodes",
       duration: 1740,
       delayMs: 750,
       animDelay: "0.74s",
@@ -362,40 +362,7 @@ export default function MotionLanding() {
 
         {/* 2) Hero (Center) */}
         <section className="motion-hero">
-          {/* Trust Row ("Trusted by 2000+ Enterprises") */}
-          <div
-            className="motion-trust-row motion-anim"
-            style={{ "--d": "0.05s" } as React.CSSProperties}
-          >
-            {/* Avatar 1: Microsoft */}
-            <div className="motion-trust-avatar a1" title="Microsoft">
-              <div className="motion-trust-avatar-inner">
-                <i className="fa-brands fa-microsoft" aria-hidden="true" />
-              </div>
-            </div>
-
-            {/* Avatar 2: Amazon */}
-            <div className="motion-trust-avatar a2" title="Amazon">
-              <div className="motion-trust-avatar-inner">
-                <i className="fa-brands fa-amazon" aria-hidden="true" />
-              </div>
-            </div>
-
-            {/* Avatar 3: Google */}
-            <div className="motion-trust-avatar a3" title="Google">
-              <div className="motion-trust-avatar-inner">
-                <i className="fa-brands fa-google" aria-hidden="true" />
-              </div>
-            </div>
-
-            {/* Trust Pill */}
-            <div className="motion-trust-pill">
-              <span className="motion-trust-text">
-                Trusted by 2000+ Enterprises
-              </span>
-            </div>
-          </div>
-
+    
           {/* Headline (Two Lines with BubbleDot Font) */}
           <h1 className="motion-headline">
             <span className="line1">Intelligence</span>
