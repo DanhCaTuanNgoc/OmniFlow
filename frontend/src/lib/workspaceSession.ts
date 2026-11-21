@@ -1,5 +1,5 @@
-import { getAccount, signMessage, watchAccount } from 'wagmi/actions';
-import { isAddressEqual, type Address } from 'viem';
+import { connect, getAccount, signMessage, watchAccount } from 'wagmi/actions';
+import { isAddress, isAddressEqual, type Address } from 'viem';
 import { APP_CONFIG } from './constants';
 import { wagmiConfig } from './wagmi';
 
@@ -9,6 +9,57 @@ type Challenge = { nonce: string; message: string };
 let session: Session | undefined;
 let walletVersion = 0;
 let watching = false;
+const sessionKey = 'omniflow.workspace.session.v1';
+const sessionListeners = new Set<() => void>();
+let expiryTimer: ReturnType<typeof setTimeout> | undefined;
+
+function setSession(next?: Session) {
+  session = next;
+  clearTimeout(expiryTimer);
+  try {
+    if (next) sessionStorage.setItem(sessionKey, JSON.stringify(next));
+    else sessionStorage.removeItem(sessionKey);
+  } catch {
+    // The current tab can still use the in-memory session.
+  }
+  if (next) expiryTimer = setTimeout(() => invalidateWorkspaceSession(next.token), Math.max(0, next.expiresAt - Date.now()));
+  sessionListeners.forEach(listener => listener());
+}
+
+export function subscribeToWorkspaceSession(listener: () => void) {
+  sessionListeners.add(listener);
+  trackWorkspaceWallet();
+  return () => { sessionListeners.delete(listener); };
+}
+
+function trackWorkspaceWallet() {
+  if (watching || typeof window === 'undefined') return;
+  watching = true;
+  try {
+    const restored = JSON.parse(sessionStorage.getItem(sessionKey) ?? 'null') as Partial<Session> | null;
+    if (restored && typeof restored.owner === 'string' && isAddress(restored.owner) &&
+        typeof restored.token === 'string' && typeof restored.expiresAt === 'number' && restored.expiresAt > Date.now()) {
+      const account = getAccount(wagmiConfig);
+      if (!account.address || isAddressEqual(account.address, restored.owner)) setSession(restored as Session);
+      else setSession();
+    } else {
+      setSession();
+    }
+  } catch {
+    setSession();
+  }
+  watchAccount(wagmiConfig, {
+    onChange(account, previous) {
+      if (account.address === previous.address && account.isConnected === previous.isConnected) return;
+      walletVersion++;
+      walletPrompt?.finish(false);
+      if (session && ((account.address && !isAddressEqual(account.address, session.owner)) ||
+          (previous.isConnected && !account.isConnected && account.status === 'disconnected'))) {
+        invalidateWorkspaceSession(session.token);
+      }
+    },
+  });
+}
 
 type WalletPrompt = { canSwitch: boolean; finish: (approved: boolean) => void };
 let walletPrompt: WalletPrompt | null = null;
@@ -83,12 +134,31 @@ async function post<T>(path: string, body: object): Promise<T> {
 export function invalidateWorkspaceSession(token: string) {
   if (session?.token !== token) return;
   const previous = session;
-  session = undefined;
+  setSession();
   revoke(previous);
 }
 
 export function getWorkspaceSessionToken(owner: Address) {
   return session && session.expiresAt > Date.now() && isAddressEqual(owner, session.owner) ? session.token : undefined;
+}
+
+export function clearWorkspaceSession() {
+  if (session) invalidateWorkspaceSession(session.token);
+}
+
+let pendingConnection: Promise<Session> | undefined;
+export function connectAndSignInToWorkspace() {
+  if (pendingConnection) return pendingConnection;
+  pendingConnection = (async () => {
+    trackWorkspaceWallet();
+    const account = getAccount(wagmiConfig);
+    if (account.isConnected && account.address) return signInToWorkspace(account.address);
+    const connector = wagmiConfig.connectors[0];
+    if (!connector) throw new Error('Open MetaMask to connect a wallet.');
+    const connection = await connect(wagmiConfig, { connector });
+    return signInToWorkspace(connection.accounts[0]);
+  })().finally(() => { pendingConnection = undefined; });
+  return pendingConnection;
 }
 
 let pendingSignIn: { owner: Address; task: Promise<Session> } | undefined;
@@ -105,17 +175,7 @@ export async function signInToWorkspace(owner: Address) {
 }
 
 async function createWorkspaceSession(owner: Address) {
-  if (!watching) {
-    watching = true;
-    watchAccount(wagmiConfig, {
-      onChange(account, previous) {
-        if (account.address === previous.address && account.isConnected === previous.isConnected) return;
-        walletVersion++;
-        walletPrompt?.finish(false);
-        if (session) invalidateWorkspaceSession(session.token);
-      },
-    });
-  }
+  trackWorkspaceWallet();
 
   const version = walletVersion;
   const ensureCurrentWallet = async (mustBeOnBase: boolean) => {
@@ -150,7 +210,7 @@ async function createWorkspaceSession(owner: Address) {
     throw error;
   }
   if (session) revoke(session);
-  session = verified;
+  setSession(verified);
   return verified;
 }
 

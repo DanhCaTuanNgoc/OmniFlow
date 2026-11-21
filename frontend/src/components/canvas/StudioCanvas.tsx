@@ -27,7 +27,7 @@ import { isPhaseTwoGraph, resolvePhaseTwo, resolveStopLoss, STOP_LOSS_TEMPLATE, 
 import { APP_CONFIG } from '@/lib/constants';
 import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph, exportDraftJson, connectionError, simulationPath } from '@/lib/pipelineDraft';
 import { WorkspaceSignInRequired, workspaceRequest } from '@/lib/workspaceSession';
-import { StudioSignIn } from '@/components/studio/StudioSignIn';
+import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
 import { useStudioHeaderStore } from '@/lib/studioHeaderStore';
 
 import {
@@ -120,7 +120,7 @@ function StudioCanvasInner() {
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string>();
   const [signInRequired, setSignInRequired] = useState(false);
-  const [reload, setReload] = useState(0);
+  const signedIn = useWorkspaceSignedIn(isConnected ? address : undefined);
   const active = useRef(false);
   const editVersion = useRef(0);
   const restoreSimulation = useRef<() => void>();
@@ -220,7 +220,7 @@ function StudioCanvasInner() {
   }, [localParam, setNodes, setEdges]);
 
   useEffect(() => {
-    if (!address || (!pipelineParam && !deploymentParam)) return;
+    if (loaded || !address || (!pipelineParam && !deploymentParam)) return;
     const controller = new AbortController();
     const resource = deploymentParam ? 'deployments' : 'drafts';
     const id = deploymentParam ?? pipelineParam!;
@@ -247,7 +247,7 @@ function StudioCanvasInner() {
       setLoadError(needsSignIn ? undefined : error instanceof Error ? error.message : 'Unable to load pipeline.');
     });
     return () => controller.abort();
-  }, [address, pipelineParam, deploymentParam, setNodes, setEdges, reload]);
+  }, [address, pipelineParam, deploymentParam, setNodes, setEdges, signedIn, loaded]);
 
   async function saveGraph(leave = false) {
     if (draftBusy) return false;
@@ -691,7 +691,7 @@ function StudioCanvasInner() {
   if ((pipelineParam || deploymentParam || localParam) && !loaded) {
     return <div className="ws-page" role={loadError ? 'alert' : 'status'}>
       {signInRequired && address
-        ? <StudioSignIn owner={address} onSignedIn={() => setReload(value => value + 1)} />
+        ? <WorkspaceSignIn />
         : <p>{loadError ?? 'Loading pipeline...'}</p>}
       <Link href="/workspace/studio" className="ws-button">Back to pipelines</Link>
     </div>;

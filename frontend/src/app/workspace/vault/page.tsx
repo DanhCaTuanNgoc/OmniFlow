@@ -3,6 +3,7 @@
 import React, { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
+import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
 import { 
   Vault, 
   AlertOctagon, 
@@ -37,6 +38,7 @@ function VaultRoute() {
   const { address, isConnected } = useAccount();
   const id = useSearchParams().get('deployment');
   const owner = isConnected ? address : undefined;
+  const signedIn = useWorkspaceSignedIn(owner);
   const [customVault, setCustomVault] = useState<Address | null>(null);
 
   useEffect(() => {
@@ -67,6 +69,13 @@ function VaultRoute() {
     setCustomVault(null);
   };
 
+  if (!signedIn) {
+    return <div className="ws-page space-y-5">
+      <WorkspacePageHeader title="Vault Manager" icon={<Lock className="size-4" />} />
+      <WorkspaceSignIn />
+    </div>;
+  }
+
   return id ? (
     <VaultSelection key={`${owner}:${id}`} owner={owner} id={id} />
   ) : (
@@ -91,7 +100,7 @@ function VaultSelection({ owner, id }: { owner?: Address; id: string }) {
     setPending(true);
     setError(undefined);
     try {
-      setDeployment(await workspaceRequest<DeploymentDetail>(owner, `/pipeline/deployments/${encodeURIComponent(id)}`));
+      setDeployment(await workspaceRequest<DeploymentDetail>(owner, `/pipeline/deployments/${encodeURIComponent(id)}`, { sessionOnly: true }));
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Unable to load the Vault.');
     } finally {
@@ -173,7 +182,7 @@ function VaultForWallet({
 
   useEffect(() => {
     if (!userAddress) return;
-    void workspaceRequest<{ deployments: DeploymentSummary[] }>(userAddress, '/pipeline/deployments').then(({ deployments: deps }) => {
+    void workspaceRequest<{ deployments: DeploymentSummary[] }>(userAddress, '/pipeline/deployments', { sessionOnly: true }).then(({ deployments: deps }) => {
       setDeployments(deps);
       const deployedRsc = deps.find(({ contracts }) => contracts.rscAddress)?.contracts.rscAddress;
       if (!initialRscAddress && deployedRsc) {

@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { WorkspaceState } from '@/components/common/WorkspaceUI';
 import { PipelineStudioHub } from '@/components/studio/PipelineStudioHub';
+import { WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
 
 const StudioCanvas = dynamic(
   () => import('@/components/canvas/StudioCanvas').then((mod) => mod.StudioCanvas),
@@ -37,7 +38,7 @@ function StudioRoute() {
   const source = ['deployment', 'pipeline', 'local', 'recipe', 'new'].find(key => params.has(key));
   const privateGraph = source === 'pipeline' || source === 'deployment';
   if (privateGraph && !owner) {
-    return <WorkspaceState title="Connect the workspace wallet to open this pipeline." />;
+    return <div className="ws-page"><WorkspaceSignIn /></div>;
   }
   if (source && ['deployment', 'pipeline', 'local'].includes(source) && !params.get(source)?.trim()) {
     return <WorkspaceState title="This pipeline link is missing an ID." />;

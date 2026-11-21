@@ -23,6 +23,7 @@ import {
   FileCheck2
 } from 'lucide-react';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
+import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
 import { useWebSocket, WebSocketProvider } from '@/components/providers/WebSocketProvider';
 import { getWorkspaceSessionToken, workspaceRequest } from '@/lib/workspaceSession';
 
@@ -63,6 +64,7 @@ export default function ActivityLogsPage() {
 
 function LogsRoute() {
   const { address, isConnected } = useAccount();
+  const signedIn = useWorkspaceSignedIn(isConnected ? address : undefined);
   const id = useSearchParams().get('deployment');
 
   return (
@@ -92,17 +94,12 @@ function LogsRoute() {
         }
       />
 
-      {isConnected && address ? (
+      {isConnected && address && signedIn ? (
         <WebSocketProvider key={`${address}:${id ?? 'all'}`}>
           <WalletHistory owner={address} deploymentId={id} />
         </WebSocketProvider>
       ) : (
-        <WorkspaceState
-          title="Connect your wallet to inspect activity logs."
-          description="View live cross-chain execution receipts between Base Sepolia and Reactive Omni Lasna."
-          icon={<Activity className="size-6" />}
-          action={{ label: 'Open Pipeline Studio', href: '/workspace/studio' }}
-        />
+        <WorkspaceSignIn />
       )}
     </div>
   );
@@ -127,7 +124,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
     setPending(true);
     setError(undefined);
     try {
-      const res = await workspaceRequest<History>(owner, path);
+      const res = await workspaceRequest<History>(owner, path, { sessionOnly: true });
       setHistory(res);
       setLastSyncedAt(new Date());
     } catch (err) {
@@ -153,7 +150,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
     setError(undefined);
     try {
       const params = new URLSearchParams({ before: next.timestamp, sequence: String(next.sequence) });
-      const page = await workspaceRequest<History>(owner, `${path}${deploymentId ? '&' : '?'}${params}`);
+      const page = await workspaceRequest<History>(owner, `${path}${deploymentId ? '&' : '?'}${params}`, { sessionOnly: true });
       setHistory((current) => current && {
         ...page,
         logs: [...current.logs, ...page.logs.filter((entry) => !current.logs.some((c) => c.id === entry.id))],

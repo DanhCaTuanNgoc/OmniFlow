@@ -3,11 +3,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
+import { useAccount, useDisconnect, useSwitchChain } from 'wagmi';
 import { ArrowLeftRight, LogOut, Wallet, Pencil } from 'lucide-react';
 import { baseSepoliaChain } from '@/lib/chains';
 import { truncateAddress } from '@/lib/utils';
 import { useStudioHeaderStore } from '@/lib/studioHeaderStore';
+import { clearWorkspaceSession } from '@/lib/workspaceSession';
+import { useWorkspaceSignedIn, WorkspaceSignIn } from './WorkspaceSignIn';
 
 const sections: Record<string, string> = {
   studio: 'Pipeline Studio',
@@ -22,7 +24,7 @@ export function Header() {
   const sectionKey = pathname.split('/')[2];
   const title = sections[sectionKey] ?? 'Workspace';
   const { address, isConnected, chain, chainId } = useAccount();
-  const { connect, connectors, isPending, error } = useConnect();
+  const signedIn = useWorkspaceSignedIn(isConnected ? address : undefined);
   const { disconnect } = useDisconnect();
   const { switchChain, isPending: isSwitching, isError: switchFailed } = useSwitchChain();
   const needsBaseSepolia = isConnected && chainId !== baseSepoliaChain.id;
@@ -139,28 +141,14 @@ export function Header() {
             </summary>
             <div className="ws-panel absolute right-0 top-full mt-2 w-48 p-2">
               {chain && <p className="px-2 py-1 text-xs text-[var(--ws-muted)]">{chain.name}</p>}
-              <button type="button" onClick={() => disconnect()} className="ws-button w-full justify-start">
+              <p className="px-2 py-1 text-xs text-[var(--ws-muted)]">{signedIn ? 'Workspace signed in' : 'Wallet connected'}</p>
+              <button type="button" onClick={() => { clearWorkspaceSession(); disconnect(); }} className="ws-button w-full justify-start">
                 <LogOut size={14} />Disconnect wallet
               </button>
             </div>
           </details>
-        ) : (
-          <button
-            type="button"
-            className="ws-button ws-button-primary"
-            disabled={isPending || connectors.length === 0}
-            onClick={() => {
-              if (connectors[0]) connect({ connector: connectors[0] });
-            }}
-          >
-            {isPending ? 'Connecting...' : 'Connect wallet'}
-          </button>
-        )}
-        {error && !isConnected && (
-          <p role="alert" className="ws-panel absolute right-3 top-full mt-2 max-w-[16rem] p-3 text-xs text-rose-200">
-            Could not connect the wallet. Check your wallet extension and try again.
-          </p>
-        )}
+        ) : null}
+        {!signedIn && <WorkspaceSignIn compact />}
         {needsBaseSepolia && switchFailed && (
           <p role="alert" className="ws-panel absolute right-3 top-full mt-2 max-w-[16rem] p-3 text-xs text-rose-200">
             Could not switch to Base Sepolia. Check your wallet and try again.

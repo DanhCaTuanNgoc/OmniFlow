@@ -42,7 +42,7 @@ import { PipelineCard, type PipelineItem } from './PipelineCard';
 import { RenamePipelineModal } from './RenamePipelineModal';
 import { DeletePipelineModal } from './DeletePipelineModal';
 import { NewPipelineModal } from './NewPipelineModal';
-import { StudioSignIn } from './StudioSignIn';
+import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
 
 const draftNodeTypes = new Map(PALETTE_ITEMS.map((item) => [item.type, item.category]));
 
@@ -62,6 +62,7 @@ export function PipelineStudioHub() {
   const [walletPending, setWalletPending] = useState(Boolean(isConnected && address));
   const [walletError, setWalletError] = useState<string>();
   const [signInRequired, setSignInRequired] = useState(false);
+  const signedIn = useWorkspaceSignedIn(isConnected ? address : undefined);
   const [reload, setReload] = useState(0);
   const session = useRef<AbortController>();
   const actionInFlight = useRef(false);
@@ -154,7 +155,7 @@ export function PipelineStudioHub() {
     return () => {
       request.abort();
     };
-  }, [isConnected, address, reload]);
+  }, [isConnected, address, reload, signedIn]);
 
   // Track wallet-archived pipeline IDs in localStorage
   const [walletArchivedIds, setWalletArchivedIds] = useState<string[]>([]);
@@ -572,7 +573,7 @@ export function PipelineStudioHub() {
       )}
 
       {walletPending && <p role="status">Loading wallet pipelines...</p>}
-      {signInRequired && address && <StudioSignIn owner={address} onSignedIn={() => setReload(value => value + 1)} />}
+      {(!isConnected || signInRequired) && <WorkspaceSignIn />}
       {walletError && <div role="alert">{walletError} <button type="button" className="ws-button" onClick={() => setReload(value => value + 1)}>Retry</button></div>}
       {localError && <p role="alert">Could not read browser drafts.</p>}
 

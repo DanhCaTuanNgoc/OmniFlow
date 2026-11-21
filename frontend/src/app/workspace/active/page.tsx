@@ -22,6 +22,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
+import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
 import { runDeploymentAction, setVaultRscAuthorization, type DeploymentDetail, type DeploymentSummary } from '@/lib/deployments';
 import { WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspaceSession';
 
@@ -50,6 +51,7 @@ export default function ActiveAutomationsPage() {
 
 function ActiveRoute() {
   const { address, isConnected } = useAccount();
+  const signedIn = useWorkspaceSignedIn(isConnected ? address : undefined);
   const id = useSearchParams().get('deployment');
 
   return (
@@ -66,15 +68,10 @@ function ActiveRoute() {
         }
       />
 
-      {isConnected && address ? (
+      {isConnected && address && signedIn ? (
         <WalletDeployments key={address} owner={address} selectedId={id} />
       ) : (
-        <WorkspaceState
-          title="Connect your wallet to inspect active automations."
-          description="View live RSC contracts on Lasna Testnet and callback ActionVaults on Base Sepolia."
-          icon={<Activity className="size-6" />}
-          action={{ label: 'Open Pipeline Studio', href: '/workspace/studio' }}
-        />
+        <WorkspaceSignIn />
       )}
     </div>
   );
@@ -98,9 +95,9 @@ function WalletDeployments({ owner, selectedId }: { owner: Address; selectedId: 
     setPending(true);
     setError(undefined);
     try {
-      const result = await workspaceRequest<{ deployments: DeploymentSummary[] }>(owner, '/pipeline/deployments');
+      const result = await workspaceRequest<{ deployments: DeploymentSummary[] }>(owner, '/pipeline/deployments', { sessionOnly: true });
       setList(result.deployments);
-      setDetail(id ? await workspaceRequest<DeploymentDetail>(owner, `/pipeline/deployments/${encodeURIComponent(id)}`) : undefined);
+      setDetail(id ? await workspaceRequest<DeploymentDetail>(owner, `/pipeline/deployments/${encodeURIComponent(id)}`, { sessionOnly: true }) : undefined);
     } catch (err) {
       setDetail(undefined);
       setError(err instanceof Error ? err.message : 'Unable to load deployments.');
