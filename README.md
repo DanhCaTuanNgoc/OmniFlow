@@ -113,6 +113,13 @@ pnpm install
 pnpm dev
 ```
 
+For wallet drafts backed by Supabase, set `DATABASE_URL` in `backend/.env` to the Session pooler URL.
+Save the Supabase CA certificate as `backend/supabase-ca.crt`, or set `DATABASE_CA_PATH`.
+Before starting Express, run `pnpm --filter @omniflow/shared build` and then
+`pnpm --filter backend db:migrate:drafts`. Add `--import-sqlite` during the initial migration
+to copy existing wallet drafts with their IDs and revision timestamps. Stop the old backend
+before importing so new edits are written to PostgreSQL after the migration.
+
 ---
 
 ## 📑 Documentation

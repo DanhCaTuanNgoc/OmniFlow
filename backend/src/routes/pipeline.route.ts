@@ -8,6 +8,7 @@ import { z } from 'zod';
 import type { Hash } from 'viem';
 import { deploymentSteps, recordDeploymentStep } from '../services/deploymentSteps.js';
 import { readDeploymentRuntime } from '../services/deploymentRuntime.js';
+import { getDraft, listDrafts, saveDraft } from '../data/pipelineDrafts.js';
 
 export const pipelineRouter = Router();
 
@@ -21,22 +22,33 @@ pipelineRouter.use((req, res, next) => {
 
 pipelineRouter.use('/vaults', vaultRouter);
 
-pipelineRouter.get('/drafts', (_req, res) => {
-  return res.json({ drafts: deploymentStore().listDrafts(res.locals.workspaceOwner) });
+pipelineRouter.get('/drafts', async (_req, res, next) => {
+  try {
+    return res.json({ drafts: await listDrafts(res.locals.workspaceOwner) });
+  } catch (error) {
+    next(error);
+  }
 });
 
-pipelineRouter.get('/drafts/:id', (req, res) => {
-  const draft = deploymentStore().getDraft(res.locals.workspaceOwner, req.params.id);
-  if (!draft) return res.status(404).json({ error: 'Pipeline draft not found.' });
-  return res.json({ id: draft.id, updatedAt: draft.updatedAt, graph: JSON.parse(draft.graphJson) });
+pipelineRouter.get('/drafts/:id', async (req, res, next) => {
+  if (!z.string().uuid().safeParse(req.params.id).success) {
+    return res.status(404).json({ error: 'Pipeline draft not found.' });
+  }
+  try {
+    const draft = await getDraft(res.locals.workspaceOwner, req.params.id);
+    if (!draft) return res.status(404).json({ error: 'Pipeline draft not found.' });
+    return res.json({ id: draft.id, updatedAt: draft.updatedAt, graph: JSON.parse(draft.graphJson) });
+  } catch (error) {
+    next(error);
+  }
 });
 
 const draftSaveSchema = z.object({
   graph: PipelineDraftSchema,
-  revision: z.object({ id: z.string().uuid(), updatedAt: z.number().int().nonnegative() }).optional(),
+  revision: z.object({ id: z.string().uuid(), updatedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER - 1) }).optional(),
 });
 
-pipelineRouter.post('/drafts', (req, res) => {
+pipelineRouter.post('/drafts', async (req, res, next) => {
   const validation = draftSaveSchema.safeParse(req.body);
   if (!validation.success) return res.status(400).json({ error: 'Invalid pipeline draft.' });
   const { graph, revision } = validation.data;
@@ -44,9 +56,13 @@ pipelineRouter.post('/drafts', (req, res) => {
   if (graph.metadata.ownerAddress.toLowerCase() !== owner.toLowerCase()) {
     return res.status(403).json({ error: 'The draft owner must match the signed-in wallet.' });
   }
-  const draft = deploymentStore().saveDraft(owner, graphSnapshot(graph), graph.metadata.name, revision);
-  if (!draft) return res.status(409).json({ error: 'The saved draft changed. Reopen it before replacing it.' });
-  return res.json({ id: draft.id, updatedAt: draft.updatedAt });
+  try {
+    const draft = await saveDraft(owner, graphSnapshot(graph), graph.metadata.name, revision);
+    if (!draft) return res.status(409).json({ error: 'The saved draft changed. Reopen it before replacing it.' });
+    return res.json({ id: draft.id, updatedAt: draft.updatedAt });
+  } catch (error) {
+    next(error);
+  }
 });
 
 pipelineRouter.get('/deployments', async (_req, res, next) => {

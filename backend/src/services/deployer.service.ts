@@ -3,6 +3,7 @@ import type { PipelineGraph } from '../schemas/pipeline.schema.js';
 import { chainService } from './chain.service.js';
 import { reactiveLasnaChain } from '../config/chains.js';
 import { DeploymentConflict, deploymentEnvironment, deploymentStore, graphSnapshot, type DeploymentIntent } from '../data/deployments.js';
+import { getDraft, publishReservedDraft } from '../data/pipelineDrafts.js';
 import { STOP_LOSS_RUNTIME } from '../abis/runtimeFingerprints.js';
 import { matchesRuntime } from './runtimeBytecode.js';
 import { verifyStopLossVault } from './vaultCompatibility.js';
@@ -124,7 +125,8 @@ export class DeployerService {
       throw new Error('Deployment signer is not configured.');
     }
     if (!requestKey) throw new Error('Deployment key is required.');
-    if (workspacePipelineId && !deploymentStore().getDraft(ownerAddress, workspacePipelineId)) {
+    const workspaceDraft = workspacePipelineId ? await getDraft(ownerAddress, workspacePipelineId) : undefined;
+    if (workspacePipelineId && !workspaceDraft) {
       throw new DeploymentConflict('The workspace pipeline is unavailable.');
     }
 
@@ -169,7 +171,7 @@ export class DeployerService {
       nonce,
       signedTransaction,
       txHash: keccak256(signedTransaction),
-    });
+    }, workspaceDraft?.id);
     return this.present(await this.resume(intent));
   }
 
@@ -182,7 +184,12 @@ export class DeployerService {
   private async resume(intent: DeploymentIntent) {
     const inFlight = this.reconciliations.get(intent.id);
     if (inFlight) return inFlight;
-    const work = this.reconcile(intent, true);
+    const work = (async () => {
+      if (intent.status === 'signed' && intent.workspacePipelineId) {
+        await publishReservedDraft(intent.owner, intent.workspacePipelineId);
+      }
+      return this.reconcile(intent, true);
+    })();
     this.reconciliations.set(intent.id, work);
     try {
       return await work;

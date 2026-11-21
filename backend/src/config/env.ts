@@ -9,6 +9,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   CORS_ALLOWED_ORIGINS: z.string().default('*'),
   WORKSPACE_DB_PATH: z.string().min(1).default('.workspace/workspace.sqlite'),
+  DATABASE_URL: z.string().url().refine(value => /^postgres(?:ql)?:\/\//.test(value)).optional(),
+  DATABASE_CA_PATH: z.string().min(1).default('supabase-ca.crt'),
   WORKSPACE_ORIGIN: z.string().url().refine((value) => {
     try {
       const url = new URL(value);

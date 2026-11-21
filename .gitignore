@@ -39,3 +39,4 @@ Thumbs.db
 
 example/
 backend/.workspace/
+backend/supabase-ca.crt

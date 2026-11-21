@@ -44,7 +44,7 @@ export type DeploymentIntent = {
 export type NewDeploymentIntent = Omit<DeploymentIntent, 'id' | 'revisionId' | 'workspacePipelineId' |
   'graphHash' | 'createdAt' | 'status' | 'rscAddress' | 'broadcastCount' | 'lastBroadcastAt'> & { workspacePipelineId?: string };
 
-type Draft = { id: string; owner: Address; name: string; graphJson: string; updatedAt: number };
+export type Draft = { id: string; owner: Address; name: string; graphJson: string; updatedAt: number };
 
 export class DeploymentStore {
   private readonly db: Database.Database;
@@ -231,6 +231,11 @@ export class DeploymentStore {
       .all(owner.toLowerCase(), deploymentEnvironment) as Omit<Draft, 'owner' | 'graphJson'>[];
   }
 
+  draftsForMigration() {
+    return this.db.prepare('SELECT id, owner, name, graphJson, updatedAt FROM pipeline_drafts WHERE environment = ?')
+      .iterate(deploymentEnvironment) as IterableIterator<Draft>;
+  }
+
   saveDraft(owner: Address, graphJson: string, name: string, existing?: { id: string; updatedAt: number }) {
     const draft = { id: existing?.id ?? randomUUID(), owner: owner.toLowerCase(), environment: deploymentEnvironment,
       name, graphJson, updatedAt: Math.max(Date.now(), (existing?.updatedAt ?? 0) + 1) };
@@ -269,7 +274,7 @@ export class DeploymentStore {
       .get(input.owner, input.address, input.chainId);
   }
 
-  reserve(input: NewDeploymentIntent) {
+  reserve(input: NewDeploymentIntent, verifiedDraftId?: string) {
     return this.db.transaction(() => {
       const existing = this.get(input.owner, input.environment, input.key);
       if (existing) {
@@ -293,13 +298,13 @@ export class DeploymentStore {
       `).get(input.signer, input.environment, input.nonce);
       if (conflictingNonce) throw new DeploymentConflict('A relay transaction is pending or the nonce changed. Retry the same deployment.');
 
-      const workspacePipeline = input.workspacePipelineId
-        ? this.getDraft(input.owner, input.workspacePipelineId)
-        : this.saveDraft(input.owner, input.graphJson, (JSON.parse(input.graphJson) as PipelineGraph).metadata.name);
-      if (!workspacePipeline) throw new DeploymentConflict('The workspace pipeline is unavailable.');
+      const workspacePipelineId = input.workspacePipelineId
+        ? verifiedDraftId === input.workspacePipelineId ? verifiedDraftId : this.getDraft(input.owner, input.workspacePipelineId)?.id
+        : this.saveDraft(input.owner, input.graphJson, (JSON.parse(input.graphJson) as PipelineGraph).metadata.name)?.id;
+      if (!workspacePipelineId) throw new DeploymentConflict('The workspace pipeline is unavailable.');
       const intent: DeploymentIntent = {
         ...input,
-        workspacePipelineId: workspacePipeline.id,
+        workspacePipelineId,
         id: randomUUID(),
         revisionId: randomUUID(),
         graphHash: createHash('sha256').update(input.graphJson).digest('hex'),
