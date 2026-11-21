@@ -2,7 +2,7 @@
 
 import React, { memo } from 'react';
 import { NodeProps } from '@xyflow/react';
-import { Hourglass, ShieldCheck } from 'lucide-react';
+import { Hourglass } from 'lucide-react';
 import { NodeCard } from './NodeCard';
 import { CooldownGuardData } from '@/types/canvas';
 
@@ -16,25 +16,19 @@ function CooldownGuardNodeComponent({ id, data, selected }: NodeProps) {
       selected={selected}
       category="condition"
       state={nodeData.state || 'CONFIGURED'}
-      title="Cooldown Rate-Limiter"
-      subtitle="Multi-Callback Storm Guard"
-      icon={<Hourglass className="w-4 h-4 text-amber-400" />}
+      title="Cooldown Limiter"
+      subtitle="Storm Prevention Guard"
+      icon={<Hourglass className="size-4" />}
       hasSourceHandle={true}
       hasTargetHandle={true}
     >
-      <div className="bg-[#07080d]/80 rounded-xl p-2.5 border border-white/[0.06] space-y-2 text-xs">
-        <div className="flex justify-between items-center text-slate-400">
-          <span>Lock Interval:</span>
-          <span className="text-sm font-semibold text-white font-mono tabular-nums">{cooldownSec}s ({Math.floor(cooldownSec / 60)} min)</span>
-        </div>
-        <div className="flex justify-between items-center text-slate-400">
-          <span>Defense Scope:</span>
-          <span className="text-amber-300 font-medium">Base 200ms Storm Guard</span>
-        </div>
+      <div className="flex items-center justify-between py-0.5">
+        <span className="text-[11px] text-[var(--ws-muted)]">Interval:</span>
+        <span className="text-xs font-semibold text-white font-mono tabular-nums">{cooldownSec}s ({Math.floor(cooldownSec / 60)} min)</span>
       </div>
-      <div className="flex items-center gap-1.5 text-[11px] text-amber-400/80 font-mono">
-        <ShieldCheck className="w-3.5 h-3.5" />
-        <span>now - lastTriggered &gt;= cooldown</span>
+      <div className="flex items-center justify-between py-0.5">
+        <span className="text-[11px] text-[var(--ws-muted)]">Scope:</span>
+        <span className="text-xs text-amber-300 font-medium">Base 200ms Denim Blocks</span>
       </div>
     </NodeCard>
   );

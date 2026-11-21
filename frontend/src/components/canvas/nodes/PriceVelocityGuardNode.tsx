@@ -2,7 +2,7 @@
 
 import React, { memo } from 'react';
 import { NodeProps } from '@xyflow/react';
-import { Activity, Clock } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { NodeCard } from './NodeCard';
 import { PriceVelocityGuardData } from '@/types/canvas';
 
@@ -19,35 +19,23 @@ function PriceVelocityGuardNodeComponent({ id, data, selected }: NodeProps) {
       selected={selected}
       category="condition"
       state={nodeData.state || 'CONFIGURED'}
-      title="Price Velocity Guard"
-      subtitle="Node #14 • Anchored Window"
-      icon={<Activity className="w-4 h-4 text-amber-400" />}
+      title="Price Velocity"
+      subtitle="Rapid Price Change Window"
+      icon={<Activity className="size-4" />}
       hasSourceHandle={true}
       hasTargetHandle={true}
     >
-      <div className="bg-[#07080d]/80 rounded-xl p-2.5 border border-white/[0.06] space-y-2 text-xs">
-        <div className="flex justify-between items-center text-slate-400">
-          <span>Velocity Drop:</span>
-          <span className="font-mono text-rose-400 font-bold text-sm tabular-nums">
-            &gt; {velocityPercent}%
-          </span>
-        </div>
-        <div className="flex justify-between items-center text-slate-400">
-          <span>Time Window:</span>
-          <span className="font-mono text-amber-300 font-semibold text-xs tabular-nums">
-            {windowSeconds} Seconds
-          </span>
-        </div>
-        <div className="flex justify-between items-center text-slate-400">
-          <span>Mode:</span>
-          <span className="text-white font-mono text-[11px] font-medium">
-            {direction === 'DROP' ? 'Rapid Flash Dump' : 'Rapid Spike'}
-          </span>
-        </div>
+      <div className="flex items-center justify-between py-0.5">
+        <span className="text-[11px] text-[var(--ws-muted)]">Rate:</span>
+        <span className="font-mono text-rose-400 font-semibold text-xs tabular-nums">
+          &gt; {velocityPercent}% {direction === 'DROP' ? 'Drop' : 'Spike'}
+        </span>
       </div>
-      <div className="flex items-center gap-1.5 text-[11px] text-amber-400/80 font-mono">
-        <Clock className="w-3.5 h-3.5" />
-        <span>ΔPrice / Δt on Lasna RVM</span>
+      <div className="flex items-center justify-between py-0.5">
+        <span className="text-[11px] text-[var(--ws-muted)]">Window:</span>
+        <span className="font-mono text-amber-300 font-medium text-xs tabular-nums">
+          {windowSeconds} Seconds
+        </span>
       </div>
     </NodeCard>
   );

@@ -2,7 +2,7 @@
 
 import React, { memo } from 'react';
 import { NodeProps } from '@xyflow/react';
-import { Coins, CheckCircle } from 'lucide-react';
+import { Coins } from 'lucide-react';
 import { NodeCard } from './NodeCard';
 import { BalanceThresholdData } from '@/types/canvas';
 
@@ -19,24 +19,18 @@ function BalanceThresholdNodeComponent({ id, data, selected }: NodeProps) {
       category="condition"
       state={nodeData.state || 'IDLE'}
       title="Balance Threshold"
-      subtitle="Account Solvency Check"
-      icon={<Coins className="w-4 h-4 text-amber-400" />}
+      subtitle="Vault Solvency Check"
+      icon={<Coins className="size-4" />}
       hasSourceHandle={true}
       hasTargetHandle={true}
     >
-      <div className="bg-[#07080d]/80 rounded-xl p-2.5 border border-white/[0.06] space-y-2 text-xs">
-        <div className="flex justify-between items-center text-slate-400">
-          <span>Target:</span>
-          <span className="text-sm font-semibold text-white font-mono">{targetAccount}</span>
-        </div>
-        <div className="flex justify-between items-center text-slate-400">
-          <span>Constraint:</span>
-          <span className="font-medium text-amber-300 font-mono tabular-nums">Balance {comparison === 'Above' ? '>' : '<'} {threshold} ETH</span>
-        </div>
+      <div className="flex items-center justify-between py-0.5">
+        <span className="text-[11px] text-[var(--ws-muted)]">Account:</span>
+        <span className="text-xs font-semibold text-white font-mono">{targetAccount}</span>
       </div>
-      <div className="flex items-center gap-1.5 text-[11px] text-amber-400/80 font-mono">
-        <CheckCircle className="w-3.5 h-3.5" />
-        <span>vault.balance &gt; threshold</span>
+      <div className="flex items-center justify-between py-0.5">
+        <span className="text-[11px] text-[var(--ws-muted)]">Balance Check:</span>
+        <span className="font-medium text-amber-300 font-mono text-xs tabular-nums">{comparison === 'Above' ? '>' : '<'} {threshold} ETH</span>
       </div>
     </NodeCard>
   );
