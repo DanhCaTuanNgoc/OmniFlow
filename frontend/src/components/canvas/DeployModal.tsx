@@ -358,7 +358,7 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
               <button type="button" onClick={onClose} className="ws-button">
                 Close
               </button>
-              <Link className="ws-button ws-button-primary" href={`/workspace/active?deployment=${deployResult.pipelineId}`}>
+              <Link className="ws-button ws-button-primary" href={`/workspace/active/${encodeURIComponent(deployResult.pipelineId)}`}>
                 Open deployment in Active
               </Link>
             </div>
@@ -487,7 +487,7 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
                 </Link>
                 <Link
                   className="ws-button ws-button-primary text-xs"
-                  href={`/workspace/active?deployment=${deployResult.pipelineId}`}
+                  href={`/workspace/active/${encodeURIComponent(deployResult.pipelineId)}`}
                 >
                   Open in Active
                 </Link>

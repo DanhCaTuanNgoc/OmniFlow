@@ -365,7 +365,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
             title={history.logs.length === 0 ? 'No matching execution receipts yet.' : 'No activity matches your search filter.'}
             description={history.logs.length === 0 ? 'Trigger a DEX trade or deposit to ActionVault to produce verifiable Reactive callbacks.' : undefined}
             icon={<Activity className="size-6" />}
-            action={{ label: 'Back to Active Automations', href: deploymentId ? `/workspace/active?deployment=${encodeURIComponent(deploymentId)}` : '/workspace/active' }}
+            action={{ label: 'Back to Active Automations', href: deploymentId ? `/workspace/active/${encodeURIComponent(deploymentId)}` : '/workspace/active' }}
           />
         ) : (
           <div className="space-y-3">
