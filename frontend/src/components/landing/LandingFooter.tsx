@@ -102,13 +102,31 @@ export default function LandingFooter() {
             © 2026 OmniFlow. Built with Reactive Omni & Base Sepolia Denim. Open source under MIT.
           </span>
           <div className="footer-social-links">
-            <a href="https://github.com" target="_blank" rel="noreferrer" aria-label="GitHub">
+            <a
+              href="https://github.com/DanhCaTuanNgoc/OmniFlow"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="GitHub"
+              title="GitHub: DanhCaTuanNgoc/OmniFlow"
+            >
               <i className="fa-brands fa-github" />
             </a>
-            <a href="https://twitter.com" target="_blank" rel="noreferrer" aria-label="X / Twitter">
+            <a
+              href="https://github.com/DanhCaTuanNgoc/OmniFlow"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="X / Twitter"
+              title="X / Twitter"
+            >
               <i className="fa-brands fa-x-twitter" />
             </a>
-            <a href="https://discord.com" target="_blank" rel="noreferrer" aria-label="Discord">
+            <a
+              href="https://discord.com"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Discord: @tundeptrainhucnach"
+              title="Discord: @tundeptrainhucnach"
+            >
               <i className="fa-brands fa-discord" />
             </a>
           </div>
