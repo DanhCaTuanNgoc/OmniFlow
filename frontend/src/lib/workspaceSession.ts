@@ -30,6 +30,13 @@ export class WorkspaceWalletPromptCancelled extends Error {
   }
 }
 
+export class WorkspaceSignInRequired extends Error {
+  constructor() {
+    super('Sign in to access your wallet workspace.');
+    this.name = 'WorkspaceSignInRequired';
+  }
+}
+
 let promptResult: Promise<boolean> | undefined;
 function requestWalletPrompt(canSwitch: boolean) {
   if (walletPrompt?.canSwitch === canSwitch && promptResult) return promptResult;
@@ -147,14 +154,23 @@ async function createWorkspaceSession(owner: Address) {
   return verified;
 }
 
-export async function workspaceRequest<T>(owner: Address, path: string, options?: RequestInit): Promise<T> {
-  const signedIn = await signInToWorkspace(owner);
+type WorkspaceRequestOptions = RequestInit & { sessionOnly?: boolean };
+
+export async function workspaceRequest<T>(owner: Address, path: string, options?: WorkspaceRequestOptions): Promise<T> {
+  const { sessionOnly, ...request } = options ?? {};
+  request.signal?.throwIfAborted();
+  const token = sessionOnly ? getWorkspaceSessionToken(owner) : (await signInToWorkspace(owner)).token;
+  if (!token) throw new WorkspaceSignInRequired();
+  request.signal?.throwIfAborted();
   const version = walletVersion;
-  const headers = new Headers(options?.headers);
-  headers.set('Authorization', `Bearer ${signedIn.token}`);
-  if (options?.body) headers.set('Content-Type', 'application/json');
-  const response = await fetch(`${APP_CONFIG.backendUrl}/api${path}`, { ...options, headers });
-  if (response.status === 401) invalidateWorkspaceSession(signedIn.token);
+  const headers = new Headers(request.headers);
+  headers.set('Authorization', `Bearer ${token}`);
+  if (request.body) headers.set('Content-Type', 'application/json');
+  const response = await fetch(`${APP_CONFIG.backendUrl}/api${path}`, { ...request, headers });
+  if (response.status === 401) {
+    invalidateWorkspaceSession(token);
+    if (sessionOnly) throw new WorkspaceSignInRequired();
+  }
   const result = await response.json();
   if (version !== walletVersion) throw new Error('The connected wallet changed.');
   if (!response.ok) throw new Error(result.message || result.error || `Workspace request failed (${response.status}).`);

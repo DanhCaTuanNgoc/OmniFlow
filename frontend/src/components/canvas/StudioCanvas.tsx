@@ -26,7 +26,8 @@ import { RECIPE_PRESETS } from '@/lib/recipes';
 import { isPhaseTwoGraph, resolvePhaseTwo, resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { APP_CONFIG } from '@/lib/constants';
 import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph, exportDraftJson, connectionError, simulationPath } from '@/lib/pipelineDraft';
-import { workspaceRequest } from '@/lib/workspaceSession';
+import { WorkspaceSignInRequired, workspaceRequest } from '@/lib/workspaceSession';
+import { StudioSignIn } from '@/components/studio/StudioSignIn';
 import { useStudioHeaderStore } from '@/lib/studioHeaderStore';
 
 import {
@@ -118,6 +119,8 @@ function StudioCanvasInner() {
   const [description, setDescription] = useState<string>();
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string>();
+  const [signInRequired, setSignInRequired] = useState(false);
+  const [reload, setReload] = useState(0);
   const active = useRef(false);
   const editVersion = useRef(0);
   const restoreSimulation = useRef<() => void>();
@@ -222,9 +225,11 @@ function StudioCanvasInner() {
     const resource = deploymentParam ? 'deployments' : 'drafts';
     const id = deploymentParam ?? pipelineParam!;
     void workspaceRequest<{ graph: unknown; id?: string; updatedAt?: number }>(
-      address, '/pipeline/' + resource + '/' + encodeURIComponent(id), { signal: controller.signal },
+      address, '/pipeline/' + resource + '/' + encodeURIComponent(id), { signal: controller.signal, sessionOnly: true },
     ).then(snapshot => {
       if (controller.signal.aborted || !active.current) return;
+      setSignInRequired(false);
+      setLoadError(undefined);
       const draft = parsePipelineDraft(JSON.stringify(snapshot.graph), draftNodeTypes);
       setNodes(draft.nodes);
       setEdges(draft.edges);
@@ -236,10 +241,13 @@ function StudioCanvasInner() {
       }
       setLoaded(true);
     }).catch(error => {
-      if (!controller.signal.aborted && active.current) setLoadError(error instanceof Error ? error.message : 'Unable to load pipeline.');
+      if (controller.signal.aborted || !active.current) return;
+      const needsSignIn = error instanceof WorkspaceSignInRequired;
+      setSignInRequired(needsSignIn);
+      setLoadError(needsSignIn ? undefined : error instanceof Error ? error.message : 'Unable to load pipeline.');
     });
     return () => controller.abort();
-  }, [address, pipelineParam, deploymentParam, setNodes, setEdges]);
+  }, [address, pipelineParam, deploymentParam, setNodes, setEdges, reload]);
 
   async function saveGraph(leave = false) {
     if (draftBusy) return false;
@@ -682,7 +690,9 @@ function StudioCanvasInner() {
 
   if ((pipelineParam || deploymentParam || localParam) && !loaded) {
     return <div className="ws-page" role={loadError ? 'alert' : 'status'}>
-      <p>{loadError ?? 'Loading pipeline?'}</p>
+      {signInRequired && address
+        ? <StudioSignIn owner={address} onSignedIn={() => setReload(value => value + 1)} />
+        : <p>{loadError ?? 'Loading pipeline...'}</p>}
       <Link href="/workspace/studio" className="ws-button">Back to pipelines</Link>
     </div>;
   }

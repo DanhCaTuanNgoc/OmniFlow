@@ -34,7 +34,7 @@ import {
 } from '@/lib/pipelineDraft';
 import { STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 import type { DeploymentSummary } from '@/lib/deployments';
-import { WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspaceSession';
+import { WorkspaceSignInRequired, WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspaceSession';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { PALETTE_ITEMS } from '@/components/canvas/NodePalette';
 
@@ -42,6 +42,7 @@ import { PipelineCard, type PipelineItem } from './PipelineCard';
 import { RenamePipelineModal } from './RenamePipelineModal';
 import { DeletePipelineModal } from './DeletePipelineModal';
 import { NewPipelineModal } from './NewPipelineModal';
+import { StudioSignIn } from './StudioSignIn';
 
 const draftNodeTypes = new Map(PALETTE_ITEMS.map((item) => [item.type, item.category]));
 
@@ -60,6 +61,7 @@ export function PipelineStudioHub() {
   const [walletDeployments, setWalletDeployments] = useState<DeploymentSummary[]>([]);
   const [walletPending, setWalletPending] = useState(Boolean(isConnected && address));
   const [walletError, setWalletError] = useState<string>();
+  const [signInRequired, setSignInRequired] = useState(false);
   const [reload, setReload] = useState(0);
   const session = useRef<AbortController>();
   const actionInFlight = useRef(false);
@@ -115,11 +117,19 @@ export function PipelineStudioHub() {
       setWalletError(undefined);
       try {
         const [draftsRes, depsRes] = await Promise.allSettled([
-          workspaceRequest<{ drafts: WalletDraftSummary[] }>(owner, '/pipeline/drafts', { signal: request.signal }),
-          workspaceRequest<{ deployments: DeploymentSummary[] }>(owner, '/pipeline/deployments', { signal: request.signal }),
+          workspaceRequest<{ drafts: WalletDraftSummary[] }>(owner, '/pipeline/drafts', { signal: request.signal, sessionOnly: true }),
+          workspaceRequest<{ deployments: DeploymentSummary[] }>(owner, '/pipeline/deployments', { signal: request.signal, sessionOnly: true }),
         ]);
 
         if (!request.signal.aborted) {
+          const needsSignIn = [draftsRes, depsRes].some(result =>
+            result.status === 'rejected' && result.reason instanceof WorkspaceSignInRequired);
+          setSignInRequired(needsSignIn);
+          if (needsSignIn) {
+            setWalletDrafts([]);
+            setWalletDeployments([]);
+            return;
+          }
           const failures = [draftsRes.status === 'rejected' && 'drafts', depsRes.status === 'rejected' && 'deployments'].filter(Boolean);
           if (failures.length) setWalletError('Could not load wallet ' + failures.join(' and ') + '.');
           if (draftsRes.status === 'fulfilled') {
@@ -562,6 +572,7 @@ export function PipelineStudioHub() {
       )}
 
       {walletPending && <p role="status">Loading wallet pipelines...</p>}
+      {signInRequired && address && <StudioSignIn owner={address} onSignedIn={() => setReload(value => value + 1)} />}
       {walletError && <div role="alert">{walletError} <button type="button" className="ws-button" onClick={() => setReload(value => value + 1)}>Retry</button></div>}
       {localError && <p role="alert">Could not read browser drafts.</p>}
 
@@ -624,7 +635,7 @@ export function PipelineStudioHub() {
             />
           ))}
         </div>
-      ) : walletPending || walletError || localError ? null : (
+      ) : walletPending || signInRequired || walletError || localError ? null : (
         /* Empty State */
         <div className="rounded-xl border border-dashed border-[var(--ws-border)] bg-[var(--ws-panel)]/50 p-12 text-center space-y-4">
           <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-[var(--ws-accent-bg)] text-[var(--ws-accent)]">
