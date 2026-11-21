@@ -4,6 +4,7 @@ import React, { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
+import { getSavedVault, setSavedVault } from '@/lib/vaultSelection';
 import { 
   Vault, 
   AlertOctagon, 
@@ -42,14 +43,7 @@ function VaultRoute() {
   const [customVault, setCustomVault] = useState<Address | null>(null);
 
   useEffect(() => {
-    if (owner && typeof window !== 'undefined') {
-      const saved = localStorage.getItem(`omniflow.vault.link.${owner.toLowerCase()}`);
-      if (saved && isAddress(saved)) {
-        setCustomVault(saved as Address);
-        return;
-      }
-    }
-    setCustomVault(null);
+    setCustomVault(owner ? getSavedVault(owner) : null);
   }, [owner]);
 
   const handleLink = (addr: Address) => {
@@ -57,15 +51,11 @@ function VaultRoute() {
   };
 
   const handleConfirmVerifiedLink = (addr: Address) => {
-    if (owner && typeof window !== 'undefined') {
-      localStorage.setItem(`omniflow.vault.link.${owner.toLowerCase()}`, addr);
-    }
+    if (owner) setSavedVault(owner, addr);
   };
 
   const handleUnlink = () => {
-    if (owner && typeof window !== 'undefined') {
-      localStorage.removeItem(`omniflow.vault.link.${owner.toLowerCase()}`);
-    }
+    if (owner) setSavedVault(owner, null);
     setCustomVault(null);
   };
 

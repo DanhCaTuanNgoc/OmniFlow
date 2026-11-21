@@ -6,6 +6,7 @@ import { getAccount, sendTransaction, waitForTransactionReceipt } from 'wagmi/ac
 import { ACTION_VAULT_ABI, ACTION_VAULT_BYTECODE, PRICE_ORDER_VAULT_ABI, PRICE_ORDER_VAULT_BYTECODE, STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 import { wagmiConfig } from '@/lib/wagmi';
 import { workspaceRequest } from '@/lib/workspaceSession';
+import { getVaultManagerAddress } from '@/lib/vaultSelection';
 
 const fieldClass = 'w-full rounded-md border border-[var(--ws-border)] bg-[#0d0e15] px-2.5 py-2 font-mono text-xs text-slate-100';
 
@@ -30,14 +31,16 @@ export function VaultSetup({ owner, pair, currentVault, onLinked, kind = 'stop-l
   const [error, setError] = useState<string>();
   const [linked, setLinked] = useState<Address>();
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submit(selectedVault?: Address) {
+    if (pending) return;
     setPending(true);
     setError(undefined);
+    setLinked(undefined);
     try {
-      let vault: string = candidate;
-      let hash = mode === 'create' ? creationHash : undefined;
-      if (mode === 'create') {
+      const creating = mode === 'create' && !selectedVault;
+      let vault: string = selectedVault ?? candidate;
+      let hash = creating ? creationHash : undefined;
+      if (creating) {
         if (!hash) {
           if (!isAddress(router) || !isAddress(backup) || isAddressEqual(backup, zeroAddress)) {
             throw new Error('Enter valid router and backup wallet addresses.');
@@ -70,6 +73,7 @@ export function VaultSetup({ owner, pair, currentVault, onLinked, kind = 'stop-l
       const result = await workspaceRequest<{ vault: { address: Address } }>(owner, '/pipeline/vaults/link', {
         method: 'POST', body: JSON.stringify({ vault, pair, creationTxHash: hash, kind }),
       });
+      setCandidate(result.vault.address);
       onLinked(result.vault.address);
       setLinked(result.vault.address);
       if (hash) localStorage.removeItem(pendingKey);
@@ -85,7 +89,10 @@ export function VaultSetup({ owner, pair, currentVault, onLinked, kind = 'stop-l
       <summary className="cursor-pointer text-sm font-medium text-slate-100">
         {kind === 'price-order' ? 'Create or link a Price Order Vault' : 'Create or link a Vault'}
       </summary>
-      <form className="mt-3 space-y-3" onSubmit={submit}>
+      <form className="mt-3 space-y-3" onSubmit={event => {
+        event.preventDefault();
+        void submit();
+      }}>
         <label className="block space-y-1">
           <span>Setup method</span>
           <select className={fieldClass} value={mode} disabled={pending}
@@ -95,10 +102,17 @@ export function VaultSetup({ owner, pair, currentVault, onLinked, kind = 'stop-l
           </select>
         </label>
         {mode === 'link' ? (
-          <label className="block space-y-1">
-            <span>Vault address</span>
-            <input className={fieldClass} value={candidate} onChange={event => setCandidate(event.target.value.trim())} required />
-          </label>
+          <>
+            <button type="button" className="ws-button" disabled={pending}
+              onClick={() => void submit(getVaultManagerAddress(owner))}>
+              Use Vault Manager selection
+            </button>
+            <label className="block space-y-1">
+              <span>Vault address</span>
+              <input className={fieldClass} value={candidate} disabled={pending}
+                onChange={event => { setCandidate(event.target.value.trim()); setLinked(undefined); }} required />
+            </label>
+          </>
         ) : (
           <>
             <label className="block space-y-1">
@@ -115,8 +129,9 @@ export function VaultSetup({ owner, pair, currentVault, onLinked, kind = 'stop-l
         )}
         {creationHash && <a className="ws-address block" href={`https://sepolia.basescan.org/tx/${creationHash}`}>Vault creation transaction</a>}
         {error && <p role="alert" className="break-words text-rose-300">{error}</p>}
-        {linked && <p role="status" className="text-emerald-300">Vault verified and applied to this swap.</p>}
-        <button type="submit" className="ws-button" disabled={pending || Boolean(linked)}>
+        {linked && linked.toLowerCase() === currentVault.toLowerCase() &&
+          <p role="status" className="text-emerald-300">Vault verified and applied to this swap.</p>}
+        <button type="submit" className="ws-button" disabled={pending || (mode === 'create' && Boolean(linked))}>
           {pending ? 'Checking Vault…' : mode === 'link' ? 'Verify and link Vault' : creationHash ? 'Check creation receipt' : 'Create and link Vault'}
         </button>
       </form>
