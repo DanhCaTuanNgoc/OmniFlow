@@ -10,7 +10,8 @@ import {
   AlertCircle, 
   Loader2, 
   X, 
-  KeyRound
+  KeyRound,
+  RotateCcw
 } from 'lucide-react';
 import { useAccount, useConfig } from 'wagmi';
 import { getAccount, readContract } from 'wagmi/actions';
@@ -165,170 +166,275 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md select-none">
-      <div className="relative w-full max-w-lg rounded-3xl bg-[#0E1017] border border-white/[0.10] shadow-2xl p-6 text-slate-100 backdrop-blur-2xl">
-        <button
-          onClick={onClose}
-          className="absolute right-5 top-5 text-slate-400 hover:text-white p-1.5 rounded-full hover:bg-white/[0.06] transition-colors cursor-pointer"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150 select-none"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="deploy-modal-title"
+    >
+      <div
+        className="relative w-full max-w-lg rounded-xl border border-[var(--ws-border)] bg-[#191c24] p-5 shadow-2xl text-[var(--ws-text)] space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center gap-3.5 mb-5 pb-3 border-b border-white/[0.08]">
-          <div className="p-3 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-violet-400 shadow-sm">
-            <Rocket className="w-5 h-5" />
+        <div className="flex items-center justify-between border-b border-[var(--ws-border)] pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-[var(--ws-accent-bg)] border border-[var(--ws-accent)]/20 text-[var(--ws-accent)]">
+              <Rocket className="size-4" />
+            </div>
+            <div>
+              <h2 id="deploy-modal-title" className="text-sm font-semibold tracking-tight text-white">
+                Deploy Reactive Automation
+              </h2>
+              <p className="text-xs text-[var(--ws-muted)]">
+                Autonomous execution on Reactive Lasna Testnet (Chain ID: 5318007)
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-base font-bold text-white tracking-tight">
-              Deploy Reactive Automation
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Autonomous execution on Reactive Lasna Testnet (Chain ID: 5318007)
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1 text-[var(--ws-muted)] hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+            aria-label="Close modal"
+          >
+            <X className="size-4" />
+          </button>
         </div>
 
         {/* Error message */}
         {error && (
-          <div className="mb-4 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
-            <span>{error}</span>
+          <div className="p-3 rounded-lg bg-rose-950/20 border border-rose-900/40 text-rose-300 text-xs flex items-start gap-2.5">
+            <AlertCircle className="size-4 shrink-0 mt-0.5 text-rose-400" />
+            <span className="leading-relaxed">{error}</span>
           </div>
         )}
 
         {/* Initial Deploy Step */}
         {!deployResult ? (
           <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-[#07080D] border border-white/[0.08] text-xs space-y-2.5">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Pipeline Structure:</span>
-                <span className="font-semibold text-white tabular-nums">{graph.nodes.length} Nodes &bull; {graph.edges.length} Edges</span>
-              </div>
-              <p className="tabular-nums">Trigger at or below ${formatEther(params.priceThresholdWei)} USD</p>
-              <p className="tabular-nums">Cooldown {params.cooldownSeconds.toString()}s · Swap {params.percentToSwap.toString()}%</p>
-              <p className="font-mono break-all">Vault {params.actionVaultAddress}</p>
-              <p className="tabular-nums">
-                {funding?.amount ? `Initial RSC funding: ${funding.amount} lREACT + deployment gas`
-                  : funding?.error ? 'Funding configuration unavailable.' : 'Loading RSC funding...'}
-              </p>
-              {funding?.error && <button type="button" className="ws-button" onClick={() => setFundingRetry(value => value + 1)}>
-                Retry funding check
-              </button>}
-              <div className="flex justify-between">
-                <span className="text-slate-400">Owner Signer:</span>
-                <span className="font-mono text-violet-300">
-                  {isConnected && userAddress ? truncateAddress(userAddress) : 'Connect wallet'}
+            <div className="rounded-lg border border-[var(--ws-border)] bg-[#111318] p-3.5 text-xs space-y-2.5">
+              <div className="flex items-center justify-between pb-2 border-b border-[var(--ws-border)]">
+                <span className="text-[var(--ws-muted)] font-medium">Pipeline Structure</span>
+                <span className="font-semibold text-white tabular-nums px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[11px]">
+                  {graph.nodes.length} Nodes &bull; {graph.edges.length} Edges
                 </span>
+              </div>
+
+              <div className="space-y-2 text-xs text-zinc-300">
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--ws-muted)]">Trigger Condition</span>
+                  <span className="font-medium text-white tabular-nums">
+                    Trigger at or below ${formatEther(params.priceThresholdWei)} USD
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--ws-muted)]">Execution Logic</span>
+                  <span className="font-medium text-white tabular-nums">
+                    Cooldown {params.cooldownSeconds.toString()}s &bull; Swap {params.percentToSwap.toString()}%
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--ws-muted)]">Action Vault</span>
+                  <span className="font-mono text-zinc-300 text-[11px]" title={params.actionVaultAddress}>
+                    {truncateAddress(params.actionVaultAddress)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--ws-muted)]">Initial RSC Funding</span>
+                  <div className="flex items-center gap-1.5 font-medium tabular-nums text-xs">
+                    {funding?.amount ? (
+                      <span className="text-emerald-400 font-semibold">{funding.amount} lREACT</span>
+                    ) : funding?.error ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-rose-400 text-[11px]">Unavailable</span>
+                        <button
+                          type="button"
+                          onClick={() => setFundingRetry(v => v + 1)}
+                          className="text-[11px] text-[var(--ws-accent)] hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                        >
+                          <RotateCcw className="size-3" /> Retry
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[var(--ws-muted)] text-[11px] flex items-center gap-1">
+                        <Loader2 className="size-3 animate-spin" /> Checking...
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-1.5 border-t border-[var(--ws-border)]/60">
+                  <span className="text-[var(--ws-muted)]">Owner Signer</span>
+                  <span className="font-mono text-[var(--ws-accent)] font-semibold text-[11px]">
+                    {isConnected && userAddress ? truncateAddress(userAddress) : 'Connect wallet'}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-xs text-violet-100 flex gap-2.5">
-              <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-violet-400" />
-              <span>
+            <div className="rounded-lg border border-[var(--ws-accent)]/20 bg-[var(--ws-accent-bg)]/30 p-3 text-xs text-zinc-300 flex items-start gap-2.5">
+              <ShieldCheck className="size-4 shrink-0 mt-0.5 text-[var(--ws-accent)]" />
+              <span className="leading-relaxed text-[11px]">
                 Deployment requires a confirmed Lasna receipt. Vault authorization is a separate Base Sepolia transaction.
               </span>
             </div>
 
-            <button
-              onClick={handleDeploy}
-              disabled={loading || !isConnected || !userAddress || !funding?.amount}
-              className="w-full flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold rounded-full bg-violet-600 hover:bg-violet-500 text-white shadow-[0_0_25px_-3px_rgba(139,92,246,0.5)] transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Deploying to Reactive Lasna...</span>
-                </>
-              ) : (
-                <>
-                  <Rocket className="w-4 h-4" />
-                  <span>Deploy to Reactive Lasna</span>
-                </>
-              )}
-            </button>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--ws-border)]">
+              <button
+                type="button"
+                onClick={onClose}
+                className="ws-button"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeploy}
+                disabled={loading || !isConnected || !userAddress || !funding?.amount}
+                className="ws-button ws-button-primary flex-1 min-h-[2.5rem] text-xs font-semibold cursor-pointer shadow-sm disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    <span>Deploying to Reactive Lasna...</span>
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="size-4" />
+                    <span>Deploy to Reactive Lasna</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         ) : deployResult.status !== 'deployed' ? (
-          <div className="space-y-3 text-sm">
-            <p role="status">{deployResult.status === 'signed' ? 'Awaiting Lasna receipt' : 'Lasna transaction reverted'}</p>
-            <a className="ws-button" href={`https://lasna.reactscan.net/tx/${deployResult.contracts.rscTxHash}`} target="_blank" rel="noreferrer">
-              View Lasna transaction
-            </a>
-            {deployResult.status === 'signed' && <button type="button" className="ws-button" disabled={loading} onClick={handleDeploy}>
-              {loading ? 'Checking receipt...' : 'Check the same deployment'}
-            </button>}
-            {deployResult.status === 'reverted' && <button type="button" className="ws-button" onClick={() => {
-              if (attemptStorageKey.current) localStorage.removeItem(attemptStorageKey.current);
-              setError(null);
-              setDeployResult(null);
-            }}>Prepare a new attempt</button>}
-            <Link className="ws-button" href={`/workspace/active?deployment=${deployResult.pipelineId}`}>Open deployment in Active</Link>
+          <div className="space-y-3 text-xs">
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-amber-300 flex items-center gap-2">
+              <AlertCircle className="size-4 shrink-0" />
+              <span role="status">{deployResult.status === 'signed' ? 'Awaiting Lasna receipt' : 'Lasna transaction reverted'}</span>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <a
+                className="ws-button"
+                href={`https://lasna.reactscan.net/tx/${deployResult.contracts.rscTxHash}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink className="size-3.5" />
+                <span>View Lasna transaction</span>
+              </a>
+              {deployResult.status === 'signed' && (
+                <button
+                  type="button"
+                  className="ws-button ws-button-primary"
+                  disabled={loading}
+                  onClick={handleDeploy}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" />
+                      <span>Checking receipt...</span>
+                    </>
+                  ) : (
+                    'Check the same deployment'
+                  )}
+                </button>
+              )}
+              {deployResult.status === 'reverted' && (
+                <button
+                  type="button"
+                  className="ws-button"
+                  onClick={() => {
+                    if (attemptStorageKey.current) localStorage.removeItem(attemptStorageKey.current);
+                    setError(null);
+                    setDeployResult(null);
+                  }}
+                >
+                  Prepare a new attempt
+                </button>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--ws-border)]">
+              <button type="button" onClick={onClose} className="ws-button">
+                Close
+              </button>
+              <Link className="ws-button ws-button-primary" href={`/workspace/active?deployment=${deployResult.pipelineId}`}>
+                Open deployment in Active
+              </Link>
+            </div>
           </div>
         ) : (
           /* Step 2: Post-Deploy Non-Custodial Authorization Prompt */
           <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-[#07080D] border border-emerald-500/30 space-y-2.5 text-xs">
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3.5 space-y-2.5 text-xs">
               <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
-                <span className="status-dot status-dot-emerald" />
+                <CheckCircle2 className="size-4 text-emerald-400" />
                 <span>RSC Successfully Deployed on Lasna</span>
               </div>
-              <div className="space-y-1 font-mono text-[11px] text-slate-300">
+              <div className="space-y-1.5 font-mono text-[11px] text-zinc-300">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Pipeline ID:</span>
+                  <span className="text-[var(--ws-muted)] font-sans">Pipeline ID:</span>
                   <span className="text-cyan-400 font-bold">{deployResult.pipelineId}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">RSC Contract:</span>
+                  <span className="text-[var(--ws-muted)] font-sans">RSC Contract:</span>
                   <span className="text-white">
                     {deployResult.contracts.rscAddress && truncateAddress(deployResult.contracts.rscAddress)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Funded at deployment:</span>
+                  <span className="text-[var(--ws-muted)] font-sans">Funded at deployment:</span>
                   <span className="text-emerald-400 font-bold tabular-nums">{deployResult.gasSponsored?.amountLReact} lREACT</span>
                 </div>
               </div>
 
               {deployResult.explorerUrls?.reactscan && (
-                <a
-                  href={deployResult.explorerUrls.reactscan}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[11px] text-violet-300 hover:text-white pt-1 transition-colors"
-                >
-                  <span>View on ReactScan Explorer</span> <ExternalLink className="w-3 h-3" />
-                </a>
+                <div className="pt-1.5 border-t border-emerald-500/20">
+                  <a
+                    href={deployResult.explorerUrls.reactscan}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] text-[var(--ws-accent)] hover:underline transition-colors"
+                  >
+                    <span>View on ReactScan Explorer</span> <ExternalLink className="size-3" />
+                  </a>
+                </div>
               )}
             </div>
 
             {/* Non-Custodial Step */}
-            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs space-y-2.5">
+            <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-3.5 text-xs space-y-2.5">
               <div className="flex items-center gap-2 text-amber-300 font-semibold">
-                <KeyRound className="w-4 h-4 text-amber-400" />
+                <KeyRound className="size-4 text-amber-400" />
                 <span>Non-Custodial Authorization (ActionVault)</span>
               </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed">
-                To guarantee zero-trust non-custodial security, the owner signs 1 lightweight transaction calling <code className="text-amber-300 font-mono">setAuthorizedRSC()</code> on Base Sepolia.
+              <p className="text-[11px] text-zinc-300 leading-relaxed">
+                To guarantee zero-trust non-custodial security, the owner signs 1 lightweight transaction calling{' '}
+                <code className="text-amber-300 font-mono bg-black/40 px-1 py-0.5 rounded border border-amber-500/20">
+                  setAuthorizedRSC()
+                </code>{' '}
+                on Base Sepolia.
               </p>
               {authSuccess ? (
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2">
-                  <span className="status-dot status-dot-emerald" />
+                <div className="p-2.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="size-3.5 text-emerald-400" />
                   <span>Vault permission confirmed. Check principal and fee reserves in Active Automations.</span>
                 </div>
               ) : (
                 <button
+                  type="button"
                   onClick={handleAuthorizeVault}
                   disabled={isAuthPending}
-                  className="w-full py-2.5 px-4 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-500/20 disabled:opacity-50 cursor-pointer"
+                  className="ws-button w-full border-amber-500/40 bg-amber-500 text-black font-semibold hover:bg-amber-400 min-h-[2.5rem] flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {isAuthPending ? (
                     <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <Loader2 className="size-3.5 animate-spin" />
                       <span>Signing on MetaMask...</span>
                     </>
                   ) : (
                     <>
-                      <KeyRound className="w-3.5 h-3.5" />
+                      <KeyRound className="size-3.5" />
                       <span>Authorize RSC on ActionVault</span>
                     </>
                   )}
@@ -336,12 +442,17 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
               )}
             </div>
 
-            <Link className="ws-button" href={`/workspace/active?deployment=${deployResult.pipelineId}`}>
-              Open deployment in Active
-            </Link>
-            <Link className="ws-button" href={`/workspace/studio?deployment=${deployResult.pipelineId}`}>
-              View deployed snapshot
-            </Link>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--ws-border)]">
+              <button type="button" onClick={onClose} className="ws-button">
+                Close
+              </button>
+              <Link className="ws-button" href={`/workspace/studio?deployment=${deployResult.pipelineId}`}>
+                View Snapshot
+              </Link>
+              <Link className="ws-button ws-button-primary" href={`/workspace/active?deployment=${deployResult.pipelineId}`}>
+                Open in Active
+              </Link>
+            </div>
           </div>
         )}
       </div>
