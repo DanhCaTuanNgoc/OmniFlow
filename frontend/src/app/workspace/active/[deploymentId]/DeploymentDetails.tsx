@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import { formatEther, parseEther, type Address } from 'viem';
-import { Activity, ArrowLeft, ExternalLink, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import {
+  Activity, AlertTriangle, ArrowLeft, CheckCircle2, CirclePlus, Code2, ExternalLink,
+  ListChecks, Loader2, Pause, Play, RefreshCw, ShieldCheck, Wallet,
+} from 'lucide-react';
 import { resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
@@ -240,13 +243,16 @@ function DeploymentPanel({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Link className="ws-button text-xs" href={`/workspace/studio?deployment=${deployment.pipelineId}`}>
+            <Link className="ws-button ws-button-primary" href={`/workspace/studio?deployment=${deployment.pipelineId}`}>
+              <Code2 aria-hidden="true" className="size-4 shrink-0" />
               Open in Studio
             </Link>
-            <Link className="ws-button text-xs" href={`/workspace/vault?deployment=${deployment.pipelineId}`}>
+            <Link className="ws-button" data-tone="accent" href={`/workspace/vault?deployment=${deployment.pipelineId}`}>
+              <Wallet aria-hidden="true" className="size-4 shrink-0" />
               Open Vault
             </Link>
-            <Link className="ws-button text-xs" href={`/workspace/logs?deployment=${deployment.pipelineId}`}>
+            <Link className="ws-button" data-tone="accent" href={`/workspace/logs?deployment=${deployment.pipelineId}`}>
+              <ListChecks aria-hidden="true" className="size-4 shrink-0" />
               Open Logs
             </Link>
           </div>
@@ -349,13 +355,8 @@ function DeploymentPanel({
                     type="button"
                     onClick={() => void handleTogglePauseResume()}
                     disabled={Boolean(busy) || !isBaseRpcAvailable}
-                    className={`ws-button text-xs inline-flex items-center gap-1 font-semibold ${
-                      !isBaseRpcAvailable
-                        ? 'opacity-50 cursor-not-allowed'
-                        : isAuthorized
-                        ? 'border-amber-500/30 bg-amber-950/20 text-amber-300 hover:bg-amber-950/40'
-                        : 'border-emerald-500/30 bg-emerald-950/20 text-emerald-300 hover:bg-emerald-950/40'
-                    }`}
+                    className="ws-button"
+                    data-tone={isBaseRpcAvailable ? (isAuthorized ? 'caution' : 'positive') : undefined}
                     title={
                       !isBaseRpcAvailable
                         ? 'Base Sepolia RPC connection unavailable'
@@ -367,25 +368,28 @@ function DeploymentPanel({
                     {!isBaseRpcAvailable ? (
                       'Pause / resume unavailable'
                     ) : busy === 'pause' || busy === 'resume' ? (
-                      'Confirming on Base…'
+                      <><Loader2 aria-hidden="true" className="size-4 shrink-0 motion-safe:animate-spin" /> Confirming on Base…</>
                     ) : isAuthorized ? (
-                      'Pause Automation'
+                      <><Pause aria-hidden="true" className="size-4 shrink-0" /> Pause Automation</>
                     ) : (
-                      'Resume Automation'
+                      <><Play aria-hidden="true" className="size-4 shrink-0" /> Resume Automation</>
                     )}
                   </button>
                 )}
 
                 {(Object.keys(stepLabels) as (keyof typeof stepLabels)[]).map((kind) => {
                   if (kind === 'authorization' && hasAuthorizedBefore) return null; // Managed by Pause/Resume toggle
+                  const Icon = kind === 'authorization' ? ShieldCheck : CirclePlus;
                   return (
                     <button
                       type="button"
                       key={kind}
                       onClick={() => void doStep(kind)}
                       disabled={Boolean(busy) || (kind === 'authorization' && !isBaseRpcAvailable)}
-                      className="ws-button text-xs"
+                      className="ws-button"
+                      data-tone={kind === 'authorization' ? 'positive' : 'accent'}
                     >
+                      <Icon aria-hidden="true" className="size-4 shrink-0" />
                       {busy === kind ? 'Confirming…' : stepLabels[kind]}
                     </button>
                   );

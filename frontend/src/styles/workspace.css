@@ -87,6 +87,44 @@
 .ws-button:disabled { opacity: .5; cursor: not-allowed; }
 .ws-button-primary { background: var(--ws-accent); color: #201735; border-color: transparent; }
 .ws-button-primary:hover { background: #d1c8ff; }
+
+.ws-button[data-tone] {
+  max-width: 100%;
+  flex-wrap: wrap;
+  background-color: var(--ws-action-bg);
+  border-color: var(--ws-action-border);
+  color: var(--ws-action-text);
+  overflow-wrap: anywhere;
+  text-align: center;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.ws-button[data-tone]:hover:not(:disabled) {
+  background-color: var(--ws-action-hover);
+  border-color: var(--ws-action-text);
+}
+
+.ws-button[data-tone="accent"] {
+  --ws-action-bg: var(--ws-accent-bg);
+  --ws-action-border: #65538c;
+  --ws-action-text: var(--ws-accent);
+  --ws-action-hover: #3a3056;
+}
+
+.ws-button[data-tone="caution"] {
+  --ws-action-bg: #3c2d1c;
+  --ws-action-border: #93663a;
+  --ws-action-text: #ffd69b;
+  --ws-action-hover: #50391f;
+}
+
+.ws-button[data-tone="positive"] {
+  --ws-action-bg: #1e352c;
+  --ws-action-border: #4f8069;
+  --ws-action-text: #b3ead0;
+  --ws-action-hover: #28473a;
+}
+
 .ws-sign-in .ws-button { min-height: 2.75rem; }
 .ws-address { font-family: ui-monospace, monospace; color: var(--ws-accent); overflow-wrap: anywhere; }
 .ws-address:hover { text-decoration: underline; text-underline-offset: .2em; }
