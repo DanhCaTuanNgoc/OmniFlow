@@ -2013,7 +2013,7 @@
   width: 100%;
   max-width: 1140px;
   margin: 0 auto;
-  padding: 0 clamp(16px, 3vw, 32px);
+  padding: clamp(56px, 9vh, 100px) clamp(16px, 3vw, 32px) 0;
   box-sizing: border-box;
 }
 

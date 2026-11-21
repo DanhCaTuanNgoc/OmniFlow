@@ -8,6 +8,7 @@ export default function MultiChainTelemetry() {
   return (
     <section className="motion-section telemetry-section" aria-label="Testnet Architecture">
       <div className="motion-section-header scroll-reveal">
+        <span className="motion-coord-tag">0x04 // TESTNET_ARCHITECTURE</span>
         <h2 className="motion-section-title">Testnet Architecture</h2>
         <p className="motion-section-subhead">
           The stop-loss demo starts with a pool event on Base Sepolia. A reactive contract
