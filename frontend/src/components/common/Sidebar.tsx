@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Network, Cpu, Library, Vault, FileText, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Network, Cpu, Library, Vault, FileText, PanelLeftClose, PanelLeftOpen, Zap } from 'lucide-react';
 
 const items = [
   { label: 'Pipeline Studio', href: '/workspace/studio', icon: Network },
@@ -23,44 +23,61 @@ export function Sidebar() {
         collapsed ? 'w-14' : 'w-14 lg:w-56'
       }`}
     >
+      {/* 1) Top Brand Header: OmniFlow Logo + Title (Navigates to Landing Page) */}
       <div
         className={`flex h-14 shrink-0 items-center border-b border-[var(--ws-border)] ${
-          collapsed ? 'justify-center' : 'justify-center lg:justify-between px-2 lg:px-4'
+          collapsed ? 'justify-center' : 'justify-center lg:justify-start px-2 lg:px-4'
         }`}
       >
+        <Link
+          href="/"
+          aria-label="OmniFlow Home"
+          title="Back to Landing Page"
+          className="flex items-center gap-2.5 rounded-md hover:opacity-90 transition-opacity"
+        >
+          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--ws-accent)] text-[#201735] shadow-sm">
+            <Zap size={17} aria-hidden="true" />
+          </span>
+          {!collapsed && (
+            <span className="hidden text-sm font-bold tracking-tight text-white lg:block truncate">
+              OmniFlow
+            </span>
+          )}
+        </Link>
+      </div>
+
+      {/* 2) Workspace Sub-header & Collapse/Expand Toggle */}
+      <div className="shrink-0 pt-3 px-2 lg:px-3">
         {collapsed ? (
-          <button
-            type="button"
-            onClick={() => setCollapsed(false)}
-            className="grid size-9 place-items-center rounded-md text-[var(--ws-muted)] hover:bg-white/5 hover:text-white transition-colors"
-            title="Expand Workspace sidebar"
-            aria-label="Expand Workspace sidebar"
-          >
-            <PanelLeftOpen size={16} />
-          </button>
-        ) : (
-          <>
-            <Link
-              href="/workspace/studio"
-              className="hidden lg:block text-sm font-semibold tracking-tight text-white hover:text-[var(--ws-accent)] transition-colors truncate"
-              title="OmniFlow Workspace"
+          <div className="flex justify-center pb-1">
+            <button
+              type="button"
+              onClick={() => setCollapsed(false)}
+              className="grid size-8 place-items-center rounded-md text-[var(--ws-muted)] hover:bg-white/5 hover:text-white transition-colors"
+              title="Expand Workspace sidebar"
+              aria-label="Expand Workspace sidebar"
             >
-              Workspace
-            </Link>
+              <PanelLeftOpen size={16} />
+            </button>
+          </div>
+        ) : (
+          <div className="hidden lg:flex items-center justify-between pb-1.5 px-1 text-xs font-medium text-[var(--ws-muted)]">
+            <span className="font-semibold text-xs text-white/90 tracking-tight">Workspace</span>
             <button
               type="button"
               onClick={() => setCollapsed(true)}
-              className="grid size-9 place-items-center rounded-md text-[var(--ws-muted)] hover:bg-white/5 hover:text-white transition-colors"
+              className="grid size-7 place-items-center rounded-md text-[var(--ws-muted)] hover:bg-white/5 hover:text-white transition-colors"
               title="Collapse Workspace sidebar"
               aria-label="Collapse Workspace sidebar"
             >
-              <PanelLeftClose size={16} />
+              <PanelLeftClose size={15} />
             </button>
-          </>
+          </div>
         )}
       </div>
 
-      <nav aria-label="Workspace" className="flex flex-1 flex-col gap-1 p-2 lg:pt-4">
+      {/* 3) Navigation Links */}
+      <nav aria-label="Workspace" className="flex flex-1 flex-col gap-1 p-2 pt-1">
         {items.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/');
           return (
