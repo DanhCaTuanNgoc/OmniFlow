@@ -46,34 +46,49 @@ export function PipelineCard({
 
   const getSourceBadge = () => {
     if (pipeline.deployment) {
-      const deploymentLabel = pipeline.status === 'deployed' ? 'Deployed' : pipeline.status === 'failed' ? 'Reverted' : 'Awaiting receipt';
+      if (pipeline.hasDraft) {
+        return (
+          <span className="inline-flex items-center gap-1 rounded bg-teal-500/10 border border-teal-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300">
+            <Radio className="size-2.5 animate-pulse text-teal-400" />
+            <span>DRAFT + LIVE</span>
+          </span>
+        );
+      }
+      if (pipeline.status === 'deployed') {
+        return (
+          <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+            <Radio className="size-2.5 text-emerald-400" />
+            <span>LIVE V1</span>
+          </span>
+        );
+      }
+      if (pipeline.status === 'failed') {
+        return (
+          <span className="inline-flex items-center gap-1 rounded bg-rose-500/10 border border-rose-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-rose-300">
+            <Radio className="size-2.5 text-rose-400" />
+            <span>REVERTED</span>
+          </span>
+        );
+      }
       return (
-        <span className="inline-flex items-center gap-1 rounded border border-[var(--ws-border)] px-1.5 py-0.5 text-[10px] font-semibold text-zinc-200">
-          <Radio className="size-2.5" />
-          <span>{pipeline.hasDraft ? 'Draft · ' : ''}{deploymentLabel}</span>
-        </span>
-      );
-    }
-    if (isWallet) {
-      return (
-        <span className="inline-flex items-center gap-1 rounded bg-violet-500/10 border border-violet-500/30 px-1.5 py-0.5 text-[10px] font-medium text-violet-300">
-          <Zap className="size-2.5" />
-          <span>WALLET</span>
+        <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
+          <Clock className="size-2.5 text-amber-400" />
+          <span>AWAITING RECEIPT</span>
         </span>
       );
     }
     if (isRecipe) {
       return (
-        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300">
-          <Shield className="size-2.5" />
+        <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 border border-blue-500/30 px-1.5 py-0.5 text-[10px] font-medium text-blue-300">
+          <Shield className="size-2.5 text-blue-400" />
           <span>RECIPE</span>
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 rounded bg-indigo-500/10 border border-indigo-500/30 px-1.5 py-0.5 text-[10px] font-medium text-indigo-300">
-        <Cpu className="size-2.5" />
-        <span>LOCAL</span>
+      <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
+        <Zap className="size-2.5 text-amber-400" />
+        <span>DRAFT</span>
       </span>
     );
   };
@@ -157,20 +172,7 @@ export function PipelineCard({
               <span>{pipeline.nodeCount}N · {pipeline.edgeCount ?? 0}W</span>
             </span>
           )}
-          {pipeline.updatedAt > 0 && (
-            <>
-              {pipeline.nodeCount !== undefined && pipeline.nodeCount > 0 && <span>·</span>}
-              <span className="flex items-center gap-1" title={new Date(pipeline.updatedAt).toLocaleString()}>
-                <Clock className="size-3 text-zinc-500" />
-                <span>
-                  {new Date(pipeline.updatedAt).toLocaleDateString(undefined, {
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </span>
-              </span>
-            </>
-          )}
+          <span className="text-zinc-500 text-[10px]">Base Sepolia &bull; Lasna</span>
         </div>
 
         <span className="inline-flex items-center gap-1 font-semibold text-xs text-[var(--ws-accent)] group-hover:translate-x-0.5 transition-transform">

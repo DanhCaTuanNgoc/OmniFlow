@@ -417,10 +417,20 @@ export function PipelineStudioHub() {
   });
 
   const handleDeleteConfirm = () => {
-    if (deletingPipeline?.source !== 'local') return;
-    void runAction(async () => {
-      deleteBrowserDraft(deletingPipeline.id);
-      refreshLocalDrafts();
+    const item = deletingPipeline;
+    if (!item) return;
+    void runAction(async (signal) => {
+      if (item.source === 'local') {
+        deleteBrowserDraft(item.id);
+        refreshLocalDrafts();
+      } else if (item.hasDraft && address) {
+        await workspaceRequest(address, `/pipeline/drafts/${encodeURIComponent(item.id)}`, {
+          method: 'DELETE',
+          signal,
+          body: JSON.stringify({ revision: { updatedAt: item.updatedAt } }),
+        });
+        if (!signal.aborted) setReload((v) => v + 1);
+      }
       setDeletingPipeline(null);
     });
   };
@@ -608,7 +618,7 @@ export function PipelineStudioHub() {
                 setRenamingPipeline(item);
               } : undefined}
               onDuplicate={handleDuplicate}
-              onDelete={pipeline.source === 'local' ? setDeletingPipeline : undefined}
+              onDelete={pipeline.source === 'local' || pipeline.hasDraft ? setDeletingPipeline : undefined}
               onExport={handleExport}
               onArchive={pipeline.source === 'local' ? handleArchive : undefined}
             />

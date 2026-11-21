@@ -8,7 +8,7 @@ import { z } from 'zod';
 import type { Hash } from 'viem';
 import { deploymentSteps, recordDeploymentStep } from '../services/deploymentSteps.js';
 import { readDeploymentRuntime } from '../services/deploymentRuntime.js';
-import { getDraft, listDrafts, saveDraft } from '../data/pipelineDrafts.js';
+import { getDraft, listDrafts, saveDraft, deleteDraft } from '../data/pipelineDrafts.js';
 
 export const pipelineRouter = Router();
 
@@ -60,6 +60,29 @@ pipelineRouter.post('/drafts', async (req, res, next) => {
     const draft = await saveDraft(owner, graphSnapshot(graph), graph.metadata.name, revision);
     if (!draft) return res.status(409).json({ error: 'The saved draft changed. Reopen it before replacing it.' });
     return res.json({ id: draft.id, updatedAt: draft.updatedAt });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const draftDeleteSchema = z.object({
+  revision: z.object({ updatedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER - 1) }).optional(),
+}).optional();
+
+pipelineRouter.delete('/drafts/:id', async (req, res, next) => {
+  if (!z.string().uuid().safeParse(req.params.id).success) {
+    return res.status(404).json({ error: 'Pipeline draft not found.' });
+  }
+  const validation = draftDeleteSchema.safeParse(req.body);
+  if (!validation.success) return res.status(400).json({ error: 'Invalid delete request.' });
+  const owner = res.locals.workspaceOwner;
+  try {
+    const existing = await getDraft(owner, req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Pipeline draft not found.' });
+    const revision = validation.data?.revision ? { id: req.params.id, updatedAt: validation.data.revision.updatedAt } : undefined;
+    const deleted = await deleteDraft(owner, req.params.id, revision);
+    if (!deleted) return res.status(409).json({ error: 'The draft changed since you opened it. Reopen before deleting.' });
+    return res.json({ success: true, id: req.params.id });
   } catch (error) {
     next(error);
   }

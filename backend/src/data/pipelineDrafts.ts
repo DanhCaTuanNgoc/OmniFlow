@@ -67,6 +67,21 @@ export async function saveDraft(owner: Address, graphJson: string, name: string,
   return result.rowCount === 1 ? { id, updatedAt } : undefined;
 }
 
+export async function deleteDraft(owner: Address, id: string, revision?: Revision) {
+  const db = draftPool();
+  if (!db) return deploymentStore().deleteDraft(owner, id, revision);
+  const result = revision
+    ? await db.query(
+      `DELETE FROM omniflow.pipeline_drafts
+       WHERE id = $1 AND owner = $2 AND environment = $3 AND updated_at = $4`,
+      [id, owner.toLowerCase(), deploymentEnvironment, revision.updatedAt])
+    : await db.query(
+      `DELETE FROM omniflow.pipeline_drafts
+       WHERE id = $1 AND owner = $2 AND environment = $3`,
+      [id, owner.toLowerCase(), deploymentEnvironment]);
+  return (result.rowCount ?? 0) === 1;
+}
+
 // Preserve the ID from the SQLite deployment reservation across retries and process restarts.
 export async function publishReservedDraft(owner: Address, id: string) {
   const db = draftPool();

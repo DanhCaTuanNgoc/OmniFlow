@@ -145,8 +145,18 @@ test('the deployment store keeps the same transaction and revision after restart
     assert.equal(store.owns(owner, original.id), true);
     const draft = store.getDraft(owner, original.workspacePipelineId)!;
     assert.equal(store.getDraft(other, draft.id), undefined);
-    assert.ok(store.saveDraft(owner, draft.graphJson, 'New name', draft));
+    const updatedDraft = store.saveDraft(owner, draft.graphJson, 'New name', draft)!;
+    assert.ok(updatedDraft);
     assert.equal(store.saveDraft(owner, draft.graphJson, 'Stale name', draft), undefined);
+
+    // Delete Draft tests: wallet authorization, revision conflict, and deployment recovery
+    assert.equal(store.deleteDraft(other, updatedDraft.id), false);
+    assert.equal(store.deleteDraft(owner, updatedDraft.id, { updatedAt: draft.updatedAt }), false); // Stale revision
+    assert.equal(store.deleteDraft(owner, updatedDraft.id, { updatedAt: updatedDraft.updatedAt }), true); // Correct revision
+    assert.equal(store.getDraft(owner, updatedDraft.id), undefined);
+
+    // Verified deployment recovery: deleting draft leaves deployment intact
+    assert.equal(store.owns(owner, original.id), true);
     assert.equal(store.get(owner, deploymentEnvironment, input.key)?.graphJson, input.graphJson);
     assert.equal(store.settle(original, 'deployed', owner).rscAddress, owner);
     assert.equal(store.get(owner, deploymentEnvironment, input.key)?.status, 'deployed');

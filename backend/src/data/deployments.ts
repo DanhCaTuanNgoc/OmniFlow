@@ -251,6 +251,21 @@ export class DeploymentStore {
     return draft;
   }
 
+  deleteDraft(owner: Address, id: string, revision?: { updatedAt: number }) {
+    if (revision) {
+      const result = this.db.prepare(`
+        DELETE FROM pipeline_drafts
+        WHERE id = ? AND owner = ? AND environment = ? AND updatedAt = ?
+      `).run(id, owner.toLowerCase(), deploymentEnvironment, revision.updatedAt);
+      return result.changes === 1;
+    }
+    const result = this.db.prepare(`
+      DELETE FROM pipeline_drafts
+      WHERE id = ? AND owner = ? AND environment = ?
+    `).run(id, owner.toLowerCase(), deploymentEnvironment);
+    return result.changes === 1;
+  }
+
   recordStep(step: { deploymentId: string; kind: string; txHash: Hash; chainId: number; blockNumber: string; blockHash: Hash }) {
     this.db.prepare('INSERT OR IGNORE INTO deployment_steps VALUES (@deploymentId, @kind, @txHash, @chainId, @blockNumber, @blockHash)')
       .run(step);
