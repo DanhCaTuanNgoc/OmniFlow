@@ -44,28 +44,31 @@ export function InspectorPanel({
   };
 
   return (
-    <div className="w-full border-l border-[var(--ws-border)] bg-[var(--ws-rail)] flex flex-col h-full text-xs">
+    <div className="w-full bg-[var(--ws-rail)] flex flex-col h-full text-xs">
       {/* Header */}
-      <div className="p-4 border-b border-white/[0.08] bg-[#0D0E15] flex items-center justify-between">
+      <div className="p-3.5 border-b border-[var(--ws-border)] bg-[var(--ws-rail)] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sliders className="w-4 h-4 text-violet-400" />
-          <span className="text-xs font-bold text-white tracking-wide">
+          <span className="grid size-6 place-items-center rounded-md bg-[var(--ws-accent)]/10 text-[var(--ws-accent)]">
+            <Sliders className="size-3.5" />
+          </span>
+          <span className="text-xs font-bold text-white tracking-tight">
             Node Inspector
           </span>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+          className="grid size-7 place-items-center rounded-md text-[var(--ws-muted)] hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+          title="Close Inspector"
         >
-          <X className="w-4 h-4" />
+          <X className="size-4" />
         </button>
       </div>
 
       {/* Body: Form Controls */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Node Info Header */}
-        <div className="p-3.5 rounded-2xl bg-[#0E1017] border border-white/[0.08] space-y-1 shadow-sm">
-          <div className="text-[11px] font-mono text-slate-400">
+        <div className="p-3.5 rounded-xl bg-[var(--ws-panel)] border border-[var(--ws-border)] space-y-1 shadow-sm">
+          <div className="text-[10.5px] font-mono text-[var(--ws-muted)]">
             Node ID: {id} &bull; {type}
           </div>
           <div className="text-sm font-bold text-white">

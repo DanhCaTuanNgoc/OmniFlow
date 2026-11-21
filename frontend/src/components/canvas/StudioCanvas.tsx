@@ -511,7 +511,7 @@ function StudioCanvasInner() {
         </div>
       )}
 
-      <div className="relative flex h-full min-w-0 flex-1 flex-col" ref={reactFlowWrapper}>
+      <div className="relative flex h-full min-w-0 flex-1 flex-col">
         <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--ws-border)] bg-[var(--ws-rail)] px-3 py-2.5 sm:px-4">
           <div className="flex min-w-0 items-center gap-2">
             <button
@@ -598,74 +598,76 @@ function StudioCanvasInner() {
           </div>
         )}
 
-        <div className="relative min-h-0 flex-1 bg-[var(--ws-bg)]">
-          {nodes.length === 0 && (
-            <p className="pointer-events-none absolute inset-x-5 top-1/2 z-10 -translate-y-1/2 text-center text-sm text-[var(--ws-muted)]">
-              Add a trigger or choose a recipe to start.
-            </p>
+        <div className="relative min-h-0 flex-1 flex overflow-hidden bg-[var(--ws-bg)]">
+          <div className="relative min-h-0 flex-1 h-full" ref={reactFlowWrapper}>
+            {nodes.length === 0 && (
+              <p className="pointer-events-none absolute inset-x-5 top-1/2 z-10 -translate-y-1/2 text-center text-sm text-[var(--ws-muted)]">
+                Add a trigger or choose a recipe to start.
+              </p>
+            )}
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              onNodesChange={handleNodesChange}
+              onEdgesChange={handleEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              onPaneClick={onPaneClick}
+              onInit={setReactFlowInstance}
+              onDrop={isSnapshot ? undefined : onDrop}
+              onDragOver={onDragOver}
+              nodesDraggable={!isSnapshot}
+              nodesConnectable={!isSnapshot}
+              elementsSelectable={!isSnapshot}
+              deleteKeyCode={isSnapshot ? null : undefined}
+              isValidConnection={isValidConnection}
+              fitView
+              fitViewOptions={{ padding: 0.2 }}
+              minZoom={0.3}
+              maxZoom={1.5}
+              defaultEdgeOptions={{ type: 'custom' }}
+              className="w-full h-full"
+            >
+              <Background
+                variant={BackgroundVariant.Dots}
+                gap={22}
+                size={1.5}
+                color="rgba(148, 163, 184, 0.20)"
+              />
+              <Controls className="!bg-[#0f111a]/90 !border-white/[0.08] !rounded-xl !shadow-2xl" />
+              <MiniMap
+                nodeColor={(node) => {
+                  if (node.data.category === 'trigger') return '#38bdf8';
+                  if (node.data.category === 'condition') return '#fbbf24';
+                  if (node.data.category === 'action') return '#34d399';
+                  return '#a855f7';
+                }}
+                maskColor="rgba(7, 8, 13, 0.75)"
+                className="!bg-[#0f111a]/90 !border !border-white/10 !rounded-xl overflow-hidden shadow-lg"
+              />
+            </ReactFlow>
+          </div>
+
+          {/* Right Node Inspector: Inside visual board at same level with canvas, below top toolbar */}
+          {selectedNode && !isSnapshot && (
+            <div className="absolute inset-y-0 right-0 z-30 w-full max-w-[20.5rem] shrink-0 border-l border-[var(--ws-border)] bg-[var(--ws-rail)] lg:relative flex flex-col h-full shadow-2xl lg:shadow-none">
+              <InspectorPanel
+                selectedNode={selectedNode}
+                owner={isConnected ? address : undefined}
+                phaseTwo={phaseTwo}
+                supportsPriceVault={supportsPriceVault}
+                crossChain={crossChain}
+                originPool={originPool}
+                onUpdateNodeData={handleUpdateNodeData}
+                onDeleteNode={handleDeleteNode}
+                onClose={() => setSelectedNodeId(null)}
+              />
+            </div>
           )}
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            edgeTypes={edgeTypes}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={onNodeClick}
-            onPaneClick={onPaneClick}
-            onInit={setReactFlowInstance}
-            onDrop={isSnapshot ? undefined : onDrop}
-            onDragOver={onDragOver}
-            nodesDraggable={!isSnapshot}
-            nodesConnectable={!isSnapshot}
-            elementsSelectable={!isSnapshot}
-            deleteKeyCode={isSnapshot ? null : undefined}
-            isValidConnection={isValidConnection}
-            fitView
-            fitViewOptions={{ padding: 0.2 }}
-            minZoom={0.3}
-            maxZoom={1.5}
-            defaultEdgeOptions={{ type: 'custom' }}
-            className="w-full h-full"
-          >
-            <Background
-              variant={BackgroundVariant.Dots}
-              gap={22}
-              size={1.5}
-              color="rgba(148, 163, 184, 0.20)"
-            />
-            <Controls className="!bg-[#0f111a]/90 !border-white/[0.08] !rounded-xl !shadow-2xl" />
-            <MiniMap
-              nodeColor={(node) => {
-                if (node.data.category === 'trigger') return '#38bdf8';
-                if (node.data.category === 'condition') return '#fbbf24';
-                if (node.data.category === 'action') return '#34d399';
-                return '#a855f7';
-              }}
-              maskColor="rgba(7, 8, 13, 0.75)"
-              className="!bg-[#0f111a]/90 !border !border-white/10 !rounded-xl overflow-hidden shadow-lg"
-            />
-          </ReactFlow>
         </div>
       </div>
-
-      {/* Right Node Inspector */}
-      {selectedNode && !isSnapshot && (
-        <div className="absolute inset-y-0 right-0 z-30 w-full max-w-[20rem] shrink-0 lg:relative">
-        <InspectorPanel
-          selectedNode={selectedNode}
-          owner={isConnected ? address : undefined}
-          phaseTwo={phaseTwo}
-          supportsPriceVault={supportsPriceVault}
-          crossChain={crossChain}
-          originPool={originPool}
-          onUpdateNodeData={handleUpdateNodeData}
-          onDeleteNode={handleDeleteNode}
-          onClose={() => setSelectedNodeId(null)}
-        />
-        </div>
-      )}
 
       {/* Deploy Modal */}
       <DeployModal
