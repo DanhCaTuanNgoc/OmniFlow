@@ -149,7 +149,7 @@ export function NodeCard({
             position={Position.Left}
             style={{ top: `${h.topPercent ?? (i === 0 ? 35 : 65)}%` }}
             className={cn(
-              '!size-3 !rounded-full !bg-[var(--ws-rail)] !border-2 hover:!scale-125 transition-transform cursor-crosshair',
+              '!size-3 !rounded-full !bg-[var(--ws-rail)] !border-2 cursor-crosshair',
               cat.handleBorder
             )}
           />
@@ -159,7 +159,7 @@ export function NodeCard({
           type="target"
           position={Position.Left}
           className={cn(
-            '!size-3 !rounded-full !bg-[var(--ws-rail)] !border-2 hover:!scale-125 transition-transform cursor-crosshair',
+            '!size-3 !rounded-full !bg-[var(--ws-rail)] !border-2 cursor-crosshair',
             cat.handleBorder
           )}
         />
@@ -211,7 +211,7 @@ export function NodeCard({
           type="source"
           position={Position.Right}
           className={cn(
-            '!size-3 !rounded-full !bg-[var(--ws-rail)] !border-2 hover:!scale-125 transition-transform cursor-crosshair',
+            '!size-3 !rounded-full !bg-[var(--ws-rail)] !border-2 cursor-crosshair',
             cat.handleBorder
           )}
         />

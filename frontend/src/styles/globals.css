@@ -189,6 +189,32 @@ code, kbd, samp, pre, .font-mono {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
 }
 
+/* XYFlow Handles: preserve exact translate centering while scaling smoothly on hover */
+.react-flow__handle {
+  transform-origin: center center !important;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease, border-color 0.15s ease !important;
+}
+
+.react-flow__handle.left,
+.react-flow__handle[data-handlepos="left"] {
+  transform: translate(-50%, -50%) !important;
+}
+
+.react-flow__handle.left:hover,
+.react-flow__handle[data-handlepos="left"]:hover {
+  transform: translate(-50%, -50%) scale(1.35) !important;
+}
+
+.react-flow__handle.right,
+.react-flow__handle[data-handlepos="right"] {
+  transform: translate(50%, -50%) !important;
+}
+
+.react-flow__handle.right:hover,
+.react-flow__handle[data-handlepos="right"]:hover {
+  transform: translate(50%, -50%) scale(1.35) !important;
+}
+
 /* Animated Photon Pulse Edge (Smooth Neon Violet/Cyan Beam) */
 @keyframes photonPulseAnimation {
   0% {
