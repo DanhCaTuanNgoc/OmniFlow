@@ -362,10 +362,8 @@ export default function MotionLanding() {
 
         {/* 2) Hero (Center) */}
         <section className="motion-hero">
-    
-          {/* Headline (Two Lines with BubbleDot Font) */}
           <h1 className="motion-headline">
-            <span className="line1">Automate Across Chains</span>
+            <span className="line1">Automate Across Chains</span>{" "}
             <span className="line2">Without Code</span>
           </h1>
 
@@ -374,8 +372,7 @@ export default function MotionLanding() {
             className="motion-subhead motion-anim"
             style={{ "--d": "0.28s" } as React.CSSProperties}
           >
-            Build workflows that react to on-chain events with a visual pipeline builder
-            powered by Reactive Omni. See the stop-loss demo on Base Sepolia and Lasna.
+            Visually design and run on-chain workflows powered by Reactive Omni.
           </p>
 
           {/* CTA Button */}

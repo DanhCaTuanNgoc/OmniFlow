@@ -395,17 +395,18 @@
   padding: 0;
   font-family: var(--font-display);
   color: #ffffff;
-  max-width: 100%;
-  font-size: clamp(24px, 5.8vw, 80px);
+  width: 100%;
+  font-size: clamp(1.25rem, 4.4vw, 2.8rem);
   line-height: 1.12;
   letter-spacing: -0.04em;
   font-weight: 400;
   text-align: center;
+  text-wrap: balance;
 }
 
 .motion-headline span {
-  display: block;
-  text-wrap: balance;
+  display: inline-block;
+  max-width: 100%;
   opacity: 0;
   transform: translateY(14px);
   animation: motionHeadlineFade 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -772,7 +773,6 @@
   }
 
   .motion-headline {
-    letter-spacing: -0.08em;
     line-height: 1.05;
   }
 
@@ -788,7 +788,6 @@
 /* Mobile <= 420px */
 @media (max-width: 420px) {
   .motion-headline {
-    letter-spacing: -0.09em;
     line-height: 1.04;
   }
 
