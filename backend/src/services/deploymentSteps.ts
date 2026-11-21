@@ -3,6 +3,8 @@ import { ACTION_VAULT_ABI, STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 import { deploymentStore } from '../data/deployments.js';
 import { chainService } from './chain.service.js';
 import { deployerService } from './deployer.service.js';
+import { VAULT_RUNTIME } from '../abis/runtimeFingerprints.js';
+import { matchesRuntime } from './runtimeBytecode.js';
 
 export const deploymentSteps = ['authorization', 'principal', 'callback-reserve', 'reactive-reserve'] as const;
 type StepKind = typeof deploymentSteps[number];
@@ -19,26 +21,33 @@ export async function recordDeploymentStep(owner: Address, id: string, kind: Ste
   const [actualChainId, tx, receipt] = await Promise.all([
     client.getChainId(), client.getTransaction({ hash }), client.getTransactionReceipt({ hash }),
   ]);
-  if (actualChainId !== chainId || receipt.status !== 'success' || !tx.to || !receipt.to ||
-      !isAddressEqual(tx.from, owner) || !isAddressEqual(receipt.from, owner) || tx.blockHash !== receipt.blockHash ||
-      !isAddressEqual(tx.to, receipt.to)) return false;
+  if (actualChainId !== chainId || receipt.status !== 'success' || tx.hash !== receipt.transactionHash ||
+      tx.blockHash !== receipt.blockHash || tx.blockNumber !== receipt.blockNumber) return false;
 
   if (kind === 'authorization') {
-    const authorization = encodeFunctionData({
-      abi: ACTION_VAULT_ABI, functionName: 'setAuthorizedRSC', args: [rscAddress, true],
-    });
     const events = parseEventLogs({
       abi: ACTION_VAULT_ABI, eventName: 'RSCAuthorized',
       logs: receipt.logs.filter(log => isAddressEqual(log.address, vaultAddress)),
     });
-    if (!isAddressEqual(tx.to, vaultAddress) || tx.input !== authorization ||
-        !events.some(log => isAddressEqual(log.args.rsc, rscAddress) && log.args.status)) return false;
-  } else if (kind === 'principal') {
-    if (!isAddressEqual(tx.to, vaultAddress) || tx.input !== '0x' || tx.value <= 0n) return false;
+    const authorization = events.filter(log => isAddressEqual(log.args.rsc, rscAddress)).at(-1);
+    if (!authorization?.args.status) return false;
+    // The verified Vault emits this event only from its owner-only authorization method.
+    // A delegated wallet can reach that method through a different outer transaction.
+    const [code, vaultOwner] = await Promise.all([
+      client.getCode({ address: vaultAddress, blockNumber: receipt.blockNumber }),
+      client.readContract({ address: vaultAddress, abi: ACTION_VAULT_ABI, functionName: 'owner', blockNumber: receipt.blockNumber }),
+    ]);
+    if (!matchesRuntime(code, VAULT_RUNTIME) || !isAddressEqual(vaultOwner, owner)) return false;
   } else {
-    const target = reactive ? STOP_LOSS_TEMPLATE.omniSystem : STOP_LOSS_TEMPLATE.callbackProxy;
-    const input = encodeFunctionData({ abi: reserveAbi, functionName: 'depositTo', args: [reactive ? rscAddress : vaultAddress] });
-    if (!isAddressEqual(tx.to, target) || tx.input !== input || tx.value <= 0n) return false;
+    if (!tx.to || !receipt.to || !isAddressEqual(tx.from, owner) || !isAddressEqual(receipt.from, owner) ||
+        !isAddressEqual(tx.to, receipt.to) || tx.value <= 0n) return false;
+    if (kind === 'principal') {
+      if (!isAddressEqual(tx.to, vaultAddress) || tx.input !== '0x') return false;
+    } else {
+      const target = reactive ? STOP_LOSS_TEMPLATE.omniSystem : STOP_LOSS_TEMPLATE.callbackProxy;
+      const input = encodeFunctionData({ abi: reserveAbi, functionName: 'depositTo', args: [reactive ? rscAddress : vaultAddress] });
+      if (!isAddressEqual(tx.to, target) || tx.input !== input) return false;
+    }
   }
   const block = await client.getBlock({ blockNumber: receipt.blockNumber });
   if (block.hash !== receipt.blockHash) return false;
