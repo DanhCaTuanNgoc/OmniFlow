@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
+import { formatEther, parseEther } from 'viem';
 import { STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 
 dotenv.config();
@@ -22,6 +23,11 @@ const envSchema = z.object({
   }, 'Use a HTTPS origin or a loopback HTTP origin, without a path or trailing slash.').default('http://localhost:3000'),
   BASE_SEPOLIA_RPC_URL: z.string().url().default('https://sepolia.base.org'),
   LASNA_RPC_URL: z.string().url().default('https://lasna-rpc.rnk.dev'),
+  RSC_DEPLOY_FUNDING_LREACT: z.string()
+    .regex(/^[0-9]{1,18}(?:\.[0-9]{1,18})?$/, 'Use a decimal amount with up to 18 decimal places')
+    .default(formatEther(STOP_LOSS_TEMPLATE.fundingWei))
+    .transform(value => parseEther(value))
+    .refine(value => value > 0n, 'Deployment funding must be positive'),
   SYSTEM_CONTRACT_LASNA: z
     .string()
     .default(STOP_LOSS_TEMPLATE.omniSystem),

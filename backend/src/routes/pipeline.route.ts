@@ -5,12 +5,18 @@ import { bearerToken, workspaceSessions } from '../services/workspaceSession.ser
 import { DeploymentConflict, DeploymentLimit, deploymentStore, graphSnapshot } from '../data/deployments.js';
 import { vaultRouter } from './vault.route.js';
 import { z } from 'zod';
-import type { Hash } from 'viem';
+import { formatEther, type Hash } from 'viem';
+import { env } from '../config/env.js';
 import { deploymentSteps, recordDeploymentStep } from '../services/deploymentSteps.js';
 import { readDeploymentRuntime } from '../services/deploymentRuntime.js';
 import { getDraft, listDrafts, saveDraft, deleteDraft } from '../data/pipelineDrafts.js';
 
 export const pipelineRouter = Router();
+
+pipelineRouter.get('/deployment-config', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  return res.json({ fundingLReact: formatEther(env.RSC_DEPLOY_FUNDING_LREACT) });
+});
 
 pipelineRouter.use((req, res, next) => {
   res.set('Cache-Control', 'no-store');

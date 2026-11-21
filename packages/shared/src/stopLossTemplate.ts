@@ -6,7 +6,7 @@ export const STOP_LOSS_TEMPLATE = {
   callbackProxy: '0x476f44b11f5c942c58f4c8e3d0300e5710743585',
   omniSystem: '0x8888888888888888888888888888888888888888',
   maxSlippageBps: 500,
-  fundingWei: 10n ** 18n,
+  fundingWei: 200_000_000_000_000_000n,
 } as const;
 
 export interface StopLossGraph {

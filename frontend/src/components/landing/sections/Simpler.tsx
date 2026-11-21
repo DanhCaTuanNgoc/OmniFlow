@@ -55,7 +55,7 @@ export default function Simpler() {
                   </svg>
                 </span>
                 <span>
-                  {"Pre-compiled bytecode deployer under 2s with 1.0 lREACT"}
+                  {"Deploy from pre-compiled bytecode with configurable lREACT funding"}
                 </span>
               </li>
               <li className={"flex items-start gap-12"}>

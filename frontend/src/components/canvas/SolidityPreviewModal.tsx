@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Check, Code2, Copy, Download, X } from 'lucide-react';
-import { encodeAbiParameters, formatEther, keccak256 } from 'viem';
+import { encodeAbiParameters, keccak256 } from 'viem';
 import {
   resolveStopLoss, stopLossConstructorArgs, STOP_LOSS_PIPELINE_ABI, STOP_LOSS_PIPELINE_SOURCE,
   isPhaseTwoGraph, resolvePhaseTwo, PRICE_ORDER_PIPELINE_SOURCE, PRICE_GATE_PIPELINE_SOURCE,
@@ -62,7 +62,7 @@ function previewGraph(graph: StopLossGraph) {
       text: [
         '// Constructor arguments for the precompiled StopLoss_Pipeline',
         `// Template: ${STOP_LOSS_TEMPLATE.id} v${STOP_LOSS_TEMPLATE.version}`,
-        `// Lasna deployment value: ${formatEther(STOP_LOSS_TEMPLATE.fundingWei)} lREACT`,
+        '// The deployment confirmation shows the relayer’s configured Lasna funding.',
         `// Vault slippage cap in bps: ${STOP_LOSS_TEMPLATE.maxSlippageBps}`,
         summary,
         '',

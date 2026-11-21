@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { 
   Rocket, 
@@ -45,6 +45,34 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
   const [deployOwner, setDeployOwner] = useState<Address>();
   const [authSuccess, setAuthSuccess] = useState(false);
   const attemptStorageKey = useRef<string>();
+  const [funding, setFunding] = useState<{ amount?: string; error?: boolean }>();
+  const [fundingRetry, setFundingRetry] = useState(0);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const controller = new AbortController();
+    setFunding(undefined);
+    void fetch(`${APP_CONFIG.backendUrl}/api/pipeline/deployment-config`, { signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error('Deployment configuration unavailable.');
+        const { fundingLReact } = await response.json();
+        if (typeof fundingLReact !== 'string' || !/^\d+(\.\d+)?$/.test(fundingLReact)) {
+          throw new Error('Deployment funding is invalid.');
+        }
+        if (!controller.signal.aborted) setFunding({ amount: fundingLReact });
+      })
+      .catch(() => { if (!controller.signal.aborted) setFunding({ error: true }); });
+    return () => controller.abort();
+  }, [isOpen, fundingRetry]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
   if (deployOwner && (!userAddress || !isConnected || !isAddressEqual(deployOwner, userAddress))) {
@@ -180,6 +208,13 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
               <p className="tabular-nums">Trigger at or below ${formatEther(params.priceThresholdWei)} USD</p>
               <p className="tabular-nums">Cooldown {params.cooldownSeconds.toString()}s · Swap {params.percentToSwap.toString()}%</p>
               <p className="font-mono break-all">Vault {params.actionVaultAddress}</p>
+              <p className="tabular-nums">
+                {funding?.amount ? `Initial RSC funding: ${funding.amount} lREACT + deployment gas`
+                  : funding?.error ? 'Funding configuration unavailable.' : 'Loading RSC funding...'}
+              </p>
+              {funding?.error && <button type="button" className="ws-button" onClick={() => setFundingRetry(value => value + 1)}>
+                Retry funding check
+              </button>}
               <div className="flex justify-between">
                 <span className="text-slate-400">Owner Signer:</span>
                 <span className="font-mono text-violet-300">
@@ -197,7 +232,7 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
 
             <button
               onClick={handleDeploy}
-              disabled={loading || !isConnected || !userAddress}
+              disabled={loading || !isConnected || !userAddress || !funding?.amount}
               className="w-full flex items-center justify-center gap-2 px-5 py-3 text-xs font-semibold rounded-full bg-violet-600 hover:bg-violet-500 text-white shadow-[0_0_25px_-3px_rgba(139,92,246,0.5)] transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
             >
               {loading ? (

@@ -1,4 +1,5 @@
-import { encodeDeployData, getContractAddress, isAddressEqual, keccak256, parseAbi, parseEventLogs, TransactionReceiptNotFoundError, type Address } from 'viem';
+import { encodeDeployData, formatEther, getContractAddress, isAddressEqual, keccak256, parseAbi, parseEventLogs, parseTransaction, TransactionReceiptNotFoundError, type Address } from 'viem';
+import { env } from '../config/env.js';
 import type { PipelineGraph } from '../schemas/pipeline.schema.js';
 import { chainService } from './chain.service.js';
 import { reactiveLasnaChain } from '../config/chains.js';
@@ -150,7 +151,7 @@ export class DeployerService {
       args: stopLossConstructorArgs(resolved),
     });
     const lasna = chainService.lasnaPublicClient;
-    const value = STOP_LOSS_TEMPLATE.fundingWei;
+    const value = env.RSC_DEPLOY_FUNDING_LREACT;
     const [nonce, gasPrice, balance] = await Promise.all([
       lasna.getTransactionCount({ address: account.address, blockTag: 'pending' }),
       lasna.getGasPrice(),
@@ -293,7 +294,7 @@ export class DeployerService {
         vaultChainId: 84532,
       },
       gasSponsored: {
-        amountLReact: '1.0',
+        amountLReact: formatEther(parseTransaction(intent.signedTransaction).value ?? 0n),
       },
       explorerUrls: {
         reactscan: intent.rscAddress ? `https://lasna.reactscan.net/address/${intent.rscAddress}` : null,
