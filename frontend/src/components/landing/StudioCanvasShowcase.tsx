@@ -140,10 +140,6 @@ export default function StudioCanvasShowcase() {
     <section className="motion-section studio-showcase-section" aria-label="Visual Studio Showcase">
       <div className="motion-section-header scroll-reveal">
         <span className="motion-coord-tag">0x01 // STUDIO_ORCHESTRATION</span>
-        <div className="motion-badge-pill">
-          <span className="motion-badge-dot" />
-          <span>Interactive Canvas Preview</span>
-        </div>
         <h2 className="motion-section-title">Visual Pipeline Studio</h2>
         <p className="motion-section-subhead">
           Build and visualize keeperless cross-chain DAG pipelines with zero Solidity coding.

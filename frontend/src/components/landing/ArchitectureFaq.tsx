@@ -52,10 +52,6 @@ export default function ArchitectureFaq() {
     <section className="motion-section faq-section" aria-label="Architecture FAQ">
       <div className="motion-section-header scroll-reveal">
         <span className="motion-coord-tag">0x05 // TECHNICAL_FAQ</span>
-        <div className="motion-badge-pill">
-          <span className="motion-badge-dot" />
-          <span>Technical Reference</span>
-        </div>
         <h2 className="motion-section-title">Frequently Asked Questions</h2>
         <p className="motion-section-subhead">
           In-depth technical answers regarding OmniFlow's decentralized cross-chain architecture,

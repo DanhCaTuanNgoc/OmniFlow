@@ -75,10 +75,6 @@ export default function OnChainProofLedger() {
     <section className="motion-section proof-ledger-section" aria-label="On-Chain Proof">
       <div className="motion-section-header scroll-reveal">
         <span className="motion-coord-tag">0x03 // ONCHAIN_PROOF_LEDGER</span>
-        <div className="motion-badge-pill green">
-          <span className="motion-badge-dot green" />
-          <span>{fullLoopVerified ? "Full Loop Verified on Testnet" : "Destination Callback Pending"}</span>
-        </div>
         <h2 className="motion-section-title">On-Chain Proof</h2>
         <p className="motion-section-subhead">
           The stop-loss demo uses a deployed test pool on <strong>Base Sepolia</strong> and a reactive contract on <strong>Lasna</strong>.

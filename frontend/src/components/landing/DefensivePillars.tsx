@@ -55,10 +55,6 @@ export default function DefensivePillars() {
     <section className="motion-section defensive-pillars-section" aria-label="Defensive Security Pillars">
       <div className="motion-section-header scroll-reveal">
         <span className="motion-coord-tag">0x02 // DEFENSIVE_INVARIANTS</span>
-        <div className="motion-badge-pill">
-          <span className="motion-badge-dot" />
-          <span>Security Architecture</span>
-        </div>
         <h2 className="motion-section-title">4 Core Defensive Pillars</h2>
         <p className="motion-section-subhead">
           How OmniFlow checks callbacks, limits repeated triggers, bounds swap slippage,
