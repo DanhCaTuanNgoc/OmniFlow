@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
@@ -58,8 +58,15 @@ export function PipelineStudioHub() {
   // Wallet drafts & deployments state
   const [walletDrafts, setWalletDrafts] = useState<WalletDraftSummary[]>([]);
   const [walletDeployments, setWalletDeployments] = useState<DeploymentSummary[]>([]);
-  const [walletPending, setWalletPending] = useState(false);
+  const [walletPending, setWalletPending] = useState(Boolean(isConnected && address));
   const [walletError, setWalletError] = useState<string>();
+  const [reload, setReload] = useState(0);
+  const session = useRef<AbortController>();
+  useLayoutEffect(() => {
+    const controller = new AbortController();
+    session.current = controller;
+    return () => controller.abort();
+  }, []);
 
   // Filter & Search (Aligned with Section 7.2 of Operations Analysis: All, Drafts, Active, Archived)
   const [searchQuery, setSearchQuery] = useState('');
@@ -101,17 +108,19 @@ export function PipelineStudioHub() {
       return;
     }
 
-    let isMounted = true;
+    const request = new AbortController();
     async function fetchWalletData(owner: Address) {
       setWalletPending(true);
       setWalletError(undefined);
       try {
         const [draftsRes, depsRes] = await Promise.allSettled([
-          workspaceRequest<{ drafts: WalletDraftSummary[] }>(owner, '/pipeline/drafts'),
-          workspaceRequest<{ deployments: DeploymentSummary[] }>(owner, '/pipeline/deployments'),
+          workspaceRequest<{ drafts: WalletDraftSummary[] }>(owner, '/pipeline/drafts', { signal: request.signal }),
+          workspaceRequest<{ deployments: DeploymentSummary[] }>(owner, '/pipeline/deployments', { signal: request.signal }),
         ]);
 
-        if (isMounted) {
+        if (!request.signal.aborted) {
+          const failures = [draftsRes.status === 'rejected' && 'drafts', depsRes.status === 'rejected' && 'deployments'].filter(Boolean);
+          if (failures.length) setWalletError('Could not load wallet ' + failures.join(' and ') + '.');
           if (draftsRes.status === 'fulfilled') {
             setWalletDrafts(draftsRes.value.drafts || []);
           }
@@ -120,11 +129,11 @@ export function PipelineStudioHub() {
           }
         }
       } catch (err) {
-        if (isMounted) {
+        if (!request.signal.aborted) {
           setWalletError(err instanceof Error ? err.message : 'Unable to load wallet data.');
         }
       } finally {
-        if (isMounted) {
+        if (!request.signal.aborted) {
           setWalletPending(false);
         }
       }
@@ -132,9 +141,9 @@ export function PipelineStudioHub() {
 
     fetchWalletData(address);
     return () => {
-      isMounted = false;
+      request.abort();
     };
-  }, [isConnected, address]);
+  }, [isConnected, address, reload]);
 
   // Track wallet-archived pipeline IDs in localStorage
   const [walletArchivedIds, setWalletArchivedIds] = useState<string[]>([]);
@@ -157,6 +166,7 @@ export function PipelineStudioHub() {
   // Handle Guest-to-Wallet Drafts Import (Section 1 & 7.2)
   const handleImportAllGuestDrafts = async () => {
     if (!address || localDrafts.length === 0) return;
+    const signal = session.current?.signal;
     setIsImportingGuest(true);
     let importedCount = 0;
     try {
@@ -171,8 +181,10 @@ export function PipelineStudioHub() {
         };
         await workspaceRequest(address, '/pipeline/drafts', {
           method: 'POST',
+          signal,
           body: JSON.stringify(payload),
         });
+        if (signal?.aborted) return;
         deleteBrowserDraft(draft.id);
         importedCount++;
       }
@@ -180,9 +192,10 @@ export function PipelineStudioHub() {
       setGuestImportMessage(`Successfully imported ${importedCount} browser drafts to your wallet workspace.`);
       setTimeout(() => setGuestImportMessage(null), 5000);
       setDismissedGuestBanner(true);
-      const draftsRes = await workspaceRequest<{ drafts: WalletDraftSummary[] }>(address, '/pipeline/drafts');
-      setWalletDrafts(draftsRes.drafts || []);
+      setReload(value => value + 1);
     } catch (err) {
+      if (signal?.aborted) return;
+      setReload(value => value + 1);
       refreshLocalDrafts();
       if (err instanceof WorkspaceWalletPromptCancelled) return;
       setImportError(
@@ -274,14 +287,14 @@ export function PipelineStudioHub() {
   const filteredPipelines = useMemo(() => {
     return unifiedPipelines.filter((item) => {
       // Status filter
-      if (statusFilter === 'DRAFTS' && (item.status === 'deployed' || item.isArchived)) return false;
-      if (statusFilter === 'ACTIVE' && item.status !== 'deployed') return false;
+      if (statusFilter === 'DRAFTS' && ((!item.hasDraft && item.source !== 'local') || item.isArchived)) return false;
+      if (statusFilter === 'ACTIVE' && !item.deployment) return false;
       if (statusFilter === 'ARCHIVED' && !item.isArchived) return false;
       if (statusFilter === 'ALL' && item.isArchived) return false;
 
       // Search query
       if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
+        const query = searchQuery.trim().toLowerCase();
         const matchesName = item.name.toLowerCase().includes(query);
         const matchesDesc = item.description?.toLowerCase().includes(query);
         return matchesName || matchesDesc;

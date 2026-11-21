@@ -3,6 +3,7 @@
 import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
+import { useAccount } from 'wagmi';
 import { WorkspaceState } from '@/components/common/WorkspaceUI';
 import { PipelineStudioHub } from '@/components/studio/PipelineStudioHub';
 
@@ -31,13 +32,20 @@ export default function StudioPage() {
 
 function StudioRoute() {
   const params = useSearchParams();
-  if (['new', 'recipe', 'pipeline', 'deployment', 'local'].some((key) => params.has(key))) {
+  const { address, isConnected } = useAccount();
+  const owner = isConnected ? address?.toLowerCase() : undefined;
+  const source = ['deployment', 'pipeline', 'local', 'recipe', 'new'].find(key => params.has(key));
+  const privateGraph = source === 'pipeline' || source === 'deployment';
+  if (privateGraph && !owner) {
+    return <WorkspaceState title="Connect the workspace wallet to open this pipeline." />;
+  }
+  if (source) {
     return (
       <div className="h-full w-full">
-        <StudioCanvas />
+        <StudioCanvas key={JSON.stringify([source, params.get(source), owner])} />
       </div>
     );
   }
-  return <PipelineStudioHub />;
+  return <PipelineStudioHub key={owner ?? 'guest'} />;
 }
 
