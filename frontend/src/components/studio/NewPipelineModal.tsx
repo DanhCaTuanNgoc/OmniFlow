@@ -74,7 +74,7 @@ export function NewPipelineModal({
                 Create New Pipeline
               </h2>
               <p className="text-xs text-[var(--ws-muted)]">
-                Start from a clean canvas or initialize with a verified preset recipe.
+                Start from a clean pipeline or initialize with a verified preset recipe.
               </p>
             </div>
           </div>
@@ -100,7 +100,7 @@ export function NewPipelineModal({
             }`}
           >
             <Layers className="size-3.5" />
-            <span>Blank Canvas</span>
+            <span>Blank Pipeline</span>
           </button>
           <button
             type="button"
@@ -135,7 +135,7 @@ export function NewPipelineModal({
               />
             </div>
             <p className="text-xs text-[var(--ws-muted)] leading-relaxed">
-              Creates an empty canvas workspace. You can drag and drop Triggers, Condition Guards, and Destination Actions freely in the Visual Studio.
+              Creates an empty pipeline workspace. You can drag and drop Triggers, Condition Guards, and Destination Actions freely in the Visual Studio.
             </p>
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--ws-border)]">
               <button type="button" onClick={onClose} className="ws-button">

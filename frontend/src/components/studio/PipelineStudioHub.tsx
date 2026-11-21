@@ -424,7 +424,7 @@ export function PipelineStudioHub() {
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-[var(--ws-muted)] mt-1">
-            Build, manage, and inspect cross-chain automation pipelines. Click any pipeline card to open its visual node canvas.
+            Build, manage, and inspect cross-chain automation pipelines. Click any pipeline card to open its visual node pipeline.
           </p>
         </div>
 

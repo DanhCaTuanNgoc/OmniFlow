@@ -431,7 +431,7 @@ export default function TemplateLibraryPage() {
                     className="ws-button ws-button-primary flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-semibold"
                   >
                     <Zap className="size-3.5" />
-                    <span>Hydrate onto Canvas</span>
+                    <span>Hydrate onto Pipeline</span>
                     <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </button>
                 </div>
@@ -549,7 +549,7 @@ export default function TemplateLibraryPage() {
                 className="ws-button ws-button-primary flex items-center gap-2 px-5 py-2 text-xs font-semibold"
               >
                 <Zap className="size-3.5" />
-                <span>Hydrate onto Canvas</span>
+                <span>Hydrate onto Pipeline</span>
                 <ArrowRight className="size-3.5" />
               </button>
             </div>

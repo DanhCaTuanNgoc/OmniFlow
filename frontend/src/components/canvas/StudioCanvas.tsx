@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useLayoutEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -25,7 +25,7 @@ import { useAccount } from 'wagmi';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { isPhaseTwoGraph, resolvePhaseTwo, resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { APP_CONFIG } from '@/lib/constants';
-import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph, exportDraftJson } from '@/lib/pipelineDraft';
+import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph, exportDraftJson, connectionError, simulationPath } from '@/lib/pipelineDraft';
 import { workspaceRequest } from '@/lib/workspaceSession';
 import { useStudioHeaderStore } from '@/lib/studioHeaderStore';
 
@@ -115,24 +115,49 @@ function StudioCanvasInner() {
   const [draftMessage, setDraftMessage] = useState<string>();
   const [draftBusy, setDraftBusy] = useState(false);
   const [pipelineName, setPipelineName] = useState('');
+  const [description, setDescription] = useState<string>();
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string>();
+  const active = useRef(false);
+  const editVersion = useRef(0);
+  const restoreSimulation = useRef<() => void>();
+  useLayoutEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
+  const stopSimulation = useCallback(() => {
+    simTimersRef.current.forEach(clearTimeout);
+    simTimersRef.current = [];
+    if (!restoreSimulation.current) return;
+    restoreSimulation.current();
+    restoreSimulation.current = undefined;
+    setIsSimulating(false);
+    setSimulationStep(0);
+    setSimulationMessage(null);
+  }, []);
+  const markDirty = useCallback(() => {
+    editVersion.current++;
+    stopSimulation();
+    setIsDirty(true);
+  }, [stopSimulation]);
   const [isDirty, setIsDirty] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
 
   const pipelineParam = searchParams.get('pipeline');
   const deploymentParam = searchParams.get('deployment');
   const localParam = searchParams.get('local');
-  const isSnapshot = Boolean(deploymentParam && !savedDraft);
+  const isSnapshot = Boolean(deploymentParam);
   const draftName = pipelineName.trim() || RECIPE_PRESETS[activeRecipeId]?.title || 'Custom pipeline';
 
   const { setStudioHeader, clearStudioHeader } = useStudioHeaderStore();
 
   const handleRenameFromHeader = useCallback((newName: string) => {
     setPipelineName(newName);
-    setIsDirty(true);
+    markDirty();
     if (localParam) {
       renameBrowserDraft(localParam, newName);
     }
-  }, [localParam]);
+  }, [localParam, markDirty]);
 
   // Synchronize active pipeline name and rename handler with top Workspace Header breadcrumb
   useEffect(() => {
@@ -156,7 +181,7 @@ function StudioCanvasInner() {
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isDirty, isSnapshot]);
+  }, [isDirty, isSnapshot, markDirty]);
 
   // Hydrate preset from query parameter ?recipe=...
   useEffect(() => {
@@ -181,44 +206,42 @@ function StudioCanvasInner() {
       setEdges(restored.edges);
       setDraftNetworks(restored.networks);
       setPipelineName(saved.name);
+      setDescription(saved.description ?? restored.description);
+      setLoaded(true);
       setIsDirty(false);
     } catch {
-      setValidationWarning('The browser draft could not be opened. Import a valid Studio JSON file.');
+      setLoadError('The browser draft could not be opened.');
     }
   }, [localParam, setNodes, setEdges]);
 
-  // Auto-load wallet draft or deployment snapshot from query parameter
   useEffect(() => {
     if (!address || (!pipelineParam && !deploymentParam)) return;
-    void openSavedGraph();
-  }, [address, pipelineParam, deploymentParam]);
-
-  async function openSavedGraph() {
-    if (!address || (!pipelineParam && !deploymentParam)) return;
-    setDraftBusy(true);
-    setValidationWarning(null);
-    try {
-      const path = deploymentParam
-        ? `/pipeline/deployments/${encodeURIComponent(deploymentParam)}`
-        : `/pipeline/drafts/${encodeURIComponent(pipelineParam!)}`;
-      const snapshot = await workspaceRequest<{ graph: { metadata: { name: string } }; id?: string; updatedAt?: number }>(address, path);
+    const controller = new AbortController();
+    const resource = deploymentParam ? 'deployments' : 'drafts';
+    const id = deploymentParam ?? pipelineParam!;
+    void workspaceRequest<{ graph: unknown; id?: string; updatedAt?: number }>(
+      address, '/pipeline/' + resource + '/' + encodeURIComponent(id), { signal: controller.signal },
+    ).then(snapshot => {
+      if (controller.signal.aborted || !active.current) return;
       const draft = parsePipelineDraft(JSON.stringify(snapshot.graph), draftNodeTypes);
       setNodes(draft.nodes);
       setEdges(draft.edges);
       setDraftNetworks(draft.networks);
-      setSelectedNodeId(null);
-      setPipelineName(snapshot.graph.metadata.name);
-      setSavedDraft(snapshot.id && snapshot.updatedAt !== undefined ? { id: snapshot.id, updatedAt: snapshot.updatedAt } : undefined);
-      setDraftMessage(deploymentParam ? 'Deployment snapshot opened. Save to create an editable draft.' : 'Saved draft opened.');
-      setIsDirty(false);
-    } catch (error) {
-      setValidationWarning(error instanceof Error ? error.message : 'Unable to open the saved graph.');
-    } finally {
-      setDraftBusy(false);
-    }
-  }
+      setPipelineName(draft.name ?? '');
+      setDescription(draft.description);
+      if (!deploymentParam && snapshot.id && snapshot.updatedAt !== undefined) {
+        setSavedDraft({ id: snapshot.id, updatedAt: snapshot.updatedAt });
+      }
+      setLoaded(true);
+    }).catch(error => {
+      if (!controller.signal.aborted && active.current) setLoadError(error instanceof Error ? error.message : 'Unable to load pipeline.');
+    });
+    return () => controller.abort();
+  }, [address, pipelineParam, deploymentParam, setNodes, setEdges]);
 
-  async function saveGraph() {
+  async function saveGraph(leave = false) {
+    if (draftBusy) return false;
+    const version = editVersion.current;
     setDraftBusy(true);
     setValidationWarning(null);
     try {
@@ -231,22 +254,27 @@ function StudioCanvasInner() {
       if (isConnected && address) {
         const result = await workspaceRequest<{ id: string; updatedAt: number }>(address, '/pipeline/drafts', {
           method: 'POST', body: JSON.stringify({
-            graph: { ...graph, metadata: { name: draftName, ownerAddress: address } }, revision: savedDraft,
+            graph: { ...graph, metadata: { name: draftName, ownerAddress: address, description } }, revision: savedDraft,
           }),
         });
+        if (!active.current) return false;
         setSavedDraft(result);
-        setIsDirty(false);
-        router.replace(`/workspace/studio?pipeline=${result.id}`, { scroll: false });
+        if (!leave && editVersion.current === version && pipelineParam !== result.id) {
+          router.replace('/workspace/studio?pipeline=' + result.id, { scroll: false });
+        }
         setDraftMessage('Draft saved to your wallet workspace.');
       } else {
         const id = localParam ?? crypto.randomUUID();
-        saveBrowserDraft(id, draftName, graph);
-        setIsDirty(false);
-        router.replace(`/workspace/studio?local=${id}`, { scroll: false });
+        saveBrowserDraft(id, draftName, graph, description);
+        if (!leave && localParam !== id) router.replace('/workspace/studio?local=' + id, { scroll: false });
         setDraftMessage('Draft saved in this browser.');
       }
+      const current = editVersion.current === version;
+      if (current) setIsDirty(false);
+      return current;
     } catch (error) {
-      setValidationWarning(error instanceof Error ? error.message : 'Unable to save the draft.');
+      if (active.current) setValidationWarning(error instanceof Error ? error.message : 'Unable to save the draft.');
+      return false;
     } finally {
       setDraftBusy(false);
     }
@@ -264,13 +292,13 @@ function StudioCanvasInner() {
         const result = await workspaceRequest<{ id: string; updatedAt: number }>(address, '/pipeline/drafts', {
           method: 'POST',
           body: JSON.stringify({
-            graph: { ...graph, metadata: { name: v2Name, ownerAddress: address } },
+            graph: { ...graph, metadata: { name: v2Name, ownerAddress: address, description } },
           }),
         });
-        router.push(`/workspace/studio?pipeline=${result.id}`);
+        if (active.current) router.push(`/workspace/studio?pipeline=${result.id}`);
       } else {
         const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
-        saveBrowserDraft(newId, v2Name, graph);
+        saveBrowserDraft(newId, v2Name, graph, description);
         router.push(`/workspace/studio?local=${encodeURIComponent(newId)}`);
       }
     } catch (err) {
@@ -294,18 +322,18 @@ function StudioCanvasInner() {
     (changes: any) => {
       onNodesChange(changes);
       const hasMeaningfulChanges = changes.some((c: any) => c.type !== 'select' && c.type !== 'dimensions');
-      if (hasMeaningfulChanges && !isSnapshot) setIsDirty(true);
+      if (hasMeaningfulChanges && !isSnapshot) markDirty();
     },
-    [onNodesChange, isSnapshot]
+    [onNodesChange, isSnapshot, markDirty]
   );
 
   const handleEdgesChange = useCallback(
     (changes: any) => {
       onEdgesChange(changes);
       const hasMeaningfulChanges = changes.some((c: any) => c.type !== 'select');
-      if (hasMeaningfulChanges && !isSnapshot) setIsDirty(true);
+      if (hasMeaningfulChanges && !isSnapshot) markDirty();
     },
-    [onEdgesChange, isSnapshot]
+    [onEdgesChange, isSnapshot, markDirty]
   );
 
   // DAG & Port Constraint Enforcement
@@ -317,25 +345,11 @@ function StudioCanvasInner() {
       if (!sourceNode || !targetNode) return false;
       if (sourceNode.id === targetNode.id) return false;
 
-      const sourceCategory = sourceNode.data.category;
-      const targetCategory = targetNode.data.category;
-
-      // Reject invalid reverse flow
-      if (sourceCategory === 'action') return false;
-      if (targetCategory === 'trigger') return false;
-
-      // Typed Port Constraint: Custom Event Watcher (Node #11) cannot connect to DEX Price conditions (#4 / #14)
-      if (
-        sourceNode.type === 'customEventWatcher' &&
-        (targetNode.type === 'priceThresholdGuard' || targetNode.type === 'priceVelocityGuard')
-      ) {
-        setValidationWarning(
-          'Custom Event Watcher (Node #11) emits raw topic logs and cannot connect to DEX Price Guards. Use Cooldown Guard (#5) or connect directly to Actions.'
-        );
-        setTimeout(() => setValidationWarning(null), 4000);
+      const error = connectionError(sourceNode, targetNode, connection);
+      if (error) {
+        setValidationWarning(error);
         return false;
       }
-
       // Check cycles (DAG enforcement)
       const hasCycle = (nodeId: string, visited = new Set<string>()): boolean => {
         if (visited.has(nodeId)) return true;
@@ -385,10 +399,10 @@ function StudioCanvasInner() {
             eds
           )
         );
-        if (!isSnapshot) setIsDirty(true);
+        if (!isSnapshot) markDirty();
       }
     },
-    [isValidConnection, setEdges, nodes, isSnapshot]
+    [isValidConnection, setEdges, nodes, isSnapshot, markDirty]
   );
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
@@ -430,9 +444,9 @@ function StudioCanvasInner() {
 
       setNodes((nds) => nds.concat(newNode));
       setSelectedNodeId(newNode.id);
-      if (!isSnapshot) setIsDirty(true);
+      if (!isSnapshot) markDirty();
     },
-    [nodes, reactFlowInstance, setNodes, isSnapshot]
+    [nodes, reactFlowInstance, setNodes, isSnapshot, markDirty]
   );
 
   const handleAddNodeFromPalette = (type: string, defaultData: Record<string, any>) => {
@@ -448,7 +462,7 @@ function StudioCanvasInner() {
     };
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(newNode.id);
-    if (!isSnapshot) setIsDirty(true);
+    if (!isSnapshot) markDirty();
   };
 
   const handleUpdateNodeData = (id: string, updatedData: Record<string, any>) => {
@@ -468,14 +482,14 @@ function StudioCanvasInner() {
         return node;
       })
     );
-    if (!isSnapshot) setIsDirty(true);
+    if (!isSnapshot) markDirty();
   };
 
   const handleDeleteNode = (id: string) => {
     setNodes((nds) => nds.filter((n) => n.id !== id));
     setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
     if (selectedNodeId === id) setSelectedNodeId(null);
-    if (!isSnapshot) setIsDirty(true);
+    if (!isSnapshot) markDirty();
   };
 
   // Cleanup simulation timers on unmount
@@ -485,34 +499,34 @@ function StudioCanvasInner() {
     };
   }, []);
 
-  // Clear Graph (Reset Canvas)
+  // Clear Graph (Reset Pipeline)
   const handleResetGraph = useCallback(() => {
     if (!nodes.length || isSnapshot) return;
-    if (window.confirm('Clear all nodes and connections from the canvas?')) {
+    if (window.confirm('Clear all nodes and connections from the pipeline?')) {
+      markDirty();
       setNodes([]);
       setEdges([]);
       setDraftNetworks(undefined);
       setSelectedNodeId(null);
       setActiveRecipeId('');
-      setIsDirty(true);
-      setDraftMessage('Canvas cleared.');
+      setDraftMessage('Pipeline cleared.');
     }
-  }, [nodes.length, isSnapshot, setNodes, setEdges]);
+  }, [nodes.length, isSnapshot, setNodes, setEdges, markDirty]);
 
   // Export Pipeline to JSON
   const handleExportGraph = useCallback(() => {
-    if (!nodes.length) return;
     const graph = studioGraph(nodes, edges, draftNetworks);
     exportDraftJson(draftName, {
       ...graph,
       metadata: {
         name: draftName,
+        description,
         exportedAt: new Date().toISOString(),
         ownerAddress: address ?? undefined,
       },
     });
     setDraftMessage('Pipeline configuration exported to JSON.');
-  }, [nodes, edges, draftNetworks, draftName, address]);
+  }, [nodes, edges, draftNetworks, draftName, address, description]);
 
   // Import Pipeline from JSON
   const handleImportGraph = useCallback(
@@ -524,27 +538,21 @@ function StudioCanvasInner() {
       try {
         if (file.size > 1_048_576) throw new Error('Choose a Studio JSON file smaller than 1 MB.');
         const text = await file.text();
+        if (!active.current) return;
         const draft = parsePipelineDraft(text, draftNodeTypes);
 
-        if (nodes.length > 0 && !window.confirm('Importing will replace the current canvas. Continue?')) {
+        if (nodes.length > 0 && !window.confirm('Importing will replace the current pipeline. Continue?')) {
           return;
         }
 
-        try {
-          const raw = JSON.parse(text);
-          if (raw?.metadata?.name && typeof raw.metadata.name === 'string') {
-            setPipelineName(raw.metadata.name);
-          }
-        } catch {
-          // ignore metadata parse error
-        }
-
+        markDirty();
+        if (draft.name?.trim()) setPipelineName(draft.name);
+        if (draft.description !== undefined) setDescription(draft.description);
         setNodes(draft.nodes);
         setEdges(draft.edges);
         setDraftNetworks(draft.networks);
         setSelectedNodeId(null);
         setActiveRecipeId('');
-        setIsDirty(true);
         setValidationWarning(null);
         setDraftMessage('Pipeline imported successfully.');
       } catch (error) {
@@ -552,33 +560,35 @@ function StudioCanvasInner() {
         setTimeout(() => setValidationWarning(null), 4000);
       }
     },
-    [nodes.length, isSnapshot, setNodes, setEdges]
+    [nodes.length, isSnapshot, setNodes, setEdges, markDirty]
   );
 
   // Simulate Flow (Dry-Run Sandbox)
   const handleSimulateFlow = useCallback(() => {
     if (isSimulating || !nodes.length) return;
 
-    const hasTrigger = nodes.some((n) => n.data.category === 'trigger');
-    const hasAction = nodes.some((n) => n.data.category === 'action');
-
-    if (!hasTrigger || !hasAction) {
-      setValidationWarning('Simulation requires at least 1 Trigger node and 1 Action node.');
-      setTimeout(() => setValidationWarning(null), 4000);
+    const path = simulationPath(nodes, edges);
+    if (!path.edges.size) {
+      setValidationWarning('Connect a Trigger to an Action before running the Sandbox.');
       return;
     }
-
-    // Clear any previous simulation timers
-    simTimersRef.current.forEach(clearTimeout);
-    simTimersRef.current = [];
-
+    const states = new Map(nodes.filter(node => path.nodes.has(node.id)).map(node => [node.id, node.data.state]));
+    const bursts = new Map(edges.filter(edge => path.edges.has(edge.id)).map(edge => [edge.id, edge.data?.isBurst]));
+    restoreSimulation.current = () => {
+      setNodes(items => items.map(node => states.has(node.id)
+        ? { ...node, data: { ...node.data, state: states.get(node.id) } } : node));
+      setEdges(items => items.map(edge => bursts.has(edge.id)
+        ? { ...edge, data: { ...edge.data, isBurst: bursts.get(edge.id) } } : edge));
+    };
+    setValidationWarning(null);
     setIsSimulating(true);
     setSimulationStep(1);
-    setSimulationMessage('Step 1/3: Origin event captured on Base Sepolia • Evaluating subscriptions');
+    setSimulationMessage('Sandbox 1/3: Example trigger received');
 
     // Step 1: Trigger captured & conditions evaluating
     setNodes((nds) =>
       nds.map((n) => {
+        if (!path.nodes.has(n.id)) return n;
         if (n.data.category === 'trigger') {
           return {
             ...n,
@@ -597,18 +607,19 @@ function StudioCanvasInner() {
 
     // Edges start photon burst animation
     setEdges((eds) =>
-      eds.map((e) => ({
+      eds.map((e) => path.edges.has(e.id) ? ({
         ...e,
         data: { ...e.data, isBurst: true },
-      }))
+      }) : e)
     );
 
     // Step 2: Reactive Omni ReactVM Condition Met
     const t1 = setTimeout(() => {
       setSimulationStep(2);
-      setSimulationMessage('Step 2/3: Reactive Omni Lasna RVM evaluated condition: Met • Cooldown & Slippage Guards OK');
+      setSimulationMessage('Sandbox 2/3: Example conditions pass');
       setNodes((nds) =>
         nds.map((n) => {
+        if (!path.nodes.has(n.id)) return n;
           if (n.data.category === 'condition') {
             return {
               ...n,
@@ -630,9 +641,10 @@ function StudioCanvasInner() {
     // Step 3: Destination Action Callback Executed on Base Sepolia
     const t2 = setTimeout(() => {
       setSimulationStep(3);
-      setSimulationMessage('Step 3/3: ActionVault callback executed on Base Sepolia • Automation Cycle Verified');
+      setSimulationMessage('Sandbox 3/3: Example action completed');
       setNodes((nds) =>
         nds.map((n) => {
+        if (!path.nodes.has(n.id)) return n;
           if (n.data.category === 'action') {
             return {
               ...n,
@@ -646,28 +658,15 @@ function StudioCanvasInner() {
     simTimersRef.current.push(t2);
 
     // End simulation and revert state
-    const t3 = setTimeout(() => {
-      setIsSimulating(false);
-      setSimulationStep(0);
-      setSimulationMessage(null);
-      setNodes((nds) =>
-        nds.map((n) => ({
-          ...n,
-          data: { ...n.data, state: 'CONFIGURED' as const },
-        }))
-      );
-      setEdges((eds) =>
-        eds.map((e) => ({
-          ...e,
-          data: { ...e.data, isBurst: false },
-        }))
-      );
-    }, 5500);
-    simTimersRef.current.push(t3);
-  }, [isSimulating, nodes, setNodes, setEdges]);
+    simTimersRef.current.push(setTimeout(stopSimulation, 5500));
+  }, [isSimulating, nodes, edges, setNodes, setEdges, stopSimulation]);
 
   const handleOpenDeploy = () => {
     if (!isConnected) return;
+    if (!savedDraft || isDirty) {
+      setValidationWarning('Save this revision to your wallet workspace before deploying.');
+      return;
+    }
     try {
       const graph = { nodes, edges, networks: draftNetworks };
       if (phaseTwo) {
@@ -685,6 +684,13 @@ function StudioCanvasInner() {
     setValidationWarning(null);
     setIsDeployOpen(true);
   };
+
+  if ((pipelineParam || deploymentParam || localParam) && !loaded) {
+    return <div className="ws-page" role={loadError ? 'alert' : 'status'}>
+      <p>{loadError ?? 'Loading pipeline?'}</p>
+      <Link href="/workspace/studio" className="ws-button">Back to pipelines</Link>
+    </div>;
+  }
 
   return (
     <div className="relative flex h-full min-h-[24rem] w-full overflow-hidden">
@@ -746,7 +752,7 @@ function StudioCanvasInner() {
               className="ws-button inline-flex items-center gap-1.5 cursor-pointer text-xs"
               onClick={handleResetGraph}
               disabled={!nodes.length || isSnapshot}
-              title="Clear all nodes and connections from canvas"
+              title="Clear all nodes and connections from pipeline"
             >
               <RotateCcw className="size-3.5 text-zinc-400" />
               <span>Clear</span>
@@ -775,7 +781,6 @@ function StudioCanvasInner() {
               type="button"
               className="ws-button inline-flex items-center gap-1.5 cursor-pointer text-xs"
               onClick={handleExportGraph}
-              disabled={!nodes.length}
               title="Export pipeline structure to JSON file"
             >
               <Download className="size-3.5 text-zinc-400" />
@@ -788,8 +793,8 @@ function StudioCanvasInner() {
             <button
               type="button"
               className="ws-button text-xs"
-              disabled={draftBusy || !nodes.length}
-              onClick={() => void saveGraph()}
+              disabled={draftBusy}
+              onClick={() => void (isSnapshot ? handleCreateDraftFromSnapshot() : saveGraph())}
             >
               {isSnapshot ? 'Save a draft copy' : 'Save draft'}
             </button>
@@ -844,13 +849,13 @@ function StudioCanvasInner() {
             <div className="flex items-center gap-2">
               <ShieldCheck className="size-4 text-indigo-400 shrink-0" />
               <span>
-                Viewing deployed on-chain snapshot (Read-Only). Live on Base Sepolia and Reactive Lasna.
+                Viewing a deployed snapshot. Check Active Automations for current Vault permissions and reserves.
               </span>
             </div>
             <button
               type="button"
               onClick={() => void handleCreateDraftFromSnapshot()}
-              disabled={draftBusy || !nodes.length}
+              disabled={draftBusy}
               className="ws-button ws-button-primary text-xs inline-flex items-center gap-1.5 shrink-0 self-start sm:self-auto disabled:opacity-50"
             >
               <Plus className="size-3.5" />
@@ -966,7 +971,8 @@ function StudioCanvasInner() {
                 <AlertTriangle className="size-5" />
               </div>
               <div>
-                <h3 className="text-base font-semibold text-white">Unsaved Changes</h3>
+                {validationWarning && <p role="alert" className="text-xs text-amber-200">{validationWarning}</p>}
+              <h3 className="text-base font-semibold text-white">Unsaved Changes</h3>
                 <p className="text-xs text-[var(--ws-muted)]">You have unsaved edits in this pipeline.</p>
               </div>
             </div>
@@ -994,9 +1000,7 @@ function StudioCanvasInner() {
               <button
                 type="button"
                 onClick={async () => {
-                  await saveGraph();
-                  setShowExitModal(false);
-                  router.push('/workspace/studio');
+                  if (await saveGraph(true) && active.current) router.push('/workspace/studio');
                 }}
                 disabled={draftBusy}
                 className="ws-button ws-button-primary w-full sm:w-auto"

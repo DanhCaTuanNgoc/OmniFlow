@@ -180,7 +180,7 @@ export function PipelineCard({
         </div>
 
         <span className="inline-flex items-center gap-1 font-semibold text-xs text-[var(--ws-accent)] group-hover:translate-x-0.5 transition-transform">
-          <span>{pipeline.hasDraft ? 'Open Draft' : pipeline.status === 'deployed' ? 'View Snapshot' : 'Open Canvas'}</span>
+          <span>{pipeline.hasDraft ? 'Open Draft' : pipeline.status === 'deployed' ? 'View Snapshot' : 'Open Pipeline'}</span>
           <ArrowRight className="size-3" />
         </span>
       </div>
