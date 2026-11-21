@@ -55,7 +55,7 @@ function ActiveRoute() {
   const id = useSearchParams().get('deployment');
 
   return (
-    <div className="ws-page space-y-5">
+    <div className={signedIn ? 'ws-page space-y-5' : 'ws-page ws-page--sign-in'}>
       <WorkspacePageHeader
         title="Active Automations"
         description="Monitor deployed pipelines, check Reactive Smart Contract status, and manage execution reserves."

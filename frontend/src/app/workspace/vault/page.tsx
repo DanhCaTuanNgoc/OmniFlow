@@ -70,7 +70,7 @@ function VaultRoute() {
   };
 
   if (!signedIn) {
-    return <div className="ws-page space-y-5">
+    return <div className="ws-page ws-page--sign-in">
       <WorkspacePageHeader title="Vault Manager" icon={<Lock className="size-4" />} />
       <WorkspaceSignIn />
     </div>;

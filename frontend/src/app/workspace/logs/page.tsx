@@ -68,7 +68,7 @@ function LogsRoute() {
   const id = useSearchParams().get('deployment');
 
   return (
-    <div className="ws-page space-y-5">
+    <div className={signedIn ? 'ws-page space-y-5' : 'ws-page ws-page--sign-in'}>
       <WorkspacePageHeader
         title="Activity Logs"
         description="Follow live on-chain events, Reactive RSC requests, and verified destination Vault receipts."

@@ -62,6 +62,8 @@
 }
 
 .ws-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.ws-page--sign-in { display: flex; min-height: 100%; flex-direction: column; }
+.ws-sign-in { display: grid; flex: 1; place-items: center; padding-block: 1rem; }
 .ws-panel, .ws-state { border: 1px solid var(--ws-border); border-radius: .75rem; background: var(--ws-panel); }
 .ws-state { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 1.25rem; }
 .ws-state h2 { font-size: .9375rem; font-weight: 600; }
@@ -85,6 +87,7 @@
 .ws-button:disabled { opacity: .5; cursor: not-allowed; }
 .ws-button-primary { background: var(--ws-accent); color: #201735; border-color: transparent; }
 .ws-button-primary:hover { background: #d1c8ff; }
+.ws-sign-in .ws-button { min-height: 2.75rem; }
 .ws-address { font-family: ui-monospace, monospace; color: var(--ws-accent); overflow-wrap: anywhere; }
 .ws-address:hover { text-decoration: underline; text-underline-offset: .2em; }
 .ws-badge { display: inline-block; border-radius: .375rem; background: #242834; color: #dce0ed; padding: .2rem .45rem; font-size: .75rem; }
