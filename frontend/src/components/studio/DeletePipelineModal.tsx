@@ -36,11 +36,11 @@ export function DeletePipelineModal({
       aria-labelledby="delete-pipeline-title"
     >
       <div
-        className="relative w-full max-w-md rounded-xl border border-rose-900/50 bg-[#19151e] p-5 shadow-2xl text-[var(--ws-text)] space-y-4"
+        className="relative w-full max-w-md rounded-xl border border-[var(--ws-border)] bg-[#191c24] p-5 shadow-2xl text-[var(--ws-text)] space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-rose-950/60 pb-3">
+        <div className="flex items-center justify-between border-b border-[var(--ws-border)] pb-3">
           <div className="flex items-center gap-2">
             <div className="flex size-7 items-center justify-center rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400">
               <AlertTriangle className="size-4" />
@@ -49,7 +49,7 @@ export function DeletePipelineModal({
               <h2 id="delete-pipeline-title" className="text-sm font-semibold tracking-tight text-white">
                 Delete Pipeline
               </h2>
-              <p className="text-xs text-rose-300/80">
+              <p className="text-xs text-[var(--ws-muted)]">
                 Permanent draft removal
               </p>
             </div>
