@@ -204,8 +204,8 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
 
         {/* Error message */}
         {error && (
-          <div className="p-3 rounded-lg bg-rose-950/20 border border-rose-900/40 text-rose-300 text-xs flex items-start gap-2.5">
-            <AlertCircle className="size-4 shrink-0 mt-0.5 text-rose-400" />
+          <div className="flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+            <AlertCircle className="size-4 shrink-0 text-rose-400" />
             <span className="leading-relaxed">{error}</span>
           </div>
         )}
@@ -365,71 +365,98 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
           </div>
         ) : (
           /* Step 2: Post-Deploy Non-Custodial Authorization Prompt */
-          <div className="space-y-4">
-            <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3.5 space-y-2.5 text-xs">
-              <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
-                <CheckCircle2 className="size-4 text-emerald-400" />
-                <span>RSC Successfully Deployed on Lasna</span>
-              </div>
-              <div className="space-y-1.5 font-mono text-[11px] text-zinc-300">
-                <div className="flex justify-between">
-                  <span className="text-[var(--ws-muted)] font-sans">Pipeline ID:</span>
-                  <span className="text-cyan-400 font-bold">{deployResult.pipelineId}</span>
+          <div className="space-y-3.5">
+            {/* Step 1: Lasna Deployed Info */}
+            <div className="rounded-lg border border-[var(--ws-border)] bg-[#111318] p-3.5 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-[var(--ws-border)]">
+                <div className="flex items-center gap-2">
+                  <span className="flex size-5 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
+                    <CheckCircle2 className="size-3.5" />
+                  </span>
+                  <span className="font-semibold text-white text-xs">Reactive Smart Contract</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--ws-muted)] font-sans">RSC Contract:</span>
-                  <span className="text-white">
-                    {deployResult.contracts.rscAddress && truncateAddress(deployResult.contracts.rscAddress)}
+                <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
+                  DEPLOYED ON LASNA
+                </span>
+              </div>
+
+              <div className="space-y-1.5 text-xs text-zinc-300">
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--ws-muted)]">Pipeline ID</span>
+                  <span className="font-mono text-[11px] text-zinc-200" title={deployResult.pipelineId}>
+                    {deployResult.pipelineId.length > 24
+                      ? `${deployResult.pipelineId.slice(0, 18)}...`
+                      : deployResult.pipelineId}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--ws-muted)] font-sans">Funded at deployment:</span>
-                  <span className="text-emerald-400 font-bold tabular-nums">{deployResult.gasSponsored?.amountLReact} lREACT</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--ws-muted)]">RSC Address</span>
+                  <span className="font-mono text-[11px] text-zinc-200">
+                    {deployResult.contracts.rscAddress ? truncateAddress(deployResult.contracts.rscAddress) : '—'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--ws-muted)]">Initial Funding</span>
+                  <span className="font-medium text-emerald-400 tabular-nums">
+                    {deployResult.gasSponsored?.amountLReact} lREACT
+                  </span>
                 </div>
               </div>
 
               {deployResult.explorerUrls?.reactscan && (
-                <div className="pt-1.5 border-t border-emerald-500/20">
+                <div className="flex justify-end pt-1.5 border-t border-[var(--ws-border)]/60">
                   <a
                     href={deployResult.explorerUrls.reactscan}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-[11px] text-[var(--ws-accent)] hover:underline transition-colors"
                   >
-                    <span>View on ReactScan Explorer</span> <ExternalLink className="size-3" />
+                    <span>View on ReactScan Explorer</span>
+                    <ExternalLink className="size-3" />
                   </a>
                 </div>
               )}
             </div>
 
-            {/* Non-Custodial Step */}
-            <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-3.5 text-xs space-y-2.5">
-              <div className="flex items-center gap-2 text-amber-300 font-semibold">
-                <KeyRound className="size-4 text-amber-400" />
-                <span>Non-Custodial Authorization (ActionVault)</span>
+            {/* Step 2: Non-Custodial Authorization */}
+            <div className="rounded-lg border border-[var(--ws-border)] bg-[#111318] p-3.5 space-y-3 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-[var(--ws-border)]">
+                <div className="flex items-center gap-2">
+                  <span className="flex size-5 items-center justify-center rounded-full bg-amber-500/10 text-amber-400">
+                    <KeyRound className="size-3.5" />
+                  </span>
+                  <span className="font-semibold text-white text-xs">ActionVault Authorization</span>
+                </div>
+                {authSuccess ? (
+                  <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
+                    AUTHORIZED
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-medium text-amber-400">
+                    STEP 2 REQUIRED
+                  </span>
+                )}
               </div>
-              <p className="text-[11px] text-zinc-300 leading-relaxed">
-                To guarantee zero-trust non-custodial security, the owner signs 1 lightweight transaction calling{' '}
-                <code className="text-amber-300 font-mono bg-black/40 px-1 py-0.5 rounded border border-amber-500/20">
-                  setAuthorizedRSC()
-                </code>{' '}
-                on Base Sepolia.
+
+              <p className="text-[11px] text-[var(--ws-muted)] leading-relaxed">
+                Grant permission on Base Sepolia (<code className="font-mono text-zinc-300 bg-white/5 px-1 py-0.5 rounded text-[10px]">ActionVault.setAuthorizedRSC</code>) to allow this RSC to execute automated stop-loss swaps.
               </p>
+
               {authSuccess ? (
-                <div className="p-2.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="size-3.5 text-emerald-400" />
-                  <span>Vault permission confirmed. Check principal and fee reserves in Active Automations.</span>
+                <div className="flex items-center gap-2 rounded-md bg-emerald-500/10 border border-emerald-500/20 p-2.5 text-xs text-emerald-300">
+                  <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
+                  <span>Vault permission confirmed. Ready to execute on Base Sepolia.</span>
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={handleAuthorizeVault}
                   disabled={isAuthPending}
-                  className="ws-button w-full border-amber-500/40 bg-amber-500 text-black font-semibold hover:bg-amber-400 min-h-[2.5rem] flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                  className="ws-button ws-button-primary w-full min-h-[2.5rem] text-xs font-semibold shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
                 >
                   {isAuthPending ? (
                     <>
-                      <Loader2 className="size-3.5 animate-spin" />
+                      <Loader2 className="size-3.5 animate-spin text-[#201735]" />
                       <span>Signing on MetaMask...</span>
                     </>
                   ) : (
@@ -442,16 +469,29 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--ws-border)]">
-              <button type="button" onClick={onClose} className="ws-button">
+            {/* Footer Navigation */}
+            <div className="flex items-center justify-between pt-2 border-t border-[var(--ws-border)]">
+              <button
+                type="button"
+                onClick={onClose}
+                className="ws-button text-xs text-[var(--ws-muted)] hover:text-white"
+              >
                 Close
               </button>
-              <Link className="ws-button" href={`/workspace/studio?deployment=${deployResult.pipelineId}`}>
-                View Snapshot
-              </Link>
-              <Link className="ws-button ws-button-primary" href={`/workspace/active?deployment=${deployResult.pipelineId}`}>
-                Open in Active
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  className="ws-button text-xs"
+                  href={`/workspace/studio?deployment=${deployResult.pipelineId}`}
+                >
+                  View Snapshot
+                </Link>
+                <Link
+                  className="ws-button ws-button-primary text-xs"
+                  href={`/workspace/active?deployment=${deployResult.pipelineId}`}
+                >
+                  Open in Active
+                </Link>
+              </div>
             </div>
           </div>
         )}
