@@ -27,7 +27,7 @@ import { isPhaseTwoGraph, resolvePhaseTwo, resolveStopLoss, STOP_LOSS_TEMPLATE, 
 import { APP_CONFIG } from '@/lib/constants';
 import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph, exportDraftJson, connectionError, simulationPath } from '@/lib/pipelineDraft';
 import { WorkspaceSignInRequired, workspaceRequest } from '@/lib/workspaceSession';
-import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
+import { useWorkspaceSignedIn } from '@/components/common/WorkspaceSignIn';
 import { useStudioHeaderStore } from '@/lib/studioHeaderStore';
 
 import {
@@ -690,9 +690,7 @@ function StudioCanvasInner() {
 
   if ((pipelineParam || deploymentParam || localParam) && !loaded) {
     return <div className="ws-page" role={loadError ? 'alert' : 'status'}>
-      {signInRequired && address
-        ? <WorkspaceSignIn />
-        : <p>{loadError ?? 'Loading pipeline...'}</p>}
+      <p>{signInRequired ? 'Sign in from the Workspace header to open this pipeline.' : loadError ?? 'Loading pipeline...'}</p>
       <Link href="/workspace/studio" className="ws-button">Back to pipelines</Link>
     </div>;
   }

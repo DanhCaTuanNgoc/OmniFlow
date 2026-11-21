@@ -42,7 +42,7 @@ import { PipelineCard, type PipelineItem } from './PipelineCard';
 import { RenamePipelineModal } from './RenamePipelineModal';
 import { DeletePipelineModal } from './DeletePipelineModal';
 import { NewPipelineModal } from './NewPipelineModal';
-import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
+import { useWorkspaceSignedIn } from '@/components/common/WorkspaceSignIn';
 
 const draftNodeTypes = new Map(PALETTE_ITEMS.map((item) => [item.type, item.category]));
 
@@ -573,7 +573,6 @@ export function PipelineStudioHub() {
       )}
 
       {walletPending && <p role="status">Loading wallet pipelines...</p>}
-      {(!isConnected || signInRequired) && <WorkspaceSignIn />}
       {walletError && <div role="alert">{walletError} <button type="button" className="ws-button" onClick={() => setReload(value => value + 1)}>Retry</button></div>}
       {localError && <p role="alert">Could not read browser drafts.</p>}
 

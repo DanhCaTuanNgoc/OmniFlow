@@ -39,7 +39,8 @@ export function WorkspaceSignIn({ compact = false }: { compact?: boolean }) {
         {isConnected ? 'Sign one message in MetaMask to access your wallet workspace.'
           : 'Connect MetaMask and sign one message to access your wallet workspace.'}
       </p>}
-      <button type="button" className="ws-button" disabled={pending || status === 'reconnecting'}
+      <button type="button" className={compact ? 'ws-button ws-button-primary whitespace-nowrap' : 'ws-button'}
+        disabled={pending || status === 'reconnecting'}
         onClick={() => void handleSignIn()}>
         {pending ? 'Signing in...' : label}
       </button>
