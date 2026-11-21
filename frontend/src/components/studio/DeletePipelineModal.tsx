@@ -89,7 +89,7 @@ export function DeletePipelineModal({
               onConfirm();
               onClose();
             }}
-            className="ws-button border-rose-800 bg-rose-600/90 text-white hover:bg-rose-600"
+            className="ws-button border-rose-600 bg-rose-600 text-white hover:bg-rose-600 hover:border-rose-600 hover:text-white cursor-pointer"
           >
             <Trash2 className="size-3.5" />
             <span>Delete Pipeline</span>
