@@ -975,18 +975,19 @@ Phạm vi Workspace theo [phân tích vận hành](docs/WORKSPACE_OPERATIONS_ANA
 * **Người thực hiện:** Chưa phân công.
 * **Trạng thái:** `TODO`.
 
-#### `TASK-340` [TODO] — Chứng minh hai kết quả stop-loss và mở lại đúng pipeline
+#### `TASK-340` [DONE] — Chứng minh hai kết quả stop-loss và mở lại đúng pipeline
 * **Module:** Script full loop, Base Sepolia/Lasna, Active Automations và lịch sử demo.
 * **Mục đích:** Cho người dùng để một pipeline tự chạy rồi quay lại xem đúng Vault, gas và bằng chứng thực thi hoặc bỏ qua.
 * **Ưu tiên và effort:** Làm trước `TASK-331` (AI Copilot) và `TASK-332` (Telegram). Dự kiến 2–4 ngày công nếu có RPC, signer và quỹ testnet. Dùng các node và hợp đồng stop-loss ngưỡng cố định trên Base Sepolia hiện có.
 * **Chi tiết:** Mở rộng verifier để nhận cả `OrderSkipped` và `StopLossExecuted`. Chạy hai lượt trên cùng deployment demo, đối chiếu origin → Lasna → proxy/Vault, kiểm tra payout ở nhánh thực thi và lưu bằng chứng riêng theo lượt. Mở lại deployment theo ví trên cùng trình duyệt, đọc Vault và lREACT qua RPC và hiển thị hai kết quả cùng link receipt.
 * **Điểm dừng và cô lập:** Dành tối đa một ngày testnet cho receipt bỏ qua. Cô lập signer, pool, Vault, RSC và cấu hình demo. Chạy script ghi giao dịch chủ động, giới hạn retry và đối soát hash trước khi gửi lại. Giữ hồ sơ full loop đang dùng và nghiệm thu trên preview trước khi đưa vào bản demo cloud.
 * **Nghiệm thu:** Hai receipt đích thuộc đúng RSC/Vault, một lượt có `OrderSkipped` với giá hồi trên ngưỡng và một lượt có `StopLossExecuted` cùng payout hợp lệ. Đóng app, mở lại đúng pipeline bằng cùng ví để xem dữ liệu on-chain và hai lượt đã xác minh. Đổi ví và kiểm tra lỗi RPC để chắc rằng UI bỏ dữ liệu cũ và báo trạng thái đúng.
+* **Kết quả:** Nghiệm thu bằng Studio/API local và public testnet. Hai kết quả, cách ly ví và phục hồi Active/Logs đã có bằng chứng Phase 1. Chromium xác nhận Active báo mất dữ liệu khi Base, Lasna hoặc cả hai RPC gián đoạn và đọc lại số dư thật khi kết nối phục hồi. Nghiệm thu cloud theo `TASK-337`.
 * **Tham chiếu:** [Thiết kế kỹ thuật và xử lý sự cố](docs/WORKSPACE_OPERATIONS_ANALYSIS.md#8-demo-stop-loss-với-hai-kết-quả-được-xác-minh-bằng-receipt). Lịch sử tự động và đồng bộ Workspace tiếp tục theo `TASK-333` đến `TASK-336`. Kết quả ở đây phục vụ nghiệm thu cloud tại `TASK-337`.
 * **Ngày tạo:** 20/11/2026.
-* **Ngày hoàn thành:** —
-* **Người thực hiện:** Chưa phân công.
-* **Trạng thái:** `TODO`.
+* **Ngày hoàn thành:** 21/11/2026.
+* **Người thực hiện:** Codex.
+* **Trạng thái:** `DONE`.
 
 ### KHẢ NĂNG DEPLOY CỦA PRESET & FLOW THEO DÕI NÂNG CẤP
 
@@ -1003,16 +1004,16 @@ Phạm vi Workspace theo [phân tích vận hành](docs/WORKSPACE_OPERATIONS_ANA
 * **Người thực hiện:** Codex.
 * **Trạng thái:** `DONE`.
 
-#### `TASK-342` [TODO] — Đồng bộ thông số stop-loss giữa Studio và Vault
+#### `TASK-342` [DONE] — Đồng bộ thông số stop-loss giữa Studio và Vault
 * **Module:** Inspector, preset, Deploy Modal và ActionVault.
 * **Mục đích:** Người dùng duyệt đúng điều kiện và mức chi trước khi chạy.
 * **Chi tiết:** Đối chiếu tham số với RSC/Vault của deployment. Vault hiện dùng trần slippage cố định 5% từ báo giá router, trong khi preset ghi 1%. Hiển thị theo hợp đồng và khóa cấu hình chưa được hỗ trợ. Giải thích tỷ lệ swap áp vào số dư ETH Vault tại lúc thực thi và cooldown cho phép lượt tiếp theo sau thời gian chờ. One-shot là thay đổi nghiệp vụ riêng.
 * **Nghiệm thu:** So khớp giá trị preview, tham số deploy và dữ liệu on-chain của cùng một lượt. UI thể hiện giá trị thực và trạng thái chưa xác minh nếu RPC lỗi.
-* **Tiến độ:** Giới hạn 5%, ngưỡng, cooldown và thứ tự constructor đã đồng bộ ở Phase 0. Còn đối chiếu receipt và cấu hình của lượt deploy mới từ Studio trong Phase 1.
+* **Kết quả:** Đối chiếu đủ 10 tham số trên Solidity Preview, giao dịch deploy và các getter của RSC Phase 1. Ngưỡng 1.800, cooldown 300 giây và tỷ lệ bán 50% khớp. Vault trả trần slippage 500 BPS, đúng với preview. Active hiển thị dữ liệu chưa xác minh khi RPC lỗi. [Bằng chứng Phase 1](docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md#11-nhật-ký-triển-khai-phase-1).
 * **Ngày tạo:** 20/11/2026.
-* **Ngày hoàn thành:** —
-* **Người thực hiện:** Chưa phân công.
-* **Trạng thái:** `TODO`.
+* **Ngày hoàn thành:** 21/11/2026.
+* **Người thực hiện:** Codex.
+* **Trạng thái:** `DONE`.
 
 #### `TASK-343` [TODO] — Chứng minh callback dừng pipeline khi adapter được lên lịch thay đổi
 * **Module:** Timelock và adapter thử nghiệm, RSC trên Lasna, Vault opt-in trên Base Sepolia và script nghiệm thu.
