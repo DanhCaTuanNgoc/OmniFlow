@@ -23,6 +23,8 @@ function WatchDEXPriceNodeComponent({ id, data, selected }: NodeProps) {
       icon={<TrendingDown className="size-4" />}
       hasSourceHandle={true}
       hasTargetHandle={false}
+      warning={nodeData.warning}
+      isOrphan={nodeData.isOrphan}
     >
       <div className="flex items-center justify-between py-0.5">
         <span className="text-[11px] text-[var(--ws-muted)]">Pair:</span>

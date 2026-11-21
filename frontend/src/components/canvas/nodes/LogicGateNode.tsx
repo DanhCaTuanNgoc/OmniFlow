@@ -24,6 +24,8 @@ function LogicGateNodeComponent({ id, data, selected }: NodeProps) {
         { id: 'signal-a', label: 'Signal A', topPercent: 32 },
         { id: 'signal-b', label: 'Signal B', topPercent: 68 },
       ]}
+      warning={nodeData.warning}
+      isOrphan={nodeData.isOrphan}
     >
       <div className="flex items-center justify-between py-0.5">
         <span className="text-[11px] text-[var(--ws-muted)]">Rule:</span>

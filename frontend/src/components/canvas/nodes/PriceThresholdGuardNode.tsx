@@ -24,6 +24,8 @@ function PriceThresholdGuardNodeComponent({ id, data, selected }: NodeProps) {
       icon={<Target className="size-4" />}
       hasSourceHandle={true}
       hasTargetHandle={true}
+      warning={nodeData.warning}
+      isOrphan={nodeData.isOrphan}
     >
       <div className="flex items-center justify-between py-0.5">
         <span className="text-[11px] text-[var(--ws-muted)]">Rule:</span>

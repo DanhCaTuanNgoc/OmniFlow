@@ -18,6 +18,8 @@ export interface BaseNodeData {
   state?: VisualNodeState;
   statusMessage?: string;
   lastRunTimestamp?: number;
+  warning?: string | null;
+  isOrphan?: boolean;
   [key: string]: any;
 }
 

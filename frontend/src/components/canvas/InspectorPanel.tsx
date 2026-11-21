@@ -2,11 +2,25 @@
 
 import React from 'react';
 import { Node } from '@xyflow/react';
-import { X, Sliders, Trash2, Info, Radio, Activity } from 'lucide-react';
-import { SUPPORTED_PAIRS, SUPPORTED_CHAINS } from '@/lib/constants';
+import { 
+  X, 
+  Sliders, 
+  Trash2, 
+  Info, 
+  Radio, 
+  Activity, 
+  AlertTriangle, 
+  AlertCircle, 
+  CheckCircle2,
+  Clock,
+  ArrowLeftRight,
+  Coins
+} from 'lucide-react';
+import { SUPPORTED_PAIRS } from '@/lib/constants';
 import { isAddress, toEventSelector, type Address } from 'viem';
 import { STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 import { VaultSetup } from './VaultSetup';
+import { PipelineIssue } from '@/lib/pipelineLint';
 
 interface InspectorPanelProps {
   selectedNode: Node | null;
@@ -18,6 +32,7 @@ interface InspectorPanelProps {
   phaseTwo: boolean;
   supportsPriceVault: boolean;
   crossChain: boolean;
+  nodeIssues?: PipelineIssue[];
 }
 
 export function InspectorPanel({
@@ -30,6 +45,7 @@ export function InspectorPanel({
   phaseTwo,
   supportsPriceVault,
   crossChain,
+  nodeIssues,
 }: InspectorPanelProps) {
   if (!selectedNode) return null;
 
@@ -42,6 +58,9 @@ export function InspectorPanel({
       [field]: value,
     });
   };
+
+  // Inline input validation states
+  const hasErrors = nodeIssues && nodeIssues.length > 0;
 
   return (
     <div className="w-full bg-[var(--ws-rail)] flex flex-col h-full text-xs">
@@ -76,6 +95,26 @@ export function InspectorPanel({
           </div>
         </div>
 
+        {/* Node Health / Issues Status Banner */}
+        {hasErrors ? (
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
+              <AlertTriangle className="size-3.5 text-amber-400 shrink-0" />
+              <span>Configuration Issues ({nodeIssues.length})</span>
+            </div>
+            <ul className="space-y-1 text-[11px] text-amber-200/90 pl-4 list-disc font-sans">
+              {nodeIssues.map((issue) => (
+                <li key={issue.id}>{issue.message}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-[11px] text-emerald-300">
+            <CheckCircle2 className="size-3.5 text-emerald-400 shrink-0" />
+            <span>Node parameters & ports are valid</span>
+          </div>
+        )}
+
         {/* 1. Watch DEX Price */}
         {type === 'watchDEXPrice' && (
           <div className="space-y-3">
@@ -104,8 +143,18 @@ export function InspectorPanel({
                 type="text"
                 value={String(data.pairAddress || '')}
                 onChange={(e) => handleChange('pairAddress', e.target.value)}
-                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 font-mono text-[11px] text-slate-200 focus:outline-none focus:border-violet-500"
+                placeholder="0xUniswapV2Pair..."
+                className={`w-full bg-[#07080D] border rounded-xl p-2.5 font-mono text-[11px] focus:outline-none ${
+                  !data.pairAddress && !data.pairLabel
+                    ? 'border-rose-500/60 bg-rose-950/20 text-rose-200 focus:border-rose-500'
+                    : 'border-white/[0.08] text-slate-200 focus:border-violet-500'
+                }`}
               />
+              {!data.pairAddress && !data.pairLabel && (
+                <span className="flex items-center gap-1 text-[11px] text-rose-400 mt-1 font-mono">
+                  <AlertCircle className="size-3 shrink-0" /> Pair contract address is required
+                </span>
+              )}
             </div>
 
             <div>
@@ -130,7 +179,99 @@ export function InspectorPanel({
           </div>
         )}
 
-        {/* 1b. Custom Event Watcher (Node #11) */}
+        {/* 1b. Watch Transfers (Node #2) */}
+        {type === 'watchTransfers' && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-slate-400 mb-1 font-medium">Target Wallet</label>
+              <input
+                type="text"
+                value={String(data.targetWallet || 'Connected Wallet')}
+                onChange={(e) => handleChange('targetWallet', e.target.value)}
+                placeholder="Connected Wallet or 0x..."
+                className={`w-full bg-[#07080D] border rounded-xl p-2.5 font-mono text-[11px] focus:outline-none ${
+                  Boolean(data.targetWallet && data.targetWallet !== 'Connected Wallet' && !isAddress(String(data.targetWallet)))
+                    ? 'border-rose-500/60 bg-rose-950/20 text-rose-200 focus:border-rose-500'
+                    : 'border-white/[0.08] text-slate-200 focus:border-violet-500'
+                }`}
+              />
+              {Boolean(data.targetWallet && data.targetWallet !== 'Connected Wallet' && !isAddress(String(data.targetWallet))) && (
+                <span className="flex items-center gap-1 text-[11px] text-rose-400 mt-1 font-mono">
+                  <AlertCircle className="size-3 shrink-0" /> Target must be a valid 0x address or &quot;Connected Wallet&quot;
+                </span>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-slate-400 mb-1 font-medium">Token Tracked</label>
+              <input
+                type="text"
+                value={String(data.tokenAddress || 'Native ETH')}
+                onChange={(e) => handleChange('tokenAddress', e.target.value)}
+                placeholder="Native ETH or 0xToken..."
+                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 font-mono text-[11px] text-slate-200 focus:outline-none focus:border-violet-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-400 mb-1 font-medium">Direction</label>
+              <select
+                value={String(data.direction || 'Outgoing')}
+                onChange={(e) => handleChange('direction', e.target.value)}
+                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 text-white focus:outline-none focus:border-violet-500"
+              >
+                <option value="Incoming">Incoming Deposits</option>
+                <option value="Outgoing">Outgoing Withdrawals</option>
+                <option value="Both">Both (Incoming & Outgoing)</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* 1c. Periodic Cron (Node #3) */}
+        {type === 'periodicCron' && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-slate-400 mb-1 font-medium">Interval Frequency</label>
+              <input
+                type="number"
+                min="1"
+                value={Number(data.intervalValue ?? 1)}
+                onChange={(e) => handleChange('intervalValue', parseInt(e.target.value))}
+                className={`w-full bg-[#07080D] border rounded-xl p-2.5 font-bold text-white text-sm focus:outline-none tabular-nums font-mono ${
+                  !data.intervalValue || Number(data.intervalValue) <= 0
+                    ? 'border-rose-500/60 bg-rose-950/20 text-rose-200 focus:border-rose-500'
+                    : 'border-white/[0.08] focus:border-violet-500'
+                }`}
+              />
+              {(!data.intervalValue || Number(data.intervalValue) <= 0) && (
+                <span className="flex items-center gap-1 text-[11px] text-rose-400 mt-1 font-mono">
+                  <AlertCircle className="size-3 shrink-0" /> Interval must be greater than zero
+                </span>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-slate-400 mb-1 font-medium">Unit</label>
+              <select
+                value={String(data.intervalUnit || 'Hours')}
+                onChange={(e) => handleChange('intervalUnit', e.target.value)}
+                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 text-white focus:outline-none focus:border-violet-500"
+              >
+                <option value="Minutes">Minutes</option>
+                <option value="Hours">Hours</option>
+                <option value="Days">Days</option>
+              </select>
+            </div>
+
+            <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-[11px] text-cyan-200 flex gap-2">
+              <Clock className="w-4 h-4 shrink-0 text-cyan-400 mt-0.5" />
+              <span>Uses CometBFT consensus block ticks on Reactive Omni Lasna to trigger autonomous executions.</span>
+            </div>
+          </div>
+        )}
+
+        {/* 1d. Custom Event Watcher (Node #11) */}
         {type === 'customEventWatcher' && (
           <div className="space-y-3">
             <div>
@@ -140,8 +281,17 @@ export function InspectorPanel({
                 value={String(data.contractAddress || '')}
                 onChange={(e) => handleChange('contractAddress', e.target.value)}
                 placeholder="0xContractAddress..."
-                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 font-mono text-[11px] text-slate-200 focus:outline-none focus:border-violet-500"
+                className={`w-full bg-[#07080D] border rounded-xl p-2.5 font-mono text-[11px] focus:outline-none ${
+                  Boolean(!data.contractAddress || !isAddress(String(data.contractAddress)))
+                    ? 'border-rose-500/60 bg-rose-950/20 text-rose-200 focus:border-rose-500'
+                    : 'border-white/[0.08] text-slate-200 focus:border-violet-500'
+                }`}
               />
+              {Boolean(!data.contractAddress || !isAddress(String(data.contractAddress))) && (
+                <span className="flex items-center gap-1 text-[11px] text-rose-400 mt-1 font-mono">
+                  <AlertCircle className="size-3 shrink-0" /> Valid 0x contract address is required
+                </span>
+              )}
             </div>
 
             <div>
@@ -160,7 +310,11 @@ export function InspectorPanel({
                   }
                 }}
                 placeholder="Transfer(address,address,uint256)"
-                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 font-mono text-[11px] text-cyan-300 focus:outline-none focus:border-violet-500"
+                className={`w-full bg-[#07080D] border rounded-xl p-2.5 font-mono text-[11px] text-cyan-300 focus:outline-none ${
+                  !data.eventName || !String(data.eventName).trim()
+                    ? 'border-rose-500/60 bg-rose-950/20 focus:border-rose-500'
+                    : 'border-white/[0.08] focus:border-violet-500'
+                }`}
               />
               <span className="text-[11px] text-slate-500 mt-1 block font-mono">
                 Topic 0: {String(data.topic0 || 'Enter signature to compute')}
@@ -204,9 +358,18 @@ export function InspectorPanel({
                   type="number"
                   value={Number(data.thresholdPriceUSD ?? 1800)}
                   onChange={(e) => handleChange('thresholdPriceUSD', parseFloat(e.target.value))}
-                  className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl pl-8 pr-3 py-2.5 font-bold text-white text-sm focus:outline-none focus:border-violet-500 tabular-nums font-mono"
+                  className={`w-full bg-[#07080D] border rounded-xl pl-8 pr-3 py-2.5 font-bold text-white text-sm focus:outline-none tabular-nums font-mono ${
+                    data.thresholdPriceUSD === undefined || Number(data.thresholdPriceUSD) <= 0 || isNaN(Number(data.thresholdPriceUSD))
+                      ? 'border-rose-500/60 bg-rose-950/20 focus:border-rose-500'
+                      : 'border-white/[0.08] focus:border-violet-500'
+                  }`}
                 />
               </div>
+              {(data.thresholdPriceUSD === undefined || Number(data.thresholdPriceUSD) <= 0 || isNaN(Number(data.thresholdPriceUSD))) && (
+                <span className="flex items-center gap-1 text-[11px] text-rose-400 mt-1 font-mono">
+                  <AlertCircle className="size-3 shrink-0" /> Price must be a positive number greater than $0
+                </span>
+              )}
             </div>
 
             {/* Quick Price Presets */}
@@ -283,6 +446,56 @@ export function InspectorPanel({
           </div>
         )}
 
+        {/* 2c. Balance Threshold (Node #6) */}
+        {type === 'balanceThreshold' && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-slate-400 mb-1 font-medium">Account Inspected</label>
+              <select
+                value={String(data.targetAccount || 'ActionVault')}
+                onChange={(e) => handleChange('targetAccount', e.target.value)}
+                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 text-white focus:outline-none focus:border-violet-500"
+              >
+                <option value="ActionVault">ActionVault Collateral</option>
+                <option value="ConnectedWallet">Connected EOA Wallet</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-400 mb-1 font-medium">Comparison Rule</label>
+              <select
+                value={String(data.comparison || 'Above')}
+                onChange={(e) => handleChange('comparison', e.target.value)}
+                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 text-white focus:outline-none focus:border-violet-500"
+              >
+                <option value="Above">Balance &gt;= Target (Dust Guard / Solvent)</option>
+                <option value="Below">Balance &lt; Target (Low Balance Warning)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-400 mb-1 font-medium">Threshold Amount (ETH)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.001"
+                value={Number(data.thresholdAmount ?? 0.05)}
+                onChange={(e) => handleChange('thresholdAmount', parseFloat(e.target.value))}
+                className={`w-full bg-[#07080D] border rounded-xl p-2.5 font-bold text-white text-sm focus:outline-none tabular-nums font-mono ${
+                  !data.thresholdAmount || Number(data.thresholdAmount) <= 0
+                    ? 'border-rose-500/60 bg-rose-950/20 text-rose-200 focus:border-rose-500'
+                    : 'border-white/[0.08] focus:border-violet-500'
+                }`}
+              />
+              {(!data.thresholdAmount || Number(data.thresholdAmount) <= 0) && (
+                <span className="flex items-center gap-1 text-[11px] text-rose-400 mt-1 font-mono">
+                  <AlertCircle className="size-3 shrink-0" /> Threshold amount must be greater than 0
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 3. Cooldown Guard */}
         {type === 'cooldownGuard' && (
           <div className="space-y-3">
@@ -290,10 +503,20 @@ export function InspectorPanel({
               <label className="block text-slate-400 mb-1 font-medium">Cooldown Duration (Seconds)</label>
               <input
                 type="number"
+                min="0"
                 value={Number(data.cooldownSeconds ?? 300)}
                 onChange={(e) => handleChange('cooldownSeconds', parseInt(e.target.value))}
-                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 font-bold text-white text-sm focus:outline-none focus:border-violet-500 tabular-nums font-mono"
+                className={`w-full bg-[#07080D] border rounded-xl p-2.5 font-bold text-white text-sm focus:outline-none tabular-nums font-mono ${
+                  data.cooldownSeconds !== undefined && Number(data.cooldownSeconds) < 0
+                    ? 'border-rose-500/60 bg-rose-950/20 text-rose-200 focus:border-rose-500'
+                    : 'border-white/[0.08] focus:border-violet-500'
+                }`}
               />
+              {data.cooldownSeconds !== undefined && Number(data.cooldownSeconds) < 0 && (
+                <span className="flex items-center gap-1 text-[11px] text-rose-400 mt-1 font-mono">
+                  <AlertCircle className="size-3 shrink-0" /> Cooldown cannot be negative
+                </span>
+              )}
             </div>
 
             {/* Quick Cooldown Presets */}
@@ -405,6 +628,7 @@ export function InspectorPanel({
                 type="text"
                 value={String(data.actionVaultAddress || '')}
                 onChange={(e) => handleChange('actionVaultAddress', e.target.value)}
+                placeholder="0xActionVaultAddress..."
                 className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 font-mono text-[11px] text-slate-200 focus:outline-none focus:border-violet-500"
               />
             </div>
@@ -458,8 +682,17 @@ export function InspectorPanel({
                 value={String(data.safeAddress || '')}
                 onChange={(e) => handleChange('safeAddress', e.target.value)}
                 placeholder="0xColdSafe..."
-                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 font-mono text-[11px] text-slate-200 focus:outline-none focus:border-violet-500"
+                className={`w-full bg-[#07080D] border rounded-xl p-2.5 font-mono text-[11px] focus:outline-none ${
+                  Boolean(!data.safeAddress || !isAddress(String(data.safeAddress)))
+                    ? 'border-rose-500/60 bg-rose-950/20 text-rose-200 focus:border-rose-500'
+                    : 'border-white/[0.08] text-slate-200 focus:border-violet-500'
+                }`}
               />
+              {Boolean(!data.safeAddress || !isAddress(String(data.safeAddress))) && (
+                <span className="flex items-center gap-1 text-[11px] text-rose-400 mt-1 font-mono">
+                  <AlertCircle className="size-3 shrink-0" /> Valid cold multi-sig address is required
+                </span>
+              )}
             </div>
             <div>
               <label className="block text-slate-400 mb-1 font-medium">Asset Scope</label>
@@ -484,8 +717,18 @@ export function InspectorPanel({
                 type="text"
                 value={String(data.alertTitle || '')}
                 onChange={(e) => handleChange('alertTitle', e.target.value)}
-                className="w-full bg-[#07080D] border border-white/[0.08] rounded-xl p-2.5 text-white focus:outline-none focus:border-violet-500"
+                placeholder="Alert Message..."
+                className={`w-full bg-[#07080D] border rounded-xl p-2.5 text-white focus:outline-none ${
+                  !data.alertTitle || !String(data.alertTitle).trim()
+                    ? 'border-rose-500/60 bg-rose-950/20 focus:border-rose-500'
+                    : 'border-white/[0.08] focus:border-violet-500'
+                }`}
               />
+              {(!data.alertTitle || !String(data.alertTitle).trim()) && (
+                <span className="flex items-center gap-1 text-[11px] text-rose-400 mt-1 font-mono">
+                  <AlertCircle className="size-3 shrink-0" /> Alert title cannot be empty
+                </span>
+              )}
             </div>
             <div>
               <label className="block text-slate-400 mb-1 font-medium">Severity Level</label>

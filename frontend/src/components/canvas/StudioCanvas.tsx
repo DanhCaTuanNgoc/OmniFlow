@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef, useEffect, useLayoutEffect, Suspense } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -62,7 +62,13 @@ import {
   Download,
   Upload,
   FlaskConical,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  LayoutGrid,
+  AlertCircle,
 } from 'lucide-react';
+import { lintPipelineGraph, autoLayoutGraph, type PipelineIssue } from '@/lib/pipelineLint';
 
 // STABLE DEFINITIONS OUTSIDE COMPONENT SCOPE (Mandatory for XYFlow performance)
 const nodeTypes: NodeTypes = {
@@ -112,6 +118,7 @@ function StudioCanvasInner() {
   const [simulationMessage, setSimulationMessage] = useState<string | null>(null);
   const simTimersRef = useRef<NodeJS.Timeout[]>([]);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [savedDraft, setSavedDraft] = useState<{ id: string; updatedAt: number }>();
   const [draftMessage, setDraftMessage] = useState<string>();
   const [draftBusy, setDraftBusy] = useState(false);
@@ -153,6 +160,33 @@ function StudioCanvasInner() {
     ? null : searchParams.get('recipe');
   const isSnapshot = Boolean(deploymentParam);
   const draftName = pipelineName.trim() || RECIPE_PRESETS[activeRecipeId]?.title || 'Custom pipeline';
+
+  const lintResult = useMemo(() => lintPipelineGraph(nodes, edges), [nodes, edges]);
+  const annotatedNodes = useMemo(() => {
+    return nodes.map((n) => {
+      const issues = lintResult.nodeIssues.get(n.id);
+      const isOrphan = lintResult.isOrphanMap.get(n.id) ?? false;
+      const firstWarning = issues?.[0]?.message ?? null;
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          warning: firstWarning,
+          isOrphan,
+        },
+      };
+    });
+  }, [nodes, lintResult]);
+
+  const handleAutoLayout = useCallback(() => {
+    if (isSnapshot) return;
+    const arranged = autoLayoutGraph(nodes);
+    setNodes(arranged);
+    markDirty();
+    setTimeout(() => {
+      reactFlowInstance?.fitView({ padding: 0.2, duration: 400 });
+    }, 50);
+  }, [nodes, isSnapshot, setNodes, markDirty, reactFlowInstance]);
 
   const { setStudioHeader, clearStudioHeader } = useStudioHeaderStore();
 
@@ -670,6 +704,13 @@ function StudioCanvasInner() {
       setValidationWarning('Save this revision to your wallet workspace before deploying.');
       return;
     }
+    if (!lintResult.canDeploy) {
+      const topError = lintResult.errors[0]?.message || 'Please resolve all highlighted configuration errors before deploying.';
+      setValidationWarning(topError);
+      setShowDiagnostics(true);
+      setTimeout(() => setValidationWarning(null), 6000);
+      return;
+    }
     try {
       const graph = { nodes, edges, networks: draftNetworks };
       if (phaseTwo) {
@@ -790,6 +831,39 @@ function StudioCanvasInner() {
               <span>Export</span>
             </button>
 
+            {/* Auto-Arrange Layout */}
+            <button
+              type="button"
+              className="ws-button inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white"
+              onClick={handleAutoLayout}
+              disabled={!nodes.length || isSnapshot}
+              title="Automatically arrange nodes cleanly into columns"
+            >
+              <LayoutGrid className="size-3.5 text-zinc-400" aria-hidden="true" />
+              <span className="hidden sm:inline">Auto-Arrange</span>
+            </button>
+
+            {/* Pipeline Diagnostics Pill */}
+            {nodes.length > 0 && (
+              lintResult.allIssues.length === 0 ? (
+                <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                  <CheckCircle2 className="size-3.5 text-emerald-400" aria-hidden="true" />
+                  <span>Pipeline Valid</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowDiagnostics((prev) => !prev)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 transition-all cursor-pointer"
+                  title="Click to view all configuration issues"
+                >
+                  <AlertTriangle className="size-3.5 text-amber-400" aria-hidden="true" />
+                  <span>{lintResult.allIssues.length} {lintResult.allIssues.length === 1 ? 'Issue' : 'Issues'}</span>
+                  {showDiagnostics ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                </button>
+              )
+            )}
+
             <div className="h-4 w-px bg-white/10 hidden sm:block" />
 
             {/* Save draft */}
@@ -846,6 +920,60 @@ function StudioCanvasInner() {
           {draftMessage && <p role="status" className="w-full text-xs text-[var(--ws-muted)]">{draftMessage}</p>}
         </div>
 
+        {/* Collapsible Diagnostics Drawer */}
+        {showDiagnostics && lintResult.allIssues.length > 0 && (
+          <div className="border-b border-amber-500/25 bg-[#17120a] px-4 py-3 text-xs shrink-0">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 text-amber-300 font-semibold">
+                <AlertTriangle className="size-4 text-amber-400 shrink-0" />
+                <span>Pipeline Diagnostics ({lintResult.allIssues.length} {lintResult.allIssues.length === 1 ? 'issue' : 'issues'} found)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDiagnostics(false)}
+                className="text-zinc-400 hover:text-white text-xs px-2 py-0.5 rounded hover:bg-white/10 cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+              {lintResult.allIssues.map((issue) => (
+                <div
+                  key={issue.id}
+                  onClick={() => {
+                    if (issue.nodeId) {
+                      setSelectedNodeId(issue.nodeId);
+                      const targetNode = nodes.find(n => n.id === issue.nodeId);
+                      if (targetNode && reactFlowInstance) {
+                        reactFlowInstance.setCenter(targetNode.position.x + 140, targetNode.position.y + 70, { duration: 500, zoom: 1 });
+                      }
+                    }
+                  }}
+                  className={`flex items-start gap-2 p-2 rounded-lg border transition-all cursor-pointer ${
+                    issue.severity === 'error'
+                      ? 'bg-rose-950/20 border-rose-500/30 hover:bg-rose-950/40 text-rose-200'
+                      : 'bg-amber-950/20 border-amber-500/30 hover:bg-amber-950/40 text-amber-200'
+                  }`}
+                >
+                  {issue.severity === 'error' ? (
+                    <AlertCircle className="size-3.5 text-rose-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="size-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    {issue.nodeLabel && (
+                      <span className="font-semibold text-white mr-1.5 font-mono text-[11px]">
+                        [{issue.nodeLabel}]
+                      </span>
+                    )}
+                    <span>{issue.message}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Deployed Snapshot Banner (Section 7.1 & 7.2 of Operations Analysis) */}
         {isSnapshot && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 bg-indigo-950/40 border-b border-indigo-500/20 text-xs text-indigo-200">
@@ -883,7 +1011,7 @@ function StudioCanvasInner() {
               </p>
             )}
             <ReactFlow
-              nodes={nodes}
+              nodes={annotatedNodes}
               edges={edges}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
@@ -940,6 +1068,7 @@ function StudioCanvasInner() {
                 onUpdateNodeData={handleUpdateNodeData}
                 onDeleteNode={handleDeleteNode}
                 onClose={() => setSelectedNodeId(null)}
+                nodeIssues={selectedNode ? lintResult.nodeIssues.get(selectedNode.id) : undefined}
               />
             </div>
           )}

@@ -3,6 +3,7 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { VisualNodeState, NodeCategory } from '@/types/canvas';
+import { AlertTriangle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NodeCardProps {
@@ -17,6 +18,8 @@ interface NodeCardProps {
   hasTargetHandle?: boolean;
   hasSourceHandle?: boolean;
   targetHandles?: { id: string; label: string; topPercent?: number }[];
+  warning?: string | null;
+  isOrphan?: boolean;
 }
 
 const CATEGORY_THEME: Record<NodeCategory, {
@@ -125,6 +128,8 @@ export function NodeCard({
   hasSourceHandle = false,
   targetHandles,
   selected = false,
+  warning = null,
+  isOrphan = false,
 }: NodeCardProps) {
   const cat = CATEGORY_THEME[category];
   const st = STATE_CONFIG[state] ?? STATE_CONFIG.IDLE;
@@ -132,11 +137,15 @@ export function NodeCard({
   return (
     <div
       className={cn(
-        'relative w-72 rounded-xl bg-[var(--ws-panel)] border border-[var(--ws-border)] select-none transition-all duration-150 shadow-lg shadow-black/30',
+        'relative w-72 rounded-xl bg-[var(--ws-panel)] border select-none transition-all duration-150 shadow-lg shadow-black/30',
         cat.accentBorder,
-        selected
+        isOrphan || warning
+          ? isOrphan
+            ? 'border-amber-500/50 shadow-amber-500/10'
+            : 'border-rose-500/50 shadow-rose-500/10'
+          : selected
           ? 'ring-2 ring-[var(--ws-accent)] border-transparent'
-          : 'hover:border-white/20'
+          : 'border-[var(--ws-border)] hover:border-white/20'
       )}
     >
       {/* Target Handle(s) on Left */}
@@ -177,20 +186,47 @@ export function NodeCard({
           </div>
         </div>
 
-        <span
-          className={cn(
-            'text-[9.5px] uppercase font-mono font-semibold px-1.5 py-0.5 rounded border tracking-wider shrink-0',
-            cat.badge
-          )}
-        >
-          {cat.label}
-        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          {isOrphan ? (
+            <span
+              className="inline-flex items-center gap-1 text-[9.5px] font-mono font-medium px-1.5 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-300"
+              title={warning ?? 'Node is disconnected from the pipeline'}
+            >
+              <AlertTriangle className="size-2.5 text-amber-400" />
+              Unconnected
+            </span>
+          ) : warning ? (
+            <span
+              className="inline-flex items-center gap-1 text-[9.5px] font-mono font-medium px-1.5 py-0.5 rounded border border-rose-500/30 bg-rose-500/10 text-rose-300"
+              title={warning}
+            >
+              <AlertCircle className="size-2.5 text-rose-400" />
+              Incomplete
+            </span>
+          ) : null}
+          <span
+            className={cn(
+              'text-[9.5px] uppercase font-mono font-semibold px-1.5 py-0.5 rounded border tracking-wider',
+              cat.badge
+            )}
+          >
+            {cat.label}
+          </span>
+        </div>
       </div>
 
       {/* Card Body */}
       {children && (
         <div className="px-3.5 py-2.5 space-y-1.5 text-xs">
           {children}
+        </div>
+      )}
+
+      {/* Warning Alert Banner */}
+      {warning && (
+        <div className="px-3 py-1.5 bg-amber-500/10 border-t border-amber-500/20 text-[10.5px] text-amber-300 flex items-center gap-1.5 leading-snug">
+          <AlertTriangle className="size-3 text-amber-400 shrink-0" />
+          <span className="truncate">{warning}</span>
         </div>
       )}
 

@@ -23,6 +23,8 @@ function EmergencySafeSweepNodeComponent({ id, data, selected }: NodeProps) {
       icon={<ShieldCheck className="size-4" />}
       hasSourceHandle={false}
       hasTargetHandle={true}
+      warning={nodeData.warning}
+      isOrphan={nodeData.isOrphan}
     >
       <div className="flex items-center justify-between py-0.5">
         <span className="text-[11px] text-[var(--ws-muted)]">Safe Destination:</span>
