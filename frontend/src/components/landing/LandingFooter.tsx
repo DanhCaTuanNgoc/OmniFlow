@@ -49,7 +49,7 @@ export default function LandingFooter() {
             </p>
             <div className="footer-hackathon-badge">
               <span className="pulse-dot green" />
-              <span>Reactive Omni Buildathon · Set It and Forget It Track</span>
+              <span>Set It and Forget It Track</span>
             </div>
           </div>
 
