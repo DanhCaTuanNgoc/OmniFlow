@@ -11,7 +11,7 @@ export interface PipelineItem {
   description?: string;
   updatedAt: number;
   source: 'local' | 'wallet' | 'recipe';
-  status?: 'draft' | 'deployed' | 'pending' | 'archived';
+  status?: 'draft' | 'deployed' | 'pending' | 'failed' | 'archived';
   hasDraft?: boolean;
   deployment?: DeploymentSummary;
   nodeCount?: number;
@@ -25,9 +25,9 @@ export interface PipelineItem {
 export interface PipelineCardProps {
   pipeline: PipelineItem;
   onOpen: (pipeline: PipelineItem) => void;
-  onRename: (pipeline: PipelineItem) => void;
+  onRename?: (pipeline: PipelineItem) => void;
   onDuplicate: (pipeline: PipelineItem) => void;
-  onDelete: (pipeline: PipelineItem) => void;
+  onDelete?: (pipeline: PipelineItem) => void;
   onExport: (pipeline: PipelineItem) => void;
   onArchive?: (pipeline: PipelineItem) => void;
 }
@@ -45,19 +45,12 @@ export function PipelineCard({
   const isRecipe = pipeline.source === 'recipe';
 
   const getSourceBadge = () => {
-    if (pipeline.hasDraft && pipeline.deployment) {
+    if (pipeline.deployment) {
+      const deploymentLabel = pipeline.status === 'deployed' ? 'Deployed' : pipeline.status === 'failed' ? 'Reverted' : 'Awaiting receipt';
       return (
-        <span className="inline-flex items-center gap-1 rounded bg-teal-500/10 border border-teal-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300">
-          <Radio className="size-2.5 animate-pulse" />
-          <span>DRAFT + LIVE V1</span>
-        </span>
-      );
-    }
-    if (pipeline.status === 'deployed') {
-      return (
-        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
-          <Radio className="size-2.5 text-emerald-400" />
-          <span>LIVE V1</span>
+        <span className="inline-flex items-center gap-1 rounded border border-[var(--ws-border)] px-1.5 py-0.5 text-[10px] font-semibold text-zinc-200">
+          <Radio className="size-2.5" />
+          <span>{pipeline.hasDraft ? 'Draft · ' : ''}{deploymentLabel}</span>
         </span>
       );
     }
@@ -109,7 +102,7 @@ export function PipelineCard({
       tabIndex={0}
       onClick={() => onOpen(pipeline)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault();
           onOpen(pipeline);
         }
@@ -130,10 +123,11 @@ export function PipelineCard({
 
         {/* 3-dots kebab menu */}
         <PipelineKebabMenu
-          onRename={() => onRename(pipeline)}
+          onRename={onRename ? () => onRename(pipeline) : undefined}
+          renameLabel={isWallet ? 'Rename pipeline' : undefined}
           onDuplicate={() => onDuplicate(pipeline)}
           onExport={() => onExport(pipeline)}
-          onDelete={() => onDelete(pipeline)}
+          onDelete={onDelete ? () => onDelete(pipeline) : undefined}
           onArchive={onArchive ? () => onArchive(pipeline) : undefined}
           isArchived={pipeline.isArchived}
           canDelete={pipeline.source !== 'recipe'}

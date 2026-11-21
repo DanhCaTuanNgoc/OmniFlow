@@ -62,6 +62,7 @@ export function PipelineStudioHub() {
   const [walletError, setWalletError] = useState<string>();
   const [reload, setReload] = useState(0);
   const session = useRef<AbortController>();
+  const actionInFlight = useRef(false);
   useLayoutEffect(() => {
     const controller = new AbortController();
     session.current = controller;
@@ -233,11 +234,18 @@ export function PipelineStudioHub() {
     }
 
     // Wallet drafts & deployments (grouped by workspacePipelineId per Section 7.2)
-    const processedDepIds = new Set<string>();
+    const latest = new Map<string, DeploymentSummary>();
+    for (const dep of walletDeployments) {
+      const id = dep.workspacePipelineId ?? dep.pipelineId;
+      const previous = latest.get(id);
+      if (!previous || dep.createdAt > previous.createdAt ||
+          (dep.createdAt === previous.createdAt && dep.pipelineId > previous.pipelineId)) latest.set(id, dep);
+    }
+    const processed = new Set<string>();
 
     for (const wDraft of walletDrafts) {
-      const matchingDep = walletDeployments.find((d) => d.workspacePipelineId === wDraft.id);
-      if (matchingDep) processedDepIds.add(matchingDep.pipelineId);
+      const matchingDep = latest.get(wDraft.id);
+      if (matchingDep) processed.add(wDraft.id);
 
       const isArchived = walletArchivedIds.includes(wDraft.id);
       const status: PipelineItem['status'] = matchingDep
@@ -245,15 +253,13 @@ export function PipelineStudioHub() {
           ? 'deployed'
           : matchingDep.status === 'signed'
           ? 'pending'
-          : 'draft'
+          : 'failed'
         : 'draft';
 
       items.push({
         id: wDraft.id,
         name: wDraft.name,
-        description: matchingDep
-          ? `Revision draft in progress · Running live on ${matchingDep.contracts.vaultChainId === 84532 ? 'Base Sepolia' : 'Chain'}.`
-          : 'Synchronized on-chain wallet workspace draft.',
+        description: matchingDep ? 'Saved draft with a deployment revision.' : undefined,
         updatedAt: wDraft.updatedAt,
         source: 'wallet',
         hasDraft: true,
@@ -264,23 +270,23 @@ export function PipelineStudioHub() {
     }
 
     // Standalone deployments that don't have a separate draft revision
-    for (const dep of walletDeployments) {
-      if (processedDepIds.has(dep.pipelineId)) continue;
-      const isArchived = walletArchivedIds.includes(dep.pipelineId);
+    for (const [id, dep] of latest) {
+      if (processed.has(id)) continue;
+      const isArchived = walletArchivedIds.includes(id) || walletArchivedIds.includes(dep.pipelineId);
       items.push({
-        id: dep.pipelineId,
+        id,
         name: dep.name,
         description: `Deployed RSC (${dep.contracts.rscAddress?.slice(0, 10)}...) on Lasna & ActionVault on Base Sepolia.`,
         updatedAt: dep.createdAt,
         source: 'wallet',
         hasDraft: false,
         deployment: dep,
-        status: dep.status === 'deployed' ? 'deployed' : dep.status === 'signed' ? 'pending' : 'draft',
+        status: dep.status === 'deployed' ? 'deployed' : dep.status === 'signed' ? 'pending' : 'failed',
         isArchived,
       });
     }
 
-    return items;
+    return items.sort((a, b) => b.updatedAt - a.updatedAt);
   }, [localDrafts, walletDrafts, walletDeployments, walletArchivedIds]);
 
   // Filtered pipelines based on search and status
@@ -318,99 +324,128 @@ export function PipelineStudioHub() {
     }
   };
 
-  const handleCreateBlank = (name: string) => {
-    const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
-    saveBrowserDraft(newId, name, { nodes: [], edges: [] });
-    refreshLocalDrafts();
-    router.push(`/workspace/studio?local=${encodeURIComponent(newId)}`);
-  };
+  async function runAction(action: (signal: AbortSignal) => Promise<void>) {
+    const signal = session.current?.signal;
+    if (!signal || signal.aborted || actionInFlight.current) return;
+    actionInFlight.current = true;
+    setImportError(null);
+    try {
+      await action(signal);
+    } catch (error) {
+      if (!signal.aborted) setImportError(error instanceof Error ? error.message : 'Pipeline action failed.');
+    } finally {
+      actionInFlight.current = false;
+    }
+  }
+
+  function storeWalletDraft(name: string, graph: ReturnType<typeof studioGraph>, signal: AbortSignal,
+      revision?: { id: string; updatedAt: number }) {
+    if (!address) throw new Error('Connect the workspace wallet.');
+    return workspaceRequest<{ id: string; updatedAt: number }>(address, '/pipeline/drafts', {
+      method: 'POST', signal,
+      body: JSON.stringify({ graph: { ...graph, networks: graph.networks ?? STOP_LOSS_TEMPLATE.networks,
+        metadata: { name, ownerAddress: address } }, revision }),
+    });
+  }
+
+  async function readPipeline(item: PipelineItem, signal: AbortSignal): Promise<{ graph: unknown; updatedAt?: number }> {
+    if (item.source === 'local') return { graph: item.graph };
+    if (!address) throw new Error('Connect the workspace wallet.');
+    const path = item.hasDraft ? 'drafts/' + encodeURIComponent(item.id)
+      : 'deployments/' + encodeURIComponent(item.deployment!.pipelineId);
+    return workspaceRequest(address, '/pipeline/' + path, { signal });
+  }
+
+  function createPipeline(name: string, graph: ReturnType<typeof studioGraph>, description?: string) {
+    return runAction(async signal => {
+      if (isConnected && address) {
+        const result = await storeWalletDraft(name, graph, signal);
+        if (!signal.aborted) router.push('/workspace/studio?pipeline=' + encodeURIComponent(result.id));
+      } else {
+        const id = crypto.randomUUID();
+        saveBrowserDraft(id, name, graph, description);
+        refreshLocalDrafts();
+        router.push('/workspace/studio?local=' + encodeURIComponent(id));
+      }
+    });
+  }
+
+  const handleCreateBlank = (name: string) => void createPipeline(name, studioGraph([], []));
 
   const handleSelectRecipe = (recipeId: string) => {
     const preset = RECIPE_PRESETS[recipeId];
-    const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
-    const graph = preset ? { nodes: preset.nodes, edges: preset.edges } : { nodes: [], edges: [] };
-    saveBrowserDraft(newId, preset?.title || 'New Pipeline', graph, preset?.description);
+    if (preset) void createPipeline(preset.title, studioGraph(preset.nodes, preset.edges), preset.description);
+  };
+
+  const handleRenameSave = (name: string, description: string) => {
+    const item = renamingPipeline;
+    if (!item) return;
+    void runAction(async signal => {
+      if (item.source === 'local') {
+        renameBrowserDraft(item.id, name, description);
+        refreshLocalDrafts();
+      } else if (item.hasDraft) {
+        const snapshot = await readPipeline(item, signal);
+        if (signal.aborted) return;
+        if (snapshot.updatedAt !== item.updatedAt) throw new Error('The saved draft changed. Refresh the list and try again.');
+        const draft = parsePipelineDraft(JSON.stringify(snapshot.graph), draftNodeTypes);
+        await storeWalletDraft(name, studioGraph(draft.nodes, draft.edges, draft.networks), signal,
+          { id: item.id, updatedAt: item.updatedAt });
+        if (signal.aborted) return;
+        setReload(value => value + 1);
+      }
+      setRenamingPipeline(null);
+    });
+  };
+
+  const handleDuplicate = (item: PipelineItem) => void runAction(async signal => {
+    if (item.source === 'local') {
+      duplicateBrowserDraft(item.id);
+      refreshLocalDrafts();
+      return;
+    }
+    const { graph } = await readPipeline(item, signal);
+    if (signal.aborted) return;
+    const draft = parsePipelineDraft(JSON.stringify(graph), draftNodeTypes);
+    await storeWalletDraft(item.name + ' (Copy)', studioGraph(draft.nodes, draft.edges, draft.networks), signal);
+    if (!signal.aborted) setReload(value => value + 1);
+  });
+
+  const handleArchive = (item: PipelineItem) => void runAction(async () => {
+    archiveBrowserDraft(item.id, !item.isArchived);
     refreshLocalDrafts();
-    router.push(`/workspace/studio?local=${encodeURIComponent(newId)}`);
-  };
-
-  const handleRenameSave = (newName: string, newDescription: string) => {
-    if (!renamingPipeline) return;
-    if (renamingPipeline.source === 'local') {
-      renameBrowserDraft(renamingPipeline.id, newName, newDescription);
-      refreshLocalDrafts();
-    } else {
-      // If wallet draft, rename locally in state
-      setWalletDrafts((prev) =>
-        prev.map((d) => (d.id === renamingPipeline.id ? { ...d, name: newName } : d))
-      );
-    }
-    setRenamingPipeline(null);
-  };
-
-  const handleDuplicate = (pipeline: PipelineItem) => {
-    if (pipeline.source === 'local') {
-      duplicateBrowserDraft(pipeline.id);
-      refreshLocalDrafts();
-    } else if (pipeline.source === 'recipe' && pipeline.graph) {
-      const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
-      saveBrowserDraft(newId, `${pipeline.name} (Custom)`, pipeline.graph, pipeline.description);
-      refreshLocalDrafts();
-    }
-  };
-
-  const handleArchive = (pipeline: PipelineItem) => {
-    if (pipeline.source === 'local') {
-      archiveBrowserDraft(pipeline.id, !pipeline.isArchived);
-      refreshLocalDrafts();
-    } else if (pipeline.source === 'wallet' && address) {
-      const willArchive = !pipeline.isArchived;
-      const next = willArchive
-        ? [...walletArchivedIds, pipeline.id]
-        : walletArchivedIds.filter((id) => id !== pipeline.id);
-      setWalletArchivedIds(next);
-      localStorage.setItem(`omniflow.archived.pipelines.${address.toLowerCase()}`, JSON.stringify(next));
-    }
-  };
+  });
 
   const handleDeleteConfirm = () => {
-    if (!deletingPipeline) return;
-    if (deletingPipeline.source === 'local') {
+    if (deletingPipeline?.source !== 'local') return;
+    void runAction(async () => {
       deleteBrowserDraft(deletingPipeline.id);
       refreshLocalDrafts();
-    } else if (deletingPipeline.source === 'wallet') {
-      setWalletDrafts((prev) => prev.filter((d) => d.id !== deletingPipeline.id));
-    }
-    setDeletingPipeline(null);
+      setDeletingPipeline(null);
+    });
   };
 
-  const handleExport = (pipeline: PipelineItem) => {
-    if (pipeline.graph) {
-      exportDraftJson(pipeline.name, pipeline.graph);
-    } else {
-      // If wallet draft without graph in memory, open it first
-      handleOpenPipeline(pipeline);
-    }
-  };
+  const handleExport = (item: PipelineItem) => void runAction(async signal => {
+    const { graph } = await readPipeline(item, signal);
+    if (signal.aborted) return;
+    const draft = parsePipelineDraft(JSON.stringify(graph), draftNodeTypes);
+    exportDraftJson(item.name, { ...studioGraph(draft.nodes, draft.edges, draft.networks),
+      metadata: { name: item.name, description: draft.description ?? (item.source === 'local' ? item.description : undefined) } });
+  });
 
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    setImportError(null);
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) return;
-
+    const signal = session.current?.signal;
     try {
       if (file.size > 1_048_576) throw new Error('File size exceeds 1 MB.');
-      const text = await file.text();
-      const parsed = parsePipelineDraft(text, draftNodeTypes);
-      const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `import-${Date.now()}`;
-      const name = file.name.replace(/\.json$/i, '') || 'Imported Pipeline';
-      saveBrowserDraft(newId, name, { nodes: parsed.nodes, edges: parsed.edges, networks: parsed.networks });
-      refreshLocalDrafts();
-      router.push(`/workspace/studio?local=${encodeURIComponent(newId)}`);
-    } catch (err) {
-      setImportError(err instanceof Error ? err.message : 'Invalid Studio JSON file.');
-      setTimeout(() => setImportError(null), 5000);
+      const parsed = parsePipelineDraft(await file.text(), draftNodeTypes);
+      if (signal?.aborted) return;
+      const name = parsed.name?.trim() || file.name.replace(/\.json$/i, '') || 'Imported Pipeline';
+      await createPipeline(name, studioGraph(parsed.nodes, parsed.edges, parsed.networks), parsed.description);
+    } catch (error) {
+      if (!signal?.aborted) setImportError(error instanceof Error ? error.message : 'Invalid Studio JSON file.');
     }
   };
 
@@ -516,6 +551,10 @@ export function PipelineStudioHub() {
         </div>
       )}
 
+      {walletPending && <p role="status">Loading wallet pipelines...</p>}
+      {walletError && <div role="alert">{walletError} <button type="button" className="ws-button" onClick={() => setReload(value => value + 1)}>Retry</button></div>}
+      {localError && <p role="alert">Could not read browser drafts.</p>}
+
       {/* Toolbar: Search & Business Status Filter Tabs (All, Drafts, Active, Archived) */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-2.5">
         {/* Search Input */}
@@ -535,8 +574,8 @@ export function PipelineStudioHub() {
           {(
             [
               { key: 'ALL', label: `All (${unifiedPipelines.filter(p => !p.isArchived).length})` },
-              { key: 'DRAFTS', label: `Drafts (${unifiedPipelines.filter(p => p.status !== 'deployed' && !p.isArchived).length})` },
-              { key: 'ACTIVE', label: `Active (${unifiedPipelines.filter(p => p.status === 'deployed').length})` },
+              { key: 'DRAFTS', label: `Drafts (${unifiedPipelines.filter(p => (p.hasDraft || p.source === 'local') && !p.isArchived).length})` },
+              { key: 'ACTIVE', label: `Deployments (${unifiedPipelines.filter(p => p.deployment).length})` },
               { key: 'ARCHIVED', label: `Archived (${unifiedPipelines.filter(p => p.isArchived).length})` },
             ] as const
           ).map((tab) => (
@@ -564,15 +603,18 @@ export function PipelineStudioHub() {
               key={`${pipeline.source}-${pipeline.id}`}
               pipeline={pipeline}
               onOpen={handleOpenPipeline}
-              onRename={(item) => setRenamingPipeline(item)}
+              onRename={pipeline.source === 'local' || pipeline.hasDraft ? item => {
+                setImportError(null);
+                setRenamingPipeline(item);
+              } : undefined}
               onDuplicate={handleDuplicate}
-              onDelete={(item) => setDeletingPipeline(item)}
+              onDelete={pipeline.source === 'local' ? setDeletingPipeline : undefined}
               onExport={handleExport}
-              onArchive={handleArchive}
+              onArchive={pipeline.source === 'local' ? handleArchive : undefined}
             />
           ))}
         </div>
-      ) : (
+      ) : walletPending || walletError || localError ? null : (
         /* Empty State */
         <div className="rounded-xl border border-dashed border-[var(--ws-border)] bg-[var(--ws-panel)]/50 p-12 text-center space-y-4">
           <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-[var(--ws-accent-bg)] text-[var(--ws-accent)]">
@@ -636,6 +678,8 @@ export function PipelineStudioHub() {
           isOpen={!!renamingPipeline}
           currentName={renamingPipeline.name}
           currentDescription={renamingPipeline.description}
+          nameOnly={renamingPipeline.source === 'wallet'}
+          error={importError}
           onClose={() => setRenamingPipeline(null)}
           onSave={handleRenameSave}
         />

@@ -7,6 +7,8 @@ export interface RenamePipelineModalProps {
   isOpen: boolean;
   currentName: string;
   currentDescription?: string;
+  nameOnly?: boolean;
+  error?: string | null;
   onClose: () => void;
   onSave: (newName: string, newDescription: string) => void;
 }
@@ -15,6 +17,8 @@ export function RenamePipelineModal({
   isOpen,
   currentName,
   currentDescription = '',
+  nameOnly = false,
+  error,
   onClose,
   onSave,
 }: RenamePipelineModalProps) {
@@ -65,10 +69,10 @@ export function RenamePipelineModal({
             </div>
             <div>
               <h2 id="rename-pipeline-title" className="text-sm font-semibold tracking-tight">
-                Rename &amp; Notes
+                {nameOnly ? 'Rename pipeline' : 'Rename & Notes'}
               </h2>
               <p className="text-xs text-[var(--ws-muted)]">
-                Update pipeline title and description notes.
+                {nameOnly ? 'Update the saved draft name.' : 'Update pipeline title and description notes.'}
               </p>
             </div>
           </div>
@@ -101,7 +105,7 @@ export function RenamePipelineModal({
             />
           </div>
 
-          <div className="space-y-1.5">
+          {!nameOnly && <div className="space-y-1.5">
             <label htmlFor="pipeline-desc-input" className="block text-xs font-medium text-[var(--ws-muted)]">
               Description / Notes (Optional)
             </label>
@@ -114,7 +118,9 @@ export function RenamePipelineModal({
               placeholder="Add runbook notes or description for this pipeline..."
               className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-3 py-2 text-xs text-white placeholder-zinc-500 focus:border-[var(--ws-accent)] focus:outline-none focus:ring-0 resize-none"
             />
-          </div>
+          </div>}
+
+          {error && <p role="alert" className="text-xs text-rose-300">{error}</p>}
 
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--ws-border)]">
             <button

@@ -143,9 +143,11 @@ function StudioCanvasInner() {
   const [isDirty, setIsDirty] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
 
-  const pipelineParam = searchParams.get('pipeline');
   const deploymentParam = searchParams.get('deployment');
-  const localParam = searchParams.get('local');
+  const pipelineParam = searchParams.has('deployment') ? null : searchParams.get('pipeline');
+  const localParam = searchParams.has('deployment') || searchParams.has('pipeline') ? null : searchParams.get('local');
+  const recipeParam = ['deployment', 'pipeline', 'local'].some(key => searchParams.has(key))
+    ? null : searchParams.get('recipe');
   const isSnapshot = Boolean(deploymentParam);
   const draftName = pipelineName.trim() || RECIPE_PRESETS[activeRecipeId]?.title || 'Custom pipeline';
 
@@ -185,7 +187,7 @@ function StudioCanvasInner() {
 
   // Hydrate preset from query parameter ?recipe=...
   useEffect(() => {
-    const rId = searchParams?.get('recipe');
+    const rId = recipeParam;
     if (rId && RECIPE_PRESETS[rId]) {
       setActiveRecipeId(rId);
       setNodes(RECIPE_PRESETS[rId].nodes);
@@ -194,7 +196,7 @@ function StudioCanvasInner() {
       setSelectedNodeId(null);
       setIsDirty(false);
     }
-  }, [searchParams, setNodes, setEdges]);
+  }, [recipeParam, setNodes, setEdges]);
 
   useEffect(() => {
     if (!localParam) return;
@@ -245,12 +247,7 @@ function StudioCanvasInner() {
     setDraftBusy(true);
     setValidationWarning(null);
     try {
-      const watcher = nodes.find(node => node.type === 'watchDEXPrice');
-      const originChainId = watcher?.data.originChainId ?? watcher?.data.chainId;
-      const graph = studioGraph(nodes, edges, draftNetworks ?? {
-        ...STOP_LOSS_TEMPLATE.networks,
-        originChainId: typeof originChainId === 'number' ? originChainId : STOP_LOSS_TEMPLATE.networks.originChainId,
-      });
+      const graph = studioGraph(nodes, edges, draftNetworks);
       if (isConnected && address) {
         const result = await workspaceRequest<{ id: string; updatedAt: number }>(address, '/pipeline/drafts', {
           method: 'POST', body: JSON.stringify({
@@ -285,9 +282,7 @@ function StudioCanvasInner() {
     setDraftBusy(true);
     try {
       const v2Name = `${draftName} (Draft v2)`;
-      const graph = studioGraph(nodes, edges, draftNetworks ?? {
-        ...STOP_LOSS_TEMPLATE.networks,
-      });
+      const graph = studioGraph(nodes, edges, draftNetworks);
       if (isConnected && address) {
         const result = await workspaceRequest<{ id: string; updatedAt: number }>(address, '/pipeline/drafts', {
           method: 'POST',
@@ -595,7 +590,7 @@ function StudioCanvasInner() {
             data: { ...n.data, state: 'EVENT_CAPTURED' as const },
           };
         }
-        if (n.data.category === 'condition') {
+        if (n.data.category === 'condition' || n.data.category === 'logic') {
           return {
             ...n,
             data: { ...n.data, state: 'EVALUATING' as const },
@@ -620,7 +615,7 @@ function StudioCanvasInner() {
       setNodes((nds) =>
         nds.map((n) => {
         if (!path.nodes.has(n.id)) return n;
-          if (n.data.category === 'condition') {
+          if (n.data.category === 'condition' || n.data.category === 'logic') {
             return {
               ...n,
               data: { ...n.data, state: 'CONDITION_MET' as const },

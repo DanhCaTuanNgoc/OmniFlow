@@ -399,12 +399,12 @@ function DeploymentPanel({
   }
 
   const hasAuthorizedBefore = deployment.steps.some((s) => s.kind === 'authorization');
-  const isBaseRpcAvailable = runtime?.base !== null && runtime?.status !== 'unverified';
+  const isBaseRpcAvailable = Boolean(runtime?.base);
   const isAuthorized = Boolean(runtime?.base?.authorized);
   const isPaused = hasAuthorizedBefore && !isAuthorized && isBaseRpcAvailable;
 
   const label = isPaused
-    ? 'Automation paused by owner'
+    ? 'Vault execution paused'
     : runtime
     ? runtimeLabel[runtime.status]
     : status === 'reverted'
@@ -486,7 +486,7 @@ function DeploymentPanel({
     try {
       await setVaultRscAuthorization(owner, deployment, willAuthorize);
       setMessage({
-        text: willAuthorize ? 'Automation resumed. Vault execution permission restored.' : 'Automation paused. Vault execution permission revoked.',
+        text: willAuthorize ? 'Vault permission restored. Checking principal and reserves.' : 'Vault execution permission revoked.',
         error: false,
       });
       await reload();
@@ -631,7 +631,7 @@ function DeploymentPanel({
           </div>
           <p className="text-[11px] text-amber-200/80 leading-relaxed pl-6">
             The ActionVault on Base Sepolia has revoked execution permissions for this RSC.
-            <strong> Note:</strong> The RSC contract on Reactive Omni Lasna remains deployed and active, continuing to consume gas for event listening and evaluating until refueled or unsubscribed.
+            The RSC can still process events on Lasna and incur fees.
           </p>
         </div>
       )}

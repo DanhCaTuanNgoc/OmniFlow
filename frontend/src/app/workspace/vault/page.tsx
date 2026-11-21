@@ -822,7 +822,8 @@ function VaultForWallet({
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <p className="text-xs text-rose-200/80 leading-relaxed max-w-2xl">
-            Withdraw 100% of Vault ETH balance directly to your connected owner wallet on Base Sepolia with no delay.
+            Withdraw all native ETH from this Vault to its owner on Base Sepolia. Wait for the transaction receipt.
+            Existing RSC permissions stay in effect for future deposits.
           </p>
 
           <div className="shrink-0">

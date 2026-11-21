@@ -1,5 +1,5 @@
 import type { Edge, Node } from '@xyflow/react';
-import type { StopLossGraph } from '@omniflow/shared';
+import { STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 
 const localDraftsKey = 'omniflow.studio.drafts.v1';
 export type BrowserDraft = { id: string; name: string; description?: string; updatedAt: number; graph: unknown; isArchived?: boolean };
@@ -109,6 +109,8 @@ export function extractPipelineStats(graph: unknown): {
 }
 
 export function studioGraph(nodes: readonly Node[], edges: readonly Edge[], networks?: StopLossGraph['networks']) {
+  const watcher = nodes.find(node => node.type === 'watchDEXPrice');
+  const originChainId = watcher?.data.originChainId ?? watcher?.data.chainId;
   return {
     nodes: nodes.map(({ id, type, position, data }) => {
       const { state: _state, ...fields } = data;
@@ -116,7 +118,10 @@ export function studioGraph(nodes: readonly Node[], edges: readonly Edge[], netw
     }),
     edges: edges.map(({ id, source, target, sourceHandle, targetHandle }) =>
       ({ id, source, target, sourceHandle: sourceHandle ?? null, targetHandle: targetHandle ?? null })),
-    networks,
+    networks: networks ?? {
+      ...STOP_LOSS_TEMPLATE.networks,
+      originChainId: typeof originChainId === 'number' ? originChainId : STOP_LOSS_TEMPLATE.networks.originChainId,
+    },
   };
 }
 

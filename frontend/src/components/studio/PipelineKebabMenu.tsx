@@ -5,6 +5,7 @@ import { MoreVertical, Edit3, Copy, Download, Trash2, Archive, ArchiveRestore } 
 
 export interface PipelineKebabMenuProps {
   onRename?: () => void;
+  renameLabel?: string;
   onDuplicate?: () => void;
   onExport?: () => void;
   onDelete?: () => void;
@@ -15,6 +16,7 @@ export interface PipelineKebabMenuProps {
 
 export function PipelineKebabMenu({
   onRename,
+  renameLabel = 'Rename & Notes',
   onDuplicate,
   onExport,
   onDelete,
@@ -84,7 +86,7 @@ export function PipelineKebabMenu({
               className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 transition-colors hover:bg-white/5 hover:text-white"
             >
               <Edit3 className="size-3.5 text-[var(--ws-accent)]" />
-              <span>Rename & Notes</span>
+              <span>{renameLabel}</span>
             </button>
           )}
 

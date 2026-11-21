@@ -121,7 +121,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
 
   // Filter & Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SUCCESS' | 'PENDING' | 'FAILED'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SUCCESS' | 'PENDING' | 'FAILED' | 'SKIPPED'>('ALL');
 
   const load = useCallback(async () => {
     setPending(true);
@@ -220,7 +220,8 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
       // Status
       if (statusFilter === 'SUCCESS') return entry.status === 'SUCCESS';
       if (statusFilter === 'PENDING') return entry.status === 'PENDING' || entry.status === 'UNVERIFIED';
-      if (statusFilter === 'FAILED') return entry.status === 'FAILED' || entry.status === 'REORGED' || entry.status === 'SKIPPED';
+      if (statusFilter === 'FAILED') return entry.status === 'FAILED' || entry.status === 'REORGED';
+      if (statusFilter === 'SKIPPED') return entry.status === 'SKIPPED';
       return true;
     });
   }, [history?.logs, searchQuery, statusFilter]);
@@ -246,7 +247,8 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
               { key: 'ALL', label: `All (${history?.logs.length ?? 0})` },
               { key: 'SUCCESS', label: 'Executed' },
               { key: 'PENDING', label: 'Pending' },
-              { key: 'FAILED', label: 'Failed/Skipped' },
+              { key: 'FAILED', label: 'Failed' },
+              { key: 'SKIPPED', label: 'Skipped' },
             ] as const
           ).map((tab) => (
             <button

@@ -120,6 +120,9 @@ export function SolidityPreviewModal({ isOpen, onClose, nodes, edges, networks }
             </button>
           </div>
         </header>
+        {isPhaseTwoGraph({ nodes, edges, networks }) && (
+          <p className="px-4 pt-3 text-xs text-amber-200">Phase 2 preview is available. Deployment requires the versioned Vault setup.</p>
+        )}
         {preview.error ? <p role="alert" className="p-4 text-sm text-amber-200">{preview.error}</p> : (
           <pre className="overflow-auto p-4 text-xs leading-relaxed"><code>{preview.text}</code></pre>
         )}

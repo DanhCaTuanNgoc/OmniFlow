@@ -39,6 +39,9 @@ function StudioRoute() {
   if (privateGraph && !owner) {
     return <WorkspaceState title="Connect the workspace wallet to open this pipeline." />;
   }
+  if (source && ['deployment', 'pipeline', 'local'].includes(source) && !params.get(source)?.trim()) {
+    return <WorkspaceState title="This pipeline link is missing an ID." />;
+  }
   if (source) {
     return (
       <div className="h-full w-full">

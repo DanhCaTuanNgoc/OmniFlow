@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import { 
   Rocket, 
@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useAccount, useConfig } from 'wagmi';
 import { getAccount, readContract } from 'wagmi/actions';
-import { isAddressEqual, keccak256, stringToHex, type Address } from 'viem';
+import { formatEther, isAddressEqual, keccak256, stringToHex, type Address } from 'viem';
 import { APP_CONFIG } from '@/lib/constants';
 import { ACTION_VAULT_ABI, resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { truncateAddress } from '@/lib/utils';
@@ -44,11 +44,13 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
   const [isAuthPending, setAuthPending] = useState(false);
   const [deployOwner, setDeployOwner] = useState<Address>();
   const [authSuccess, setAuthSuccess] = useState(false);
+  const attemptStorageKey = useRef<string>();
 
   if (!isOpen) return null;
   if (deployOwner && (!userAddress || !isConnected || !isAddressEqual(deployOwner, userAddress))) {
     return null;
   }
+  const params = resolveStopLoss(graph);
 
   const handleDeploy = async () => {
     try {
@@ -85,6 +87,7 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
 
       const body = JSON.stringify(payload);
       const storageKey = `omniflow.deploy.v1.${keccak256(stringToHex(`${workspacePipelineId ?? ''}:${body}`))}`;
+      attemptStorageKey.current = storageKey;
       let attemptKey = localStorage.getItem(storageKey);
       if (!attemptKey) {
         attemptKey = crypto.randomUUID();
@@ -108,12 +111,8 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
       }
 
       const data: DeploymentResult = await res.json();
-      if (data.status === 'signed') {
-        throw new Error(`Waiting for Lasna receipt ${data.contracts.rscTxHash}. Select Deploy again to check the same transaction.`);
-      }
       if (data.status === 'reverted') {
-        localStorage.removeItem(storageKey);
-        throw new Error(`Lasna deployment reverted: ${data.contracts.rscTxHash}.`);
+        setError('The Lasna deployment reverted. Check the transaction before deploying again.');
       }
       setDeployResult(data);
     } catch (err) {
@@ -178,6 +177,9 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
                 <span className="text-slate-400">Pipeline Structure:</span>
                 <span className="font-semibold text-white tabular-nums">{graph.nodes.length} Nodes &bull; {graph.edges.length} Edges</span>
               </div>
+              <p className="tabular-nums">Trigger at or below ${formatEther(params.priceThresholdWei)} USD</p>
+              <p className="tabular-nums">Cooldown {params.cooldownSeconds.toString()}s · Swap {params.percentToSwap.toString()}%</p>
+              <p className="font-mono break-all">Vault {params.actionVaultAddress}</p>
               <div className="flex justify-between">
                 <span className="text-slate-400">Owner Signer:</span>
                 <span className="font-mono text-violet-300">
@@ -210,6 +212,22 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
                 </>
               )}
             </button>
+          </div>
+        ) : deployResult.status !== 'deployed' ? (
+          <div className="space-y-3 text-sm">
+            <p role="status">{deployResult.status === 'signed' ? 'Awaiting Lasna receipt' : 'Lasna transaction reverted'}</p>
+            <a className="ws-button" href={`https://lasna.reactscan.net/tx/${deployResult.contracts.rscTxHash}`} target="_blank" rel="noreferrer">
+              View Lasna transaction
+            </a>
+            {deployResult.status === 'signed' && <button type="button" className="ws-button" disabled={loading} onClick={handleDeploy}>
+              {loading ? 'Checking receipt...' : 'Check the same deployment'}
+            </button>}
+            {deployResult.status === 'reverted' && <button type="button" className="ws-button" onClick={() => {
+              if (attemptStorageKey.current) localStorage.removeItem(attemptStorageKey.current);
+              setError(null);
+              setDeployResult(null);
+            }}>Prepare a new attempt</button>}
+            <Link className="ws-button" href={`/workspace/active?deployment=${deployResult.pipelineId}`}>Open deployment in Active</Link>
           </div>
         ) : (
           /* Step 2: Post-Deploy Non-Custodial Authorization Prompt */
@@ -260,7 +278,7 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
               {authSuccess ? (
                 <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2">
                   <span className="status-dot status-dot-emerald" />
-                  <span>RSC is now officially Authorized on ActionVault!</span>
+                  <span>Vault permission confirmed. Check principal and fee reserves in Active Automations.</span>
                 </div>
               ) : (
                 <button
@@ -285,6 +303,9 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
 
             <Link className="ws-button" href={`/workspace/active?deployment=${deployResult.pipelineId}`}>
               Open deployment in Active
+            </Link>
+            <Link className="ws-button" href={`/workspace/studio?deployment=${deployResult.pipelineId}`}>
+              View deployed snapshot
             </Link>
           </div>
         )}

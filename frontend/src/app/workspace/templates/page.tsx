@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useLayoutEffect, useRef } from 'react';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { RECIPE_PRESETS } from '@/lib/recipes';
-import { saveBrowserDraft } from '@/lib/pipelineDraft';
+import { saveBrowserDraft, studioGraph } from '@/lib/pipelineDraft';
+import { workspaceRequest } from '@/lib/workspaceSession';
+import { useAccount } from 'wagmi';
 import { 
   Library, 
   ArrowRight, 
@@ -242,16 +244,46 @@ if (velocityDrop > VELOCITY_LIMIT) {
 
 export default function TemplateLibraryPage() {
   const router = useRouter();
+  const { address, isConnected } = useAccount();
+  const owner = isConnected ? address : undefined;
+  const scope = useRef<AbortController>();
+  const pending = useRef(false);
+  const [creationError, setCreationError] = useState<string>();
+  useLayoutEffect(() => {
+    const controller = new AbortController();
+    scope.current = controller;
+    pending.current = false;
+    setCreationError(undefined);
+    return () => controller.abort();
+  }, [owner]);
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [inspectingRecipe, setInspectingRecipe] = useState<Recipe | null>(null);
 
-  const handleHydrateRecipe = (recipe: Recipe) => {
+  const handleHydrateRecipe = async (recipe: Recipe) => {
     const preset = RECIPE_PRESETS[recipe.id];
-    const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
-    const graph = preset ? { nodes: preset.nodes, edges: preset.edges } : { nodes: [], edges: [] };
-    saveBrowserDraft(newId, recipe.title, graph, recipe.description);
-    router.push(`/workspace/studio?local=${encodeURIComponent(newId)}`);
+    const signal = scope.current?.signal;
+    if (!preset || !signal || signal.aborted || pending.current) return;
+    pending.current = true;
+    setCreationError(undefined);
+    const graph = studioGraph(preset.nodes, preset.edges);
+    try {
+      if (owner) {
+        const draft = await workspaceRequest<{ id: string }>(owner, '/pipeline/drafts', {
+          method: 'POST', signal,
+          body: JSON.stringify({ graph: { ...graph, metadata: { name: recipe.title, ownerAddress: owner } } }),
+        });
+        if (!signal.aborted) router.push('/workspace/studio?pipeline=' + encodeURIComponent(draft.id));
+      } else {
+        const id = crypto.randomUUID();
+        saveBrowserDraft(id, recipe.title, graph, recipe.description);
+        router.push('/workspace/studio?local=' + encodeURIComponent(id));
+      }
+    } catch (error) {
+      if (!signal.aborted) setCreationError(error instanceof Error ? error.message : 'Could not create the pipeline.');
+    } finally {
+      if (!signal.aborted) pending.current = false;
+    }
   };
 
   const categories = [
@@ -278,6 +310,7 @@ export default function TemplateLibraryPage() {
 
   return (
     <div className="ws-page space-y-5">
+      {creationError && <p role="alert" className="text-sm text-rose-300">{creationError}</p>}
       <WorkspacePageHeader
         title="Template Library"
         description="Browse battle-tested cross-chain automation blueprints and hydrate them into Pipeline Studio."
