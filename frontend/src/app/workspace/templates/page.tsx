@@ -346,7 +346,7 @@ export default function TemplateLibraryPage() {
             return (
               <div
                 key={recipe.id}
-                className="rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-4 sm:p-5 space-y-4 flex flex-col justify-between transition-all duration-200 hover:border-[var(--ws-accent)]/70 hover:shadow-lg hover:shadow-[var(--ws-accent-bg)]/20 hover:-translate-y-0.5 group"
+                className="rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-4 sm:p-5 space-y-4 flex flex-col justify-between transition-colors duration-200 hover:border-purple-400/60 hover:shadow-md hover:shadow-purple-500/10 group"
               >
                 <div className="space-y-3.5">
                   {/* Header: Icon, Title, Tags, Nodes Count */}

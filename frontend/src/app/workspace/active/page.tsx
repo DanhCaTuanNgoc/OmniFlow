@@ -270,10 +270,10 @@ function WalletDeployments({ owner, selectedId }: { owner: Address; selectedId: 
                       select(dep.pipelineId);
                     }
                   }}
-                  className={`group relative flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer focus:outline-none ${
+                  className={`group relative flex flex-col justify-between rounded-xl border p-4 text-left transition-colors duration-200 cursor-pointer focus:outline-none ${
                     isSelected
                       ? 'border-[var(--ws-accent)] bg-[var(--ws-panel)] shadow-lg shadow-[var(--ws-accent-bg)]/30 ring-1 ring-[var(--ws-accent)]'
-                      : 'border-[var(--ws-border)] bg-[var(--ws-panel)] hover:border-[var(--ws-accent)]/70 hover:shadow-lg hover:shadow-[var(--ws-accent-bg)]/20 hover:-translate-y-0.5'
+                      : 'border-[var(--ws-border)] bg-[var(--ws-panel)] hover:border-purple-400/60 hover:shadow-md hover:shadow-purple-500/10'
                   }`}
                 >
                   {/* Top row: Badges */}

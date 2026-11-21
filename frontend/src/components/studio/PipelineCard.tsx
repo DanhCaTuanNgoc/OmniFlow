@@ -114,7 +114,7 @@ export function PipelineCard({
           onOpen(pipeline);
         }
       }}
-      className="group relative flex flex-col justify-between rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-4 text-left transition-all duration-200 hover:border-[var(--ws-accent)]/70 hover:shadow-lg hover:shadow-[var(--ws-accent-bg)]/20 hover:-translate-y-0.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--ws-accent)] select-none"
+      className="group relative flex flex-col justify-between rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-4 text-left transition-colors duration-200 hover:border-purple-400/60 hover:shadow-md hover:shadow-purple-500/10 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--ws-accent)] select-none"
     >
       {/* Top row: Badges & Kebab menu */}
       <div className="flex items-center justify-between gap-2">
