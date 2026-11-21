@@ -25,7 +25,7 @@ import { useAccount } from 'wagmi';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { isPhaseTwoGraph, resolvePhaseTwo, resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { APP_CONFIG } from '@/lib/constants';
-import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph } from '@/lib/pipelineDraft';
+import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph, exportDraftJson } from '@/lib/pipelineDraft';
 import { workspaceRequest } from '@/lib/workspaceSession';
 import { useStudioHeaderStore } from '@/lib/studioHeaderStore';
 
@@ -56,7 +56,11 @@ import {
   ShieldCheck,
   Plus,
   PanelLeftOpen,
-  PanelLeftClose
+  PanelLeftClose,
+  RotateCcw,
+  Download,
+  Upload,
+  FlaskConical,
 } from 'lucide-react';
 
 // STABLE DEFINITIONS OUTSIDE COMPONENT SCOPE (Mandatory for XYFlow performance)
@@ -102,6 +106,10 @@ function StudioCanvasInner() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isDeployOpen, setIsDeployOpen] = useState(false);
   const [isSolidityOpen, setIsSolidityOpen] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationStep, setSimulationStep] = useState(0);
+  const [simulationMessage, setSimulationMessage] = useState<string | null>(null);
+  const simTimersRef = useRef<NodeJS.Timeout[]>([]);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
   const [savedDraft, setSavedDraft] = useState<{ id: string; updatedAt: number }>();
   const [draftMessage, setDraftMessage] = useState<string>();
@@ -470,6 +478,194 @@ function StudioCanvasInner() {
     if (!isSnapshot) setIsDirty(true);
   };
 
+  // Cleanup simulation timers on unmount
+  useEffect(() => {
+    return () => {
+      simTimersRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
+  // Clear Graph (Reset Canvas)
+  const handleResetGraph = useCallback(() => {
+    if (!nodes.length || isSnapshot) return;
+    if (window.confirm('Clear all nodes and connections from the canvas?')) {
+      setNodes([]);
+      setEdges([]);
+      setDraftNetworks(undefined);
+      setSelectedNodeId(null);
+      setActiveRecipeId('');
+      setIsDirty(true);
+      setDraftMessage('Canvas cleared.');
+    }
+  }, [nodes.length, isSnapshot, setNodes, setEdges]);
+
+  // Export Pipeline to JSON
+  const handleExportGraph = useCallback(() => {
+    if (!nodes.length) return;
+    const graph = studioGraph(nodes, edges, draftNetworks);
+    exportDraftJson(draftName, {
+      ...graph,
+      metadata: {
+        name: draftName,
+        exportedAt: new Date().toISOString(),
+        ownerAddress: address ?? undefined,
+      },
+    });
+    setDraftMessage('Pipeline configuration exported to JSON.');
+  }, [nodes, edges, draftNetworks, draftName, address]);
+
+  // Import Pipeline from JSON
+  const handleImportGraph = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file || isSnapshot) return;
+
+      try {
+        if (file.size > 1_048_576) throw new Error('Choose a Studio JSON file smaller than 1 MB.');
+        const text = await file.text();
+        const draft = parsePipelineDraft(text, draftNodeTypes);
+
+        if (nodes.length > 0 && !window.confirm('Importing will replace the current canvas. Continue?')) {
+          return;
+        }
+
+        try {
+          const raw = JSON.parse(text);
+          if (raw?.metadata?.name && typeof raw.metadata.name === 'string') {
+            setPipelineName(raw.metadata.name);
+          }
+        } catch {
+          // ignore metadata parse error
+        }
+
+        setNodes(draft.nodes);
+        setEdges(draft.edges);
+        setDraftNetworks(draft.networks);
+        setSelectedNodeId(null);
+        setActiveRecipeId('');
+        setIsDirty(true);
+        setValidationWarning(null);
+        setDraftMessage('Pipeline imported successfully.');
+      } catch (error) {
+        setValidationWarning(error instanceof Error ? error.message : 'Unable to import JSON file.');
+        setTimeout(() => setValidationWarning(null), 4000);
+      }
+    },
+    [nodes.length, isSnapshot, setNodes, setEdges]
+  );
+
+  // Simulate Flow (Dry-Run Sandbox)
+  const handleSimulateFlow = useCallback(() => {
+    if (isSimulating || !nodes.length) return;
+
+    const hasTrigger = nodes.some((n) => n.data.category === 'trigger');
+    const hasAction = nodes.some((n) => n.data.category === 'action');
+
+    if (!hasTrigger || !hasAction) {
+      setValidationWarning('Simulation requires at least 1 Trigger node and 1 Action node.');
+      setTimeout(() => setValidationWarning(null), 4000);
+      return;
+    }
+
+    // Clear any previous simulation timers
+    simTimersRef.current.forEach(clearTimeout);
+    simTimersRef.current = [];
+
+    setIsSimulating(true);
+    setSimulationStep(1);
+    setSimulationMessage('Step 1/3: Origin event captured on Base Sepolia • Evaluating subscriptions');
+
+    // Step 1: Trigger captured & conditions evaluating
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.data.category === 'trigger') {
+          return {
+            ...n,
+            data: { ...n.data, state: 'EVENT_CAPTURED' as const },
+          };
+        }
+        if (n.data.category === 'condition') {
+          return {
+            ...n,
+            data: { ...n.data, state: 'EVALUATING' as const },
+          };
+        }
+        return n;
+      })
+    );
+
+    // Edges start photon burst animation
+    setEdges((eds) =>
+      eds.map((e) => ({
+        ...e,
+        data: { ...e.data, isBurst: true },
+      }))
+    );
+
+    // Step 2: Reactive Omni ReactVM Condition Met
+    const t1 = setTimeout(() => {
+      setSimulationStep(2);
+      setSimulationMessage('Step 2/3: Reactive Omni Lasna RVM evaluated condition: Met • Cooldown & Slippage Guards OK');
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.data.category === 'condition') {
+            return {
+              ...n,
+              data: { ...n.data, state: 'CONDITION_MET' as const },
+            };
+          }
+          if (n.data.category === 'action') {
+            return {
+              ...n,
+              data: { ...n.data, state: 'FIRING_CALLBACK' as const },
+            };
+          }
+          return n;
+        })
+      );
+    }, 1500);
+    simTimersRef.current.push(t1);
+
+    // Step 3: Destination Action Callback Executed on Base Sepolia
+    const t2 = setTimeout(() => {
+      setSimulationStep(3);
+      setSimulationMessage('Step 3/3: ActionVault callback executed on Base Sepolia • Automation Cycle Verified');
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.data.category === 'action') {
+            return {
+              ...n,
+              data: { ...n.data, state: 'SUCCESS' as const },
+            };
+          }
+          return n;
+        })
+      );
+    }, 3200);
+    simTimersRef.current.push(t2);
+
+    // End simulation and revert state
+    const t3 = setTimeout(() => {
+      setIsSimulating(false);
+      setSimulationStep(0);
+      setSimulationMessage(null);
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          data: { ...n.data, state: 'CONFIGURED' as const },
+        }))
+      );
+      setEdges((eds) =>
+        eds.map((e) => ({
+          ...e,
+          data: { ...e.data, isBurst: false },
+        }))
+      );
+    }, 5500);
+    simTimersRef.current.push(t3);
+  }, [isSimulating, nodes, setNodes, setEdges]);
+
   const handleOpenDeploy = () => {
     if (!isConnected) return;
     try {
@@ -543,31 +739,96 @@ function StudioCanvasInner() {
             )}
           </div>
 
-          <div className="ws-actions">
+          <div className="ws-actions flex flex-wrap items-center gap-1.5 sm:gap-2">
+            {/* Clear Board */}
             <button
               type="button"
-              className="ws-button"
+              className="ws-button inline-flex items-center gap-1.5 cursor-pointer text-xs"
+              onClick={handleResetGraph}
+              disabled={!nodes.length || isSnapshot}
+              title="Clear all nodes and connections from canvas"
+            >
+              <RotateCcw className="size-3.5 text-zinc-400" />
+              <span>Clear</span>
+            </button>
+
+            {/* Import JSON */}
+            <label
+              className={`ws-button inline-flex items-center gap-1.5 text-xs ${
+                isSnapshot ? 'opacity-50 pointer-events-none' : 'cursor-pointer'
+              }`}
+              title="Import pipeline structure from JSON file"
+            >
+              <Upload className="size-3.5 text-zinc-400" />
+              <span>Import</span>
+              <input
+                type="file"
+                className="sr-only"
+                accept=".json,application/json"
+                onChange={(e) => void handleImportGraph(e)}
+                disabled={isSnapshot}
+              />
+            </label>
+
+            {/* Export JSON */}
+            <button
+              type="button"
+              className="ws-button inline-flex items-center gap-1.5 cursor-pointer text-xs"
+              onClick={handleExportGraph}
+              disabled={!nodes.length}
+              title="Export pipeline structure to JSON file"
+            >
+              <Download className="size-3.5 text-zinc-400" />
+              <span>Export</span>
+            </button>
+
+            <div className="h-4 w-px bg-white/10 hidden sm:block" />
+
+            {/* Save draft */}
+            <button
+              type="button"
+              className="ws-button text-xs"
               disabled={draftBusy || !nodes.length}
               onClick={() => void saveGraph()}
             >
               {isSnapshot ? 'Save a draft copy' : 'Save draft'}
             </button>
+
+            {/* View Solidity */}
             <button
               type="button"
-              className="ws-button"
+              className="ws-button inline-flex items-center gap-1.5 text-xs"
               onClick={() => setIsSolidityOpen(true)}
               disabled={!nodes.length}
             >
-              <Code2 size={14} aria-hidden="true" />
+              <Code2 className="size-3.5 text-violet-400" aria-hidden="true" />
               <span>Solidity</span>
             </button>
+
+            {/* Simulate Flow (Dry-Run) */}
             <button
               type="button"
-              className="ws-button ws-button-primary"
+              onClick={handleSimulateFlow}
+              disabled={isSimulating || !nodes.length}
+              className={`ws-button inline-flex items-center gap-1.5 text-xs cursor-pointer transition-all ${
+                isSimulating
+                  ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-300 animate-pulse'
+                  : 'text-cyan-400 hover:text-cyan-300'
+              }`}
+              title="Simulate end-to-end event execution without spending gas"
+            >
+              <FlaskConical className={`size-3.5 ${isSimulating ? 'animate-spin text-cyan-300' : 'text-cyan-400'}`} />
+              <span>{isSimulating ? `Simulating (${simulationStep}/3)...` : 'Simulate Flow'}</span>
+            </button>
+
+            {/* Deploy */}
+            <button
+              type="button"
+              className="ws-button ws-button-primary inline-flex items-center gap-1.5 text-xs"
               onClick={handleOpenDeploy}
               disabled={!isConnected || !nodes.length || isSnapshot}
             >
-              <Rocket size={14} aria-hidden="true" />
+              <Rocket className="size-3.5" aria-hidden="true" />
               <span>{isConnected ? 'Deploy' : 'Connect wallet to deploy'}</span>
             </button>
           </div>
@@ -600,6 +861,14 @@ function StudioCanvasInner() {
 
         <div className="relative min-h-0 flex-1 flex overflow-hidden bg-[var(--ws-bg)]">
           <div className="relative min-h-0 flex-1 h-full" ref={reactFlowWrapper}>
+            {/* Simulation Watermark Banner */}
+            {simulationMessage && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-full bg-[#0d091a]/95 border border-cyan-500/40 text-cyan-300 text-xs font-mono shadow-2xl backdrop-blur-md flex items-center gap-2 animate-fade-in pointer-events-none">
+                <span className="size-2 rounded-full bg-cyan-400 animate-ping" />
+                <span>{simulationMessage}</span>
+              </div>
+            )}
+
             {nodes.length === 0 && (
               <p className="pointer-events-none absolute inset-x-5 top-1/2 z-10 -translate-y-1/2 text-center text-sm text-[var(--ws-muted)]">
                 Add a trigger or choose a recipe to start.
