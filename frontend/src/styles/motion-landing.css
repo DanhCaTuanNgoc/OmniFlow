@@ -2009,11 +2009,15 @@
 /* ==========================================================================
    Section 7: Final Conversion CTA Banner & Footer
    ========================================================================== */
+.motion-final-section {
+  padding-top: clamp(56px, 9vh, 100px);
+}
+
 .motion-footer-section {
   width: 100%;
   max-width: 1140px;
   margin: 0 auto;
-  padding: clamp(56px, 9vh, 100px) clamp(16px, 3vw, 32px) 0;
+  padding: 0 clamp(16px, 3vw, 32px);
   box-sizing: border-box;
 }
 

@@ -464,11 +464,13 @@ export default function MotionLanding() {
         </div>
 
         {/* Section 7: Final Conversion CTA Banner & Footer */}
-        <LazySection
-          minHeight="400px"
-          label="FINAL_CTA_FOOTER"
-          render={() => <LandingFooter />}
-        />
+        <div className="motion-final-section">
+          <LazySection
+            minHeight="400px"
+            label="FINAL_CTA_FOOTER"
+            render={() => <LandingFooter />}
+          />
+        </div>
       </div>
     </main>
   );
