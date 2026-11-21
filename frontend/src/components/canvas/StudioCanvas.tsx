@@ -633,8 +633,8 @@ function StudioCanvasInner() {
               <Background
                 variant={BackgroundVariant.Dots}
                 gap={22}
-                size={1.5}
-                color="rgba(148, 163, 184, 0.20)"
+                size={1.8}
+                color="rgba(194, 205, 230, 0.40)"
               />
               <Controls className="!bg-[#0f111a]/90 !border-white/[0.08] !rounded-xl !shadow-2xl" />
               <MiniMap

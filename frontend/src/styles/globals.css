@@ -153,34 +153,38 @@ code, kbd, samp, pre, .font-mono {
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
 }
 
-/* XYFlow Custom Canvas Styling (Modern Obsidian Glass) */
+/* XYFlow Custom Canvas Styling (Modern Cosmic Obsidian Grid) */
 .react-flow__background {
-  background-color: #07080d !important;
+  background-color: #0c0e17 !important;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(99, 102, 241, 0.16), transparent 75%),
+    radial-gradient(ellipse 60% 45% at 90% 90%, rgba(34, 211, 238, 0.09), transparent 65%),
+    radial-gradient(ellipse 50% 40% at 10% 85%, rgba(168, 85, 247, 0.10), transparent 60%) !important;
 }
 
 .react-flow__controls {
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  background: #0E1017 !important;
+  border: 1px solid var(--ws-border) !important;
+  background: var(--ws-panel) !important;
   border-radius: 12px !important;
   overflow: hidden;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
 }
 
 .react-flow__controls-button {
-  background: #0E1017 !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-  fill: #94A3B8 !important;
+  background: var(--ws-panel) !important;
+  border-bottom: 1px solid var(--ws-border) !important;
+  fill: #a8b0c1 !important;
   transition: all 0.2s ease;
 }
 
 .react-flow__controls-button:hover {
-  background: #161922 !important;
-  fill: #F8FAFC !important;
+  background: #242834 !important;
+  fill: #ffffff !important;
 }
 
 .react-flow__minimap {
-  background-color: #0E1017 !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-color: var(--ws-panel) !important;
+  border: 1px solid var(--ws-border) !important;
   border-radius: 12px !important;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
 }
