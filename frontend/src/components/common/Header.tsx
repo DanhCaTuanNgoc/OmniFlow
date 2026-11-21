@@ -3,8 +3,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { LogOut, Wallet, Pencil } from 'lucide-react';
+import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
+import { ArrowLeftRight, LogOut, Wallet, Pencil } from 'lucide-react';
+import { baseSepoliaChain } from '@/lib/chains';
 import { truncateAddress } from '@/lib/utils';
 import { useStudioHeaderStore } from '@/lib/studioHeaderStore';
 
@@ -20,9 +21,11 @@ export function Header() {
   const pathname = usePathname();
   const sectionKey = pathname.split('/')[2];
   const title = sections[sectionKey] ?? 'Workspace';
-  const { address, isConnected, chain } = useAccount();
+  const { address, isConnected, chain, chainId } = useAccount();
   const { connect, connectors, isPending, error } = useConnect();
   const { disconnect } = useDisconnect();
+  const { switchChain, isPending: isSwitching, isError: switchFailed } = useSwitchChain();
+  const needsBaseSepolia = isConnected && chainId !== baseSepoliaChain.id;
 
   const { pipelineName, isEditable, onRename } = useStudioHeaderStore();
   const [isEditing, setIsEditing] = useState(false);
@@ -114,6 +117,20 @@ export function Header() {
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         {isConnected && chain && <span className="ws-badge hidden sm:inline-block">{chain.name}</span>}
+        {needsBaseSepolia && (
+          <button
+            type="button"
+            className="ws-button border-amber-400/40 text-amber-200 hover:border-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
+            aria-label={isSwitching ? 'Switching to Base Sepolia' : 'Switch to Base Sepolia'}
+            title="Switch to Base Sepolia"
+            disabled={isSwitching}
+            onClick={() => switchChain({ chainId: baseSepoliaChain.id })}
+          >
+            <ArrowLeftRight size={14} aria-hidden="true" />
+            <span className="sm:hidden">{isSwitching ? 'Switching…' : 'Switch'}</span>
+            <span className="hidden sm:inline">{isSwitching ? 'Switching…' : 'Switch to Base Sepolia'}</span>
+          </button>
+        )}
         {isConnected && address ? (
           <details className="relative">
             <summary className="ws-button cursor-pointer list-none font-mono">
@@ -142,6 +159,11 @@ export function Header() {
         {error && !isConnected && (
           <p role="alert" className="ws-panel absolute right-3 top-full mt-2 max-w-[16rem] p-3 text-xs text-rose-200">
             Could not connect the wallet. Check your wallet extension and try again.
+          </p>
+        )}
+        {needsBaseSepolia && switchFailed && (
+          <p role="alert" className="ws-panel absolute right-3 top-full mt-2 max-w-[16rem] p-3 text-xs text-rose-200">
+            Could not switch to Base Sepolia. Check your wallet and try again.
           </p>
         )}
       </div>
