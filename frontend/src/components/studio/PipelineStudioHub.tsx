@@ -48,6 +48,10 @@ const draftNodeTypes = new Map(PALETTE_ITEMS.map((item) => [item.type, item.cate
 
 type WalletDraftSummary = { id: string; name: string; updatedAt: number };
 
+function isStandaloneDraft(item: PipelineItem) {
+  return !item.deployment && !item.isArchived && (item.hasDraft || item.source === 'local');
+}
+
 export function PipelineStudioHub() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
@@ -299,7 +303,7 @@ export function PipelineStudioHub() {
   const filteredPipelines = useMemo(() => {
     return unifiedPipelines.filter((item) => {
       // Status filter
-      if (statusFilter === 'DRAFTS' && ((!item.hasDraft && item.source !== 'local') || item.isArchived)) return false;
+      if (statusFilter === 'DRAFTS' && !isStandaloneDraft(item)) return false;
       if (statusFilter === 'ACTIVE' && (!item.deployment || item.isArchived)) return false;
       if (statusFilter === 'ARCHIVED' && !item.isArchived) return false;
       if (statusFilter === 'ALL' && item.isArchived) return false;
@@ -607,7 +611,7 @@ export function PipelineStudioHub() {
           {(
             [
               { key: 'ALL', label: `All (${unifiedPipelines.filter(p => !p.isArchived).length})` },
-              { key: 'DRAFTS', label: `Drafts (${unifiedPipelines.filter(p => (p.hasDraft || p.source === 'local') && !p.isArchived).length})` },
+              { key: 'DRAFTS', label: `Drafts (${unifiedPipelines.filter(isStandaloneDraft).length})` },
               { key: 'ACTIVE', label: `Deployments (${unifiedPipelines.filter(p => p.deployment && !p.isArchived).length})` },
               { key: 'ARCHIVED', label: `Archived (${unifiedPipelines.filter(p => p.isArchived).length})` },
             ] as const
