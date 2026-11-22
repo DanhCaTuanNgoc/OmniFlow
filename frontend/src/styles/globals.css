@@ -215,24 +215,42 @@ code, kbd, samp, pre, .font-mono {
   transform: translate(50%, -50%) scale(1.35) !important;
 }
 
-/* Animated Photon Pulse Edge (Smooth Neon Violet/Cyan Beam) */
-@keyframes photonPulseAnimation {
-  0% {
-    stroke-dashoffset: 100%;
-    stroke: #8B5CF6;
-  }
-  50% {
-    stroke: #00E5FF;
-  }
-  100% {
-    stroke-dashoffset: 0%;
-    stroke: #10B981;
-  }
+@keyframes studio-edge-flow {
+  from { stroke-dashoffset: 13; }
+  to { stroke-dashoffset: 0; }
 }
 
-.edge-pulse-active path {
-  stroke-dasharray: 8 6 !important;
-  animation: photonPulseAnimation 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
+.studio-flow-edge-stream {
+  opacity: 0.46;
+  animation: studio-edge-flow 4s linear infinite;
+  transition: opacity 160ms ease;
+}
+
+.studio-flow-edge-target {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.studio-flow-edge[data-simulation-pulse] .studio-flow-edge-stream,
+[data-execution-pulse] .studio-flow-edge-stream {
+  opacity: 0.95;
+  animation-duration: 800ms;
+}
+
+.studio-flow-edge[data-simulation-pulse] .studio-flow-edge-target,
+[data-execution-pulse] .studio-flow-edge-target {
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-flow-edge-stream {
+    animation-name: none;
+    transition: none;
+  }
+
+  .studio-flow-edge-target {
+    transition: none;
+  }
 }
 
 /* ==========================================================================

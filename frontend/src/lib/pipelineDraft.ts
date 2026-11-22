@@ -139,6 +139,15 @@ export function connectionError(source: Node, target: Node, edge: Pick<Edge, 'so
   }
 }
 
+export function studioEdgeData(source: Node, target: Node) {
+  if ((source.data.originChainId ?? source.data.chainId) === 1301) {
+    return { color: '#c084fc', crossChainLabel: 'Cross-Chain: Unichain -> Base' };
+  }
+  if (source.data.category === 'trigger') return { color: '#38bdf8' };
+  if (source.data.category === 'logic') return { color: '#a855f7' };
+  return { color: target.data.category === 'action' ? '#34d399' : '#fbbf24' };
+}
+
 export function simulationPath(nodes: readonly Node[], edges: readonly Edge[]) {
   const walk = (starts: string[], reverse: boolean) => {
     const visited = new Set(starts);
@@ -180,22 +189,22 @@ export function parsePipelineDraft(text: string, supportedTypes: ReadonlyMap<str
     return { id: value.id, type: value.type, position: { x: value.position.x, y: value.position.y },
       data: { ...value.data, state: 'IDLE' } };
   });
-  const nodeIds = new Set(nodes.map(node => node.id));
-  if (nodeIds.size !== nodes.length) throw new Error('The file contains duplicate node IDs.');
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  if (byId.size !== nodes.length) throw new Error('The file contains duplicate node IDs.');
 
   const edges: Edge[] = graph.edges.map((value: unknown) => {
     if (!record(value) || typeof value.id !== 'string' || !value.id ||
-        typeof value.source !== 'string' || !nodeIds.has(value.source) ||
-        typeof value.target !== 'string' || !nodeIds.has(value.target) ||
+        typeof value.source !== 'string' || !byId.has(value.source) ||
+        typeof value.target !== 'string' || !byId.has(value.target) ||
         (value.sourceHandle != null && typeof value.sourceHandle !== 'string') ||
         (value.targetHandle != null && typeof value.targetHandle !== 'string')) {
       throw new Error('The file contains an invalid edge or an edge to a missing node.');
     }
     return { id: value.id, source: value.source, target: value.target, type: 'custom',
-      sourceHandle: value.sourceHandle, targetHandle: value.targetHandle, data: { isPulsing: false } };
+      sourceHandle: value.sourceHandle, targetHandle: value.targetHandle,
+      data: studioEdgeData(byId.get(value.source)!, byId.get(value.target)!) };
   });
   if (new Set(edges.map(edge => edge.id)).size !== edges.length) throw new Error('The file contains duplicate edge IDs.');
-  const byId = new Map(nodes.map(node => [node.id, node]));
   const incoming = new Map(nodes.map(node => [node.id, 0]));
   const outgoing = new Map<string, string[]>();
   for (const edge of edges) {

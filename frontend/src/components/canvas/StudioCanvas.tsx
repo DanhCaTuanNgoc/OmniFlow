@@ -24,7 +24,7 @@ import { useAccount } from 'wagmi';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { isPhaseTwoGraph, resolvePhaseTwo, resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { APP_CONFIG } from '@/lib/constants';
-import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph, exportDraftJson, connectionError, simulationPath } from '@/lib/pipelineDraft';
+import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph, studioEdgeData, exportDraftJson, connectionError, simulationPath } from '@/lib/pipelineDraft';
 import { WorkspaceSignInRequired, workspaceRequest } from '@/lib/workspaceSession';
 import { useWorkspaceSignedIn } from '@/components/common/WorkspaceSignIn';
 import { PipelineOpenState } from '@/components/studio/PipelineOpenState';
@@ -45,6 +45,7 @@ import {
   PriceVelocityGuardNode,
 } from './nodes';
 import { CustomEdge } from './CustomEdge';
+import { SnapshotExecutionPulse } from './SnapshotExecutionPulse';
 import { NodePalette, PALETTE_ITEMS } from './NodePalette';
 import { InspectorPanel } from './InspectorPanel';
 import { DeployModal } from './DeployModal';
@@ -414,24 +415,14 @@ function StudioCanvasInner() {
       if (isValidConnection(params)) {
         const sourceNode = nodes.find((n) => n.id === params.source);
         const targetNode = nodes.find((n) => n.id === params.target);
-
-        const isCrossChain = sourceNode?.data?.chainId === 1301;
-        const color = isCrossChain
-          ? '#c084fc'
-          : sourceNode?.data.category === 'trigger'
-          ? '#38bdf8'
-          : sourceNode?.data.category === 'condition'
-          ? '#fbbf24'
-          : '#34d399';
-
-        const crossChainLabel = isCrossChain ? 'Cross-Chain: Unichain -> Base' : undefined;
+        if (!sourceNode || !targetNode) return;
 
         setEdges((eds) =>
           addEdge(
             {
               ...params,
               type: 'custom',
-              data: { isPulsing: true, color, crossChainLabel },
+              data: studioEdgeData(sourceNode, targetNode),
             },
             eds
           )
@@ -642,7 +633,7 @@ function StudioCanvasInner() {
       })
     );
 
-    // Edges start photon burst animation
+    // Accelerate only the edges participating in the sandbox run.
     setEdges((eds) =>
       eds.map((e) => path.edges.has(e.id) ? ({
         ...e,
@@ -1000,6 +991,9 @@ function StudioCanvasInner() {
 
         <div className="relative min-h-0 flex-1 flex overflow-hidden bg-[var(--ws-bg)]">
           <div className="relative min-h-0 flex-1 h-full" ref={reactFlowWrapper}>
+            {deploymentParam && address && signedIn && (
+              <SnapshotExecutionPulse owner={address} deploymentId={deploymentParam} canvasRef={reactFlowWrapper} />
+            )}
             {/* Simulation Watermark Banner */}
             {simulationMessage && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-full bg-[#0d091a]/95 border border-cyan-500/40 text-cyan-300 text-xs font-mono shadow-2xl backdrop-blur-md flex items-center gap-2 animate-fade-in pointer-events-none">
