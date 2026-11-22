@@ -1346,6 +1346,79 @@ gantt
 
 ---
 
+### 9.2 Lộ Trình Sau Hackathon (Post-Hackathon Future Roadmap): Hoàn Thành 16 Ca Mở Rộng & Universal Pipeline Engine
+
+Tuân thủ nghiêm ngặt định hướng phân kỳ tại [docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md](docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md):
+* **Phạm vi Hackathon (Core Delivery):** Tập trung tuyệt đối vào 2 luồng cốt lõi có vòng lặp khép kín hoàn chỉnh: **Flash Crash Stop-Loss (BP-01)** và **Take-Profit (BP-03)**, kèm bằng chứng đối soát on-chain 3-giao dịch tại `FULL_LOOP_EVIDENCE.json`.
+* **Phạm vi Mở rộng Sau Hackathon (Post-Hackathon Delivery):** Triển khai toàn bộ **16 ca kịch bản còn lại** trong ma trận nghiệm thu (§8) và hợp nhất kiến trúc vào **Universal Pipeline Engine (§14)**:
+
+```mermaid
+flowchart TD
+    subgraph Core_Hackathon["HACKATHON CORE SCOPE (DEMO READY)"]
+        direction TB
+        C1["BP-01: Flash Crash Stop-Loss (100% Full-Loop PASS)"]
+        C2["BP-03: Take-Profit Scalper (Deployed, Awaiting Acceptance)"]
+        C3["BP-11: Oscillation Cooldown (PASS on Stop-Loss)"]
+    end
+
+    subgraph Future_Roadmap_16["POST-HACKATHON ROADMAP: 16 SCENARIOS (§8)"]
+        direction TB
+        subgraph Group1["Nhóm 1: Lệnh Theo Giá & Hedging"]
+            S1["BP-02: Cắt lỗ bậc thang (Laddered Stop-Loss)"]
+            S2["EXT-01: Cross-Chain Hedge (Unichain -> Lasna -> Base)"]
+            S3["EXT-02: Stop-Loss một lần (One-Shot Policy)"]
+        end
+        subgraph Group2["Nhóm 2: Bảo Vệ Quỹ, Transfer & Governance"]
+            S4["BP-04: Dust Guard (Portfolio / Balance Protection)"]
+            S5["BP-05: Anti-Drainer SafeSweep (Emergency Outflow Defense)"]
+            S6["BP-06: Cảnh báo chuyển ra (Outflow Alert & Webhook)"]
+            S7["BP-07: Cảnh báo cá voi (Whale Movement Watcher)"]
+            S8["BP-08: Thoát theo tín hiệu cá voi (Whale Signal Exit)"]
+            S9["EXT-03: Trích khoản nhận USDC (Inflow Extraction)"]
+            S10["EXT-04: Payday Auto-Splitter (Compound 20/30/50 Split)"]
+            S11["EXT-05: Pause Pipeline khi Adapter đổi (Timelock Pause)"]
+        end
+        subgraph Group3["Nhóm 3: Lập Lịch Cron & Cổng Logic Đa Nguồn"]
+            S12["BP-09: Daily Autonomous Rebalancer (Periodic DEX Swap)"]
+            S13["BP-10: Rút lãi hàng tuần (Weekly Profit Sweep)"]
+            S14["BP-11*: Cooldown Đa Tài Sản (Multi-Pair Rate-Limiting)"]
+            S15["BP-12: Cảnh báo Vault sắp cạn (Low Reserve Alert)"]
+            S16["CAP-01: Logic Gate OR (Multi-Pool Condition Resolver)"]
+        end
+    end
+
+    subgraph Universal_Engine["UNIVERSAL PIPELINE ENGINE (§14)"]
+        U1["UniversalDeployModal: Tự động phân tích DAG & gom 2 bước ký"]
+        U2["Atomic Vault Onboarding: Hàm setupAndAuthorizeRSC() gom 1 Tx Base"]
+        U3["Universal DAG Compiler: Biên dịch động đồ thị tùy ý sang RSC Bytecode"]
+    end
+
+    Core_Hackathon --> Future_Roadmap_16
+    Future_Roadmap_16 --> Universal_Engine
+```
+
+#### Ma Trận 16 Kịch Bản Mở Rộng:
+1. **BP-02 (Cắt lỗ bậc thang):** Bán theo từng mốc giá; gộp các bậc khi giá rơi đột ngột; snapshot vốn ban đầu tại Vault.
+2. **BP-04 (Dust Guard):** Kết hợp điều kiện giá và số dư tối thiểu của Vault; tránh bán khi giá đạt nhưng không đủ phí gas.
+3. **BP-05 (Anti-Drainer SafeSweep):** Giám sát sự kiện Transfer bất thường trên ví chỉ định; tự động chuyển tài sản vào ví an toàn dự phòng (`backupSafeAddress`).
+4. **BP-06 (Cảnh báo chuyển ra):** Lắng nghe Transfer ra khỏi địa chỉ theo dõi; gửi cảnh báo tới webhook và giao diện Workspace.
+5. **BP-07 (Cảnh báo cá voi):** Lắng nghe chuyển dịch số lượng lớn của token ERC-20; lọc ngưỡng tối thiểu và phân loại ví.
+6. **BP-08 (Thoát theo tín hiệu cá voi):** Ghép đôi Transfer của cá voi với biến động giá DEX trong cùng cửa sổ thời gian để kích hoạt bán phòng thủ.
+7. **BP-09 (Daily Autonomous Rebalancer):** Dựa trên Reactive Cron định kỳ để tái cân bằng tỷ trọng danh mục (50/50) tự động.
+8. **BP-10 (Rút lãi hàng tuần):** Dựa trên Reactive Cron hàng tuần; nếu giá trên ngưỡng mục tiêu thì bán phần lãi dôi dư và chuyển về ví lạnh.
+9. **BP-11 (Chống giằng co đa tài sản):** Mở rộng cơ chế Stateless Cooldown Timestamp cho toàn bộ các cặp token và đa pipeline song song.
+10. **BP-12 (Cảnh báo Vault sắp cạn):** Định kỳ kiểm tra số dư principal và quỹ callback; cảnh báo trước khi bot bị ngưng trệ vì thiếu gas.
+11. **EXT-01 (Cross-Chain Hedge):** Tín hiệu giảm giá trên Unichain Sepolia kích hoạt giao dịch phòng hộ (Hedge Swap) trên Base Sepolia.
+12. **EXT-02 (Stop-loss một lần):** Cơ chế One-Shot tự động vô hiệu hóa quyền của RSC sau khi hoàn tất thanh toán lượt đầu tiên.
+13. **EXT-03 (Trích khoản nhận USDC):** Tự động phát hiện khoản USDC nạp vào Vault và trích xuất một phần cố định ra ví thanh toán.
+14. **EXT-04 (Payday Auto-Splitter):** Chia khoản nhận thành 3 phần: 20% mua ETH tái đầu tư, 30% gửi tiết kiệm, 50% giữ lại chi tiêu.
+15. **EXT-05 (Pause Pipeline theo Governance):** Tự động tạm dừng pipeline khi phát hiện đề xuất nâng cấp hợp đồng (Timelock scheduled) có nguy cơ ảnh hưởng thanh khoản.
+16. **CAP-01 (Logic Gate OR):** Ghép tín hiệu từ hai pool DEX độc lập (Pool A hoặc Pool B chạm ngưỡng) để tạo 1 callback duy nhất.
+
+*Chi tiết kỹ thuật, tiêu chí nghiệm thu và nhật ký thực thi được theo dõi đầy đủ tại [docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md](docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md) và tài liệu đánh giá kỹ thuật hệ thống tại [docs/REACTIVE_NETWORK_EVALUATION_AND_FEEDBACK.md](docs/REACTIVE_NETWORK_EVALUATION_AND_FEEDBACK.md).*
+
+---
+
 # 10. KỊCH BẢN VIDEO DEMO < 3 PHÚT & BỘ TIÊU CHÍ SUBMISSION
 
 Đề bài hackathon quy định rất nghiêm ngặt: **Video demo phải dưới 3 phút** và bài thi phải có link repo công khai, địa chỉ hợp đồng và giao dịch minh chứng vòng lặp.

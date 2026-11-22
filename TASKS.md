@@ -18,10 +18,17 @@
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 24 | 23 | 0 | **95.8%** |
 | **Đánh giá cạnh tranh, bằng chứng và tính năng mở rộng** | 18–19/11/2026 | 8 | 5 | 0 | **62.5%** |
 | **Vận hành Workspace & nghiệm thu dự thi** | Ghi nhận 20/11/2026 | 8 | 0 | 0 | **0%** |
-| **Khả năng deploy của preset, runtime và nghiệm thu toàn bộ flow** | Ghi nhận 20/11/2026 | 13 | 1 | 0 | **7.7%** |
-| **TỔNG CỘNG** | **Đối chiếu 20/11/2026** | **89** | **65** | **0** | **73.0%** |
+| **Khả năng deploy của preset, runtime và nghiệm thu toàn bộ flow** | Ghi nhận 20/11/2026 | 13 | 2 | 0 | **15.4%** |
+| **Future Roadmap: 16 Ca Mở Rộng & Universal Engine** | Lộ trình mở rộng | 18 | 1 | 0 | **5.6%** |
+| **TỔNG CỘNG** | **Đối chiếu 22/11/2026** | **107** | **67** | **0** | **62.6%** |
 
-Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **24 mục `TODO`**. Điều kiện phát hành cloud tính theo [ma trận nghiệm thu pipeline](docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md), gồm cả những kịch bản chia sẻ runtime.
+Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **23 mục `TODO`** và **17 mục `BACKLOG`**. 
+
+> [!IMPORTANT]
+> **Yêu cầu Bắt buộc & Định hướng Hoàn thành Nghiệm thu On-chain:**
+> 1. **Hoàn thành Toàn diện Kế hoạch Nghiệm thu On-Chain:** Toàn bộ quá trình triển khai, kiểm chứng full-loop và điều kiện phát hành cloud **BẮT BUỘC** hoàn thành theo đặc tả trong [docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md](docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md). Hai luồng trọng tâm tuyệt đối cho bài thi Hackathon là **Flash Crash Stop-Loss (BP-01)** và **Take-Profit (BP-03)**.
+> 2. **Roadmap 16 Kịch bản Còn lại (Future Roadmap):** Toàn bộ 16 ca kịch bản còn lại (BP-02, BP-04 $\rightarrow$ BP-12, EXT-01 $\rightarrow$ EXT-05, CAP-01) đã được chính thức đưa vào Roadmap dự án (§8) và giao diện hợp nhất Universal Pipeline Engine (§14), được theo dõi chi tiết từ `TASK-401` đến `TASK-417`.
+> 3. **Báo cáo Đánh giá Kỹ thuật, Trải nghiệm DX & Báo lỗi Reactive Network:** Đã hoàn thành biên soạn và lưu trữ tại [docs/REACTIVE_NETWORK_EVALUATION_AND_FEEDBACK.md](docs/REACTIVE_NETWORK_EVALUATION_AND_FEEDBACK.md) (`TASK-418`), tổng kết các bài học thực chiến (Two-Slot Payload, Stateless Cooldown 200ms Denim block storm, `if (!vm)` Foundry guard) và báo cáo lỗi WebSocket RPC / độ trễ ReactScan.
 
 * **On-chain:** Lượt stop-loss ngày 19/11 dùng pool và token thử nghiệm trên testnet. Đã đọc lại cả ba receipt qua RPC ngày 20/11 và xác nhận đều thành công. [Bằng chứng full loop](FULL_LOOP_EVIDENCE.json)
 * **Workspace:** Commit `155d62f` bỏ dữ liệu mẫu, `872a381` kiểm tra Vault/RSC cấu hình sẵn, và `f8c3410` đồng bộ giao diện năm màn hình. Deployer hiện chỉ hỗ trợ các node của luồng stop-loss. Xác thực theo ví, lưu pipeline và phục hồi deploy nằm ở `TASK-333` đến `TASK-335`.
@@ -1105,3 +1112,181 @@ Phạm vi Workspace theo [phân tích vận hành](docs/WORKSPACE_OPERATIONS_ANA
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
 * **Trạng thái:** `TODO`.
+
+---
+
+### FUTURE ROADMAP: HOÀN THÀNH 16 CA MỞ RỘNG (PIPELINE ON-CHAIN RELEASE PLAN §8) & UNIVERSAL ENGINE (§14)
+
+**Mục tiêu Lộ trình Mở rộng:**  
+Sau khi hoàn tất nghiệm thu hai luồng lõi phục vụ bài thi Hackathon (Flash Crash Stop-Loss `BP-01` và Take-Profit `BP-03`), toàn bộ 16 ca kịch bản còn lại được triển khai tuần tự theo đặc tả [docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md](docs/PIPELINE_ONCHAIN_RELEASE_PLAN.md#8-ma-trận-nghiệm-thu-và-future-roadmap) và hợp nhất vào Universal Pipeline Engine (§14).
+
+#### `TASK-401` [BACKLOG] — BP-02: Cắt lỗ bậc thang (Laddered Stop-Loss)
+* **Module:** `PriceOrderPipeline.sol`, `PriceOrderVault.sol`, Studio Canvas.
+* **Mục đích:** Hỗ trợ cắt lỗ từng phần theo nhiều bậc giá định trước.
+* **Chi tiết thực thi:**
+  * Đi qua từng bậc giá với tỷ lệ % snapshot từ vốn ban đầu của Vault.
+  * Khi giá sập đột ngột nhảy qua nhiều bậc, gộp các bậc chưa kích hoạt thành một lần swap duy nhất.
+  * Chỉ khóa bậc sau khi giao dịch swap thành công. Rollback nếu giao dịch trượt giá.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-402` [BACKLOG] — BP-04: Dust Guard (Portfolio / Balance Protection)
+* **Module:** Balance Threshold Guard, Vault, Logic Gate.
+* **Mục đích:** Ngăn chặn lãng phí gas khi giá đạt điều kiện nhưng số dư ví/Vault quá nhỏ (dust).
+* **Chi tiết thực thi:**
+  * Vault kiểm tra số dư thực tế tại thời điểm thực thi.
+  * Nếu giá chạm ngưỡng nhưng số dư < ngưỡng tối thiểu, tự động phát event `OrderSkipped` và không chi gas swap.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-403` [BACKLOG] — BP-05: Anti-Drainer SafeSweep (Emergency Outflow Defense)
+* **Module:** Watch Transfers Node, `PriceOrderVault.executeSafeSweep()`.
+* **Mục đích:** Phòng thủ tự động trước các vụ tấn công rút cạn ví (Drainer/Phishing).
+* **Chi tiết thực thi:**
+  * Lắng nghe sự kiện Transfer bất thường từ ví chỉ định tới địa chỉ lạ ngoài whitelist.
+  * Kích hoạt gọi lại tức thời quét toàn bộ tài sản còn lại về `backupSafeAddress` do chủ ví cài đặt trước.
+  * Bảo đảm chủ ví vẫn có quyền rút trực tiếp `emergencyWithdraw()`.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-404` [BACKLOG] — BP-06: Cảnh báo chuyển ra (Outflow Alert & Webhook)
+* **Module:** Watch Transfers Node, WebSocket / Webhook Gateway.
+* **Mục đích:** Thông báo tức thời khi có dòng tiền chuyển ra khỏi ví được theo dõi.
+* **Chi tiết thực thi:**
+  * Lọc đúng emitter, token, địa chỉ nguồn và số tiền tối thiểu.
+  * Ghi nhận event xác nhận trên chuỗi và chuyển tiếp tới webhook/Telegram của người dùng với cơ chế chống trùng lặp (idempotency key).
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-405` [BACKLOG] — BP-07: Cảnh báo cá voi (Whale Movement Watcher)
+* **Module:** Watch Transfers Node, Volume Filter.
+* **Mục đích:** Theo dõi chuyển dịch của các ví cá voi lớn đối với token mục tiêu.
+* **Chi tiết thực thi:**
+  * Phân biệt log trong cùng transaction, quy đổi đơn vị token chính xác theo decimals.
+  * Bắn thông báo real-time lên Activity Logs và kênh cấu hình khi phát hiện volume bất thường.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-406` [BACKLOG] — BP-08: Thoát theo tín hiệu cá voi (Whale Signal Exit)
+* **Module:** Watch Transfers + DEX Watcher + Multi-Signal Gate.
+* **Mục đích:** Thoát vị thế tự động khi cá voi xả hàng kèm giá DEX sụt giảm.
+* **Chi tiết thực thi:**
+  * Ghép log Transfer của cá voi với quan sát giá DEX trong cùng cửa sổ thời gian (freshness window).
+  * Nếu cả hai tín hiệu đều đạt trong thời hạn, kích hoạt swap bán bảo vệ; nếu tín hiệu quá hạn thì tự động bỏ qua.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-407` [BACKLOG] — BP-09: Daily Autonomous Rebalancer (Periodic DEX Swap)
+* **Module:** Reactive Cron Subscription, Portfolio Vault.
+* **Mục đích:** Tự động cân bằng tỷ trọng danh mục (ví dụ 50% ETH / 50% USDC) mỗi ngày.
+* **Chi tiết thực thi:**
+  * Nhận tick định kỳ từ hệ thống cron của Lasna.
+  * Đọc tỷ trọng danh mục; nếu nằm trong biên dung sai (tolerance band) thì bỏ qua.
+  * Nếu lệch quá ngưỡng, tự động hoán đổi đúng chiều và số lượng để đưa về tỷ trọng mục tiêu.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-408` [BACKLOG] — BP-10: Rút lãi hàng tuần (Weekly Profit Sweep / Harvest)
+* **Module:** Reactive Cron Subscription, Vault Harvest Action.
+* **Mục đích:** Định kỳ hàng tuần chốt lời phần lợi nhuận dôi dư về ví cá nhân.
+* **Chi tiết thực thi:**
+  * Lắng nghe tick cron tuần; tái kiểm định giá tại Vault.
+  * Chỉ thực hiện rút lãi khi giá trị danh mục vượt ngưỡng mục tiêu sinh lời.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-409` [BACKLOG] — BP-11: Chống giằng co quanh ngưỡng đa tài sản (Multi-Pair Cooldown)
+* **Module:** `AbstractReactive`, Stateless Cooldown Timestamp.
+* **Mục đích:** Mở rộng cơ chế chống bão callback cho đa cặp giao dịch và đa pipeline đồng thời.
+* **Chi tiết thực thi:**
+  * Áp dụng timestamp mapping độc lập cho từng cặp token và từng pipeline revision.
+  * Đảm bảo nhiều sự kiện liên tiếp trong cửa sổ cooldown chỉ sinh tối đa 1 callback.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-410` [BACKLOG] — BP-12: Cảnh báo Vault sắp cạn (Low Reserve Alert)
+* **Module:** Cron Watcher, Vault Balance Monitor.
+* **Mục đích:** Cảnh báo sớm cho người dùng khi quỹ vốn giao dịch hoặc quỹ phí callback sắp hết.
+* **Chi tiết thực thi:**
+  * Đo lường định kỳ số dư ETH / lREACT; phát thông báo một lần trong kỳ khi số dư dưới ngưỡng cảnh báo.
+  * Hỗ trợ nút nạp nhanh (Quick Refuel) từ giao diện Active Automations.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-411` [BACKLOG] — EXT-01: Cross-Chain Hedge (Unichain Sepolia → Lasna → Base Sepolia)
+* **Module:** Unichain Emitter Watcher, Cross-Chain Resolver, Vault.
+* **Mục đích:** Giảm thiểu rủi ro chéo giữa các Layer 2 EVM.
+* **Chi tiết thực thi:**
+  * Giám sát sự kiện sụt giảm giá (Velocity Guard) trên Unichain Sepolia.
+  * Kích hoạt lệnh bán phòng hộ (Hedge Swap) tức thời trên Base Sepolia.
+  * Xử lý trường hợp lệch đồng hồ và hết hạn cửa sổ tín hiệu xuyên chuỗi.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-412` [BACKLOG] — EXT-02: Stop-loss một lần (One-Shot Policy Settlement)
+* **Module:** `PriceOrderPipeline.sol`, `PriceOrderVault.sol`.
+* **Mục đích:** Chế độ lệnh một lần (One-Shot) tự khóa sau khi thực hiện thành công.
+* **Chi tiết thực thi:**
+  * Khóa trạng thái vĩnh viễn sau settlement thành công; không cho phép callback lặp kích hoạt lần hai.
+  * Cho phép tái kích hoạt nếu lệnh bị skip do trượt giá trước đó.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-413` [BACKLOG] — EXT-03: Trích khoản nhận USDC (Inflow Extraction)
+* **Module:** Watch Transfers Node, Vault Trích Xuất.
+* **Mục đích:** Tự động nhận diện giao dịch nạp USDC và trích chuyển một phần tới ví thanh toán.
+* **Chi tiết thực thi:**
+  * Nhận diện khoản nạp theo chain, tx hash và log index; tính toán chính xác theo decimals của token.
+  * Chống xử lý trùng lặp (replay protection) đối với cùng một giao dịch.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-414` [BACKLOG] — EXT-04: Payday Auto-Splitter (Compound 20/30/50 Multi-Action)
+* **Module:** Splitter Vault, Atomic Multi-Action Contract.
+* **Mục đích:** Tự động chia lương/doanh thu theo tỷ lệ 20% đầu tư, 30% tiết kiệm, 50% giữ lại.
+* **Chi tiết thực thi:**
+  * Thực hiện đa hành động nguyên tử (Atomic Multi-Action) trong cùng 1 transaction callback để tránh tranh chấp số dư.
+  * Rollback toàn bộ nếu một nhánh hành động tài chính gặp sự cố.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-415` [BACKLOG] — EXT-05: Pause Pipeline khi adapter nâng cấp (Governance Timelock Pause)
+* **Module:** Timelock Watcher, Vault Revoke Action.
+* **Mục đích:** Tự động tạm dừng pipeline khi giao thức DeFi phụ thuộc kích hoạt lịch nâng cấp hợp đồng.
+* **Chi tiết thực thi:**
+  * Lắng nghe sự kiện `CallScheduled` từ Timelock của DEX router.
+  * Tự động revoke quyền của RSC trên Vault trước thời điểm ETA nâng cấp, bảo vệ tiền của người dùng.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-416` [BACKLOG] — CAP-01: Logic Gate OR (Multi-Pool Condition Resolver)
+* **Module:** `PriceGatePipeline.sol`, Studio Canvas DAG Engine.
+* **Mục đích:** Cho phép kích hoạt hành động khi một trong hai nguồn tín hiệu độc lập thỏa mãn điều kiện.
+* **Chi tiết thực thi:**
+  * Ghép hai pool Base Sepolia độc lập làm Signal A và Signal B.
+  * Chỉ cần một tín hiệu đạt ngưỡng trong cửa sổ hợp lệ là tạo callback; nếu cả hai cùng đạt chỉ tạo tối đa 1 callback cho cùng đợt.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-417` [BACKLOG] — Universal Pipeline Engine & Atomic Vault Onboarding (§14)
+* **Module:** `UniversalDeployModal.tsx`, `PriceOrderVault.setupAndAuthorizeRSC()`, Backend DAG Compiler.
+* **Mục đích:** Xóa bỏ phân mảnh kiến trúc giữa các modal deploy, gom các bước ký ví Base Sepolia thành 1 transaction nguyên tử.
+* **Chi tiết thực thi:**
+  * Tầng 1: Xây dựng `UniversalDeployModal` tự động phân tích DAG đồ thị và gom quy trình ký về chuẩn 2 bước (1 click Lasna, 1 click Base).
+  * Tầng 2: Bổ sung hàm atomic `setupAndAuthorizeRSC` hoặc multicall trên Vault để gom đăng ký, cấu hình policy, nạp vốn và cấp quyền thành 1 transaction.
+  * Tầng 3: Universal DAG Compiler trên backend biên dịch mọi đồ thị hợp lệ thành bytecode chuẩn.
+* **Ngày tạo:** 22/11/2026.
+* **Trạng thái:** `BACKLOG`.
+
+#### `TASK-418` [DONE] — Soạn thảo Báo cáo Đánh giá Kỹ thuật, Trải nghiệm DX và Kiến nghị Báo lỗi cho Reactive Network
+* **Module:** Tài liệu kỹ thuật dự án (`docs/REACTIVE_NETWORK_EVALUATION_AND_FEEDBACK.md`).
+* **Mục đích:** Đúc kết toàn diện trải nghiệm thực chiến khi xây dựng OmniFlow trên Reactive Omni Lasna Testnet, báo cáo các điểm nghẽn kỹ thuật và đóng góp kiến nghị nâng tầm DX cho hệ sinh thái Reactive Network.
+* **Chi tiết thực thi:**
+  * Phân tích điểm sáng kiến trúc: Inverted Autonomous Execution, Trustless Cross-Chain Flow, `@reactive-network/reactive-lib`.
+  * Đúc kết 4 bài học thực chiến & Gotchas: Cơn bão callback 200ms Denim block storm & Stateless Cooldown, Two-Slot Callback Payload, `if (!vm)` Foundry guard, Live Price Re-Validation.
+  * Báo cáo 5 lỗi / hạn chế kỹ thuật: Trình khám phá ReactScan chậm chỉ mục & thiếu Cross-Chain Tracing link, ngắt kết nối WebSocket RPC Lasna, tài liệu chưa rõ về nợ gas callback, thiếu công cụ mô phỏng ReactVM trong local Foundry, vấn đề đo lường Reactive Cron.
+  * Đề xuất 4 sáng kiến DX: Bộ React Hooks SDK `@reactive-network/hooks`, Testing Kit `@reactive-network/test-helpers`, Full-Loop Tracing API trên ReactScan, Universal Gas Station.
+* **Ngày tạo:** 22/11/2026.
+* **Ngày hoàn thành:** 22/11/2026.
+* **Người thực hiện:** Đội ngũ Kỹ sư OmniFlow.
+* **Trạng thái:** `DONE`.
