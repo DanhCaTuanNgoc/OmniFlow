@@ -1,6 +1,6 @@
 'use client';
 
-import { Panel, useReactFlow, useStore } from '@xyflow/react';
+import { useReactFlow, useStore } from '@xyflow/react';
 import { LayoutGrid, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react';
 
 type CanvasActionDockProps = {
@@ -13,7 +13,7 @@ type CanvasActionDockProps = {
   onClear: () => void;
 };
 
-const button = 'inline-flex h-9 min-w-9 shrink-0 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 text-xs font-medium text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40';
+const button = 'inline-flex h-9 min-w-8 shrink-0 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40';
 
 export function CanvasActionDock({
   isSnapshot, isPaletteOpen, hasNodes, selectedNodeIds, selectedEdgeIds, onTogglePalette, onClear,
@@ -29,8 +29,8 @@ export function CanvasActionDock({
     : selectedEdgeIds.length ? 'Delete connection' : 'Select a node or connection to delete';
 
   return (
-    <Panel position="bottom-center" role="group" aria-label="Canvas controls"
-      className="nopan nodrag !mb-5 flex w-max max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-center gap-1 rounded-xl border border-[var(--ws-border)] bg-[#13151c]/95 p-1 shadow-xl backdrop-blur-md">
+    <div role="group" aria-label="Canvas controls"
+      className="nopan nodrag nowheel absolute bottom-5 left-1/2 z-[5] flex w-max max-w-[calc(100%-1rem)] -translate-x-1/2 items-center gap-0.5 overflow-x-auto rounded-xl border border-[var(--ws-border)] bg-[#13151c]/95 px-1 py-0.5 shadow-xl backdrop-blur-md [scrollbar-width:none]">
       {!isSnapshot && (
         <>
           <button type="button" aria-label="Node catalog" title="Node catalog" aria-pressed={isPaletteOpen}
@@ -55,7 +55,7 @@ export function CanvasActionDock({
           <Minus aria-hidden="true" className="size-4" />
         </button>
         <button type="button" aria-label={'Fit view. Current zoom ' + percent + '%'} title="Fit view" disabled={!hasNodes}
-          className={button + ' min-w-[3.25rem] tabular-nums'} onClick={() => void fitView({ padding: 0.2, duration: 250 })}>
+          className={button + ' w-11 tabular-nums'} onClick={() => void fitView({ padding: 0.2, duration: 250 })}>
           {percent}%
         </button>
         <button type="button" aria-label="Zoom in" title="Zoom in" disabled={zoom >= maxZoom}
@@ -70,6 +70,6 @@ export function CanvasActionDock({
           <span className="studio-dock-label">Clear</span>
         </button>
       )}
-    </Panel>
+    </div>
   );
 }
