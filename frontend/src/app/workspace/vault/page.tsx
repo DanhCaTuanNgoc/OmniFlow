@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
@@ -16,7 +16,10 @@ import {
   ShieldCheck, 
   Coins, 
   ArrowDownLeft, 
-  Zap 
+  Zap,
+  ChevronDown,
+  Check,
+  Cpu
 } from 'lucide-react';
 import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract, useSwitchChain } from 'wagmi';
 import { parseEther, formatEther, isAddress, isAddressEqual, type Address } from 'viem';
@@ -184,6 +187,26 @@ function VaultForWallet({
   );
   const [customRscInput, setCustomRscInput] = useState('');
   const [showCustomRscInput, setShowCustomRscInput] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedDeploymentName = showCustomRscInput
+    ? 'Custom RSC Contract'
+    : isAddressEqual(targetRsc, CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS)
+    ? 'Default StopLoss RSC'
+    : deployments.find(({ contracts: { rscAddress } }) =>
+        rscAddress && isAddressEqual(rscAddress, targetRsc)
+      )?.name ?? 'Reactive RSC';
 
   useEffect(() => {
     if (!userAddress) return;
@@ -708,42 +731,153 @@ function VaultForWallet({
               </span>
             </div>
 
-            {/* Target RSC Selector */}
-            <div className="space-y-2">
-              {deployments.length > 0 && (
-                <div className="space-y-1">
-                  <label className="text-xs text-zinc-300 font-medium block">
-                    Pipeline Automation Contract
-                  </label>
-                  <select
-                    value={showCustomRscInput ? 'custom' : targetRsc}
-                    onChange={(e) => {
-                      if (e.target.value === 'custom') {
-                        setShowCustomRscInput(true);
-                      } else {
-                        setShowCustomRscInput(false);
-                        setTargetRsc(e.target.value as Address);
-                      }
-                    }}
-                    className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-2.5 py-1.5 text-xs text-white focus:border-[var(--ws-accent)] focus:outline-none"
-                  >
-                    {deployments.map(({ pipelineId, name, contracts: { rscAddress } }) =>
-                      rscAddress && (
-                        <option key={pipelineId} value={rscAddress}>
-                          {name} ({truncateAddress(rscAddress, 6)})
-                        </option>
-                      )
-                    )}
-                    <option value={CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS}>
-                      Default StopLoss RSC ({truncateAddress(CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS, 6)})
-                    </option>
-                    <option value="custom">-- Custom RSC Address --</option>
-                  </select>
-                </div>
-              )}
+            {/* Custom Styled Pipeline Automation Contract Selector */}
+            <div className="space-y-1.5" ref={dropdownRef}>
+              <div className="flex items-center justify-between text-xs">
+                <label className="text-zinc-300 font-medium">
+                  Pipeline Automation Contract
+                </label>
+                <span className="text-[11px] text-zinc-500 font-mono">Lasna #5318007</span>
+              </div>
 
+              {/* Custom Trigger Button */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen((prev) => !prev)}
+                  className="w-full flex items-center justify-between gap-2.5 rounded-lg border border-[var(--ws-border)] bg-[#111318] p-2.5 text-left text-xs transition-colors hover:border-zinc-500/60 focus:border-[var(--ws-accent)] focus:outline-none"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="p-1.5 rounded-md bg-white/[0.05] border border-white/5 text-[var(--ws-accent)] shrink-0">
+                      <Cpu className="size-3.5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-medium text-white truncate text-xs">
+                        {selectedDeploymentName}
+                      </div>
+                      <div className="text-[11px] font-mono text-[var(--ws-muted)] truncate">
+                        {truncateAddress(targetRsc, 8)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium border flex items-center gap-1 ${
+                        isRscAuthorized === true
+                          ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+                          : 'text-zinc-400 border-white/10 bg-white/5'
+                      }`}
+                    >
+                      <span
+                        className={`size-1.5 rounded-full ${
+                          isRscAuthorized === true ? 'bg-emerald-400' : 'bg-zinc-500'
+                        }`}
+                      />
+                      <span>
+                        {authorizationError
+                          ? 'Read Failed'
+                          : isRscAuthorized === undefined
+                          ? 'Checking'
+                          : isRscAuthorized
+                          ? 'Authorized'
+                          : 'Unauthorized'}
+                      </span>
+                    </span>
+                    <ChevronDown className={`size-3.5 text-zinc-400 transition-transform duration-150 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                </button>
+
+                {/* Floating Custom Dropdown Menu */}
+                {isDropdownOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-1.5 z-30 rounded-xl border border-[var(--ws-border)] bg-[#141720] shadow-2xl p-1.5 space-y-1 text-xs animate-in fade-in zoom-in-95 duration-100">
+                    {deployments.length > 0 && (
+                      <div className="space-y-0.5">
+                        <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                          Deployed Pipelines
+                        </div>
+                        {deployments.map(({ pipelineId, name, contracts: { rscAddress } }) =>
+                          rscAddress ? (
+                            <button
+                              key={pipelineId}
+                              type="button"
+                              onClick={() => {
+                                setTargetRsc(rscAddress);
+                                setShowCustomRscInput(false);
+                                setIsDropdownOpen(false);
+                              }}
+                              className={`w-full flex items-center justify-between p-2 rounded-lg text-left transition-colors ${
+                                isAddressEqual(targetRsc, rscAddress) && !showCustomRscInput
+                                  ? 'bg-[var(--ws-accent-bg)] text-white'
+                                  : 'hover:bg-white/5 text-zinc-300 hover:text-white'
+                              }`}
+                            >
+                              <div className="min-w-0">
+                                <div className="font-medium truncate">{name}</div>
+                                <div className="text-[11px] font-mono text-zinc-400">{truncateAddress(rscAddress, 8)}</div>
+                              </div>
+                              {isAddressEqual(targetRsc, rscAddress) && !showCustomRscInput && (
+                                <Check className="size-3.5 text-[var(--ws-accent)] shrink-0" />
+                              )}
+                            </button>
+                          ) : null
+                        )}
+                      </div>
+                    )}
+
+                    <div className="space-y-0.5 border-t border-white/[0.06] pt-1">
+                      <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                        Default Blueprints
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTargetRsc(CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS);
+                          setShowCustomRscInput(false);
+                          setIsDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between p-2 rounded-lg text-left transition-colors ${
+                          isAddressEqual(targetRsc, CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS) && !showCustomRscInput
+                            ? 'bg-[var(--ws-accent-bg)] text-white'
+                            : 'hover:bg-white/5 text-zinc-300 hover:text-white'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">Default StopLoss RSC</div>
+                          <div className="text-[11px] font-mono text-zinc-400">
+                            {truncateAddress(CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS, 8)}
+                          </div>
+                        </div>
+                        {isAddressEqual(targetRsc, CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS) && !showCustomRscInput && (
+                          <Check className="size-3.5 text-[var(--ws-accent)] shrink-0" />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="border-t border-white/[0.06] pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomRscInput(true);
+                          setIsDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between p-2 rounded-lg text-left transition-colors ${
+                          showCustomRscInput
+                            ? 'bg-[var(--ws-accent-bg)] text-white'
+                            : 'hover:bg-white/5 text-zinc-300 hover:text-white'
+                        }`}
+                      >
+                        <div className="font-medium">Enter Custom RSC Address...</div>
+                        {showCustomRscInput && <Check className="size-3.5 text-[var(--ws-accent)] shrink-0" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Custom Address Input */}
               {showCustomRscInput && (
-                <div className="flex gap-2 pt-1">
+                <div className="flex gap-2 pt-1 animate-in fade-in duration-150">
                   <input
                     type="text"
                     placeholder="0x... (Reactive Lasna RSC Address)"
@@ -759,7 +893,7 @@ function VaultForWallet({
                       }
                     }}
                     disabled={!isAddress(customRscInput)}
-                    className="ws-button text-xs disabled:opacity-50"
+                    className="ws-button text-xs disabled:opacity-50 shrink-0"
                   >
                     Apply
                   </button>
@@ -767,37 +901,18 @@ function VaultForWallet({
               )}
             </div>
 
-            {/* Delegation Row */}
-            <div className="p-3 rounded-lg bg-[#111318] border border-[var(--ws-border)] space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-medium text-white flex items-center gap-2">
-                    <span>
-                      {deployments.find(({ contracts: { rscAddress } }) =>
-                        rscAddress && isAddressEqual(rscAddress, targetRsc)
-                      )?.name ?? 'Reactive RSC'}
-                    </span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium border ${
-                      isRscAuthorized === true
-                        ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
-                        : 'text-zinc-400 border-white/10 bg-white/5'
-                    }`}>
-                      {authorizationError ? 'Read Failed' : isRscAuthorized === undefined ? 'Checking' : isRscAuthorized ? 'Authorized' : 'Unauthorized'}
-                    </span>
-                  </div>
-                  <div className="text-[11px] font-mono text-[var(--ws-muted)] mt-0.5">
-                    {truncateAddress(targetRsc, 8)} · Lasna #5318007
-                  </div>
-                </div>
-
+            {/* Permission Action Card */}
+            <div className="p-3.5 rounded-lg bg-[#111318] border border-[var(--ws-border)] space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[var(--ws-muted)]">Explorer Verification</span>
                 <a
                   href={`https://lasna.reactscan.net/address/${targetRsc}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-1 rounded text-zinc-400 hover:text-white transition-colors"
-                  title="View on ReactScan"
+                  className="inline-flex items-center gap-1.5 text-[var(--ws-accent)] hover:underline font-mono text-[11px]"
                 >
-                  <ExternalLink className="size-3.5" />
+                  <span>ReactScan</span>
+                  <ExternalLink className="size-3" />
                 </a>
               </div>
 
@@ -805,13 +920,22 @@ function VaultForWallet({
                 type="button"
                 onClick={handleToggleAuthorizeRsc}
                 disabled={isWritePending || isWriteConfirming || !canWrite || authorizationError || isRscAuthorized === undefined}
-                className={`w-full py-1.5 px-3 text-xs font-semibold rounded-md border transition-colors cursor-pointer disabled:opacity-50 ${
+                className={`w-full py-2 px-3 text-xs font-semibold rounded-md border transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 ${
                   isRscAuthorized === true
                     ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border-rose-500/30'
                     : 'ws-button ws-button-primary'
                 }`}
               >
-                {isRscAuthorized === true ? 'Revoke Permission' : 'Grant Permission'}
+                {isWritePending || isWriteConfirming ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" />
+                    <span>Confirming on Base Sepolia...</span>
+                  </>
+                ) : isRscAuthorized === true ? (
+                  'Revoke Permission'
+                ) : (
+                  'Grant Permission'
+                )}
               </button>
             </div>
           </div>
