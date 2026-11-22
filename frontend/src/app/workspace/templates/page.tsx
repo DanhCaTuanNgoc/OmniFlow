@@ -14,13 +14,13 @@ import {
   TrendingDown, 
   RefreshCw, 
   Flame, 
-  Wallet,
-  Globe,
-  Zap,
-  Search,
-  ShieldAlert,
-  ShieldCheck,
-  X
+  Wallet, 
+  Globe, 
+  Zap, 
+  Search, 
+  ShieldAlert, 
+  ShieldCheck, 
+  X 
 } from 'lucide-react';
 
 interface Recipe {
@@ -34,9 +34,10 @@ interface Recipe {
   tags: string[];
   nodesCount: number;
   flow: {
-    trigger: string;
-    condition: string;
-    action: string;
+    when: string;
+    then: string;
+    rawTrigger: string;
+    rawAction: string;
   };
   metrics: {
     cooldown: string;
@@ -55,22 +56,23 @@ const RECIPES: Recipe[] = [
     category: 'defi',
     categoryLabel: 'DeFi Risk',
     title: 'Flash Crash Stop-Loss',
-    description: 'Monitors DEX pool reserves and automatically executes an emergency swap to USDC when spot price breaches threshold.',
+    description: 'Monitors Uniswap ETH/USDC reserves on Base Sepolia and executes a 50% stop-loss swap to USDC when price breaches threshold.',
     icon: TrendingDown,
     tagColor: 'text-cyan-300 border-cyan-500/30 bg-cyan-500/10',
     tags: ['DeFi Risk', 'Uniswap V2', 'Base Sepolia'],
     nodesCount: 4,
     flow: {
-      trigger: 'Sync(reserve0, reserve1)',
-      condition: 'Price <= $1,800',
-      action: 'ActionVault.executeStopLoss(50%)'
+      when: 'ETH Spot <= $1,800',
+      then: 'Swap 50% to USDC',
+      rawTrigger: 'Uniswap Sync(reserve0, reserve1)',
+      rawAction: 'ActionVault.executeStopLoss(50%)'
     },
     metrics: {
       cooldown: '300s Cooldown Guard',
     },
     nodesList: [
       { name: 'DEX Sync Event Listener', type: 'trigger', summary: 'Subscribes to Base Sepolia Uniswap pair topic0 0x1c411e9a...' },
-      { name: 'Price Threshold Filter', type: 'condition', summary: 'Computes reserve0 / reserve1 in fixed-point 18 decimals against $1800 target' },
+      { name: 'Price Threshold Filter', type: 'condition', summary: 'Computes reserve0 / reserve1 in fixed-point 18 decimals against $1,800 target' },
       { name: 'Stateless Cooldown Guard', type: 'condition', summary: 'Rejects rapid flurry events within 300s window to protect against 200ms block storms' },
       { name: 'ActionVault Stop-Loss', type: 'action', summary: 'Rechecks the pool price and applies the Vault’s fixed 5% slippage cap to its router quote' }
     ],
@@ -91,29 +93,30 @@ function react(LogRecord calldata record) external vmOnly {
     category: 'defi',
     categoryLabel: 'DeFi Risk',
     title: 'Take-Profit Scalper',
-    description: 'Monitors AMM liquidity for upside surges and autonomously locks in positions into stablecoins with slippage protection.',
+    description: 'Monitors AMM liquidity for upside surges and autonomously locks in 50% profit into stablecoins when ETH reaches $2,800.',
     icon: RefreshCw,
     tagColor: 'text-amber-300 border-amber-500/30 bg-amber-500/10',
     tags: ['Profit Taking', 'AMM Sync', 'Rate-Limited'],
     nodesCount: 4,
     flow: {
-      trigger: 'Sync(reserve0, reserve1)',
-      condition: 'Price >= $2,500',
-      action: 'ActionVault.executeTakeProfit(25%)'
+      when: 'ETH Spot >= $2,800',
+      then: 'Sell 50% to USDC',
+      rawTrigger: 'Uniswap Sync(reserve0, reserve1)',
+      rawAction: 'ActionVault.executeTakeProfit(50%)'
     },
     metrics: {
       cooldown: '600s Cooldown Guard',
     },
     nodesList: [
       { name: 'Uniswap Sync Listener', type: 'trigger', summary: 'Base Sepolia DEX liquidity tracking' },
-      { name: 'High-Watermark Check', type: 'condition', summary: 'Ensures target exit price is exceeded' },
-      { name: 'MEV Re-Validation Guard', type: 'condition', summary: 'Simulates minimum return before execution' },
-      { name: 'Vault Liquidate Action', type: 'action', summary: 'Swaps collateral to USDC safe holding' }
+      { name: 'High-Watermark Check', type: 'condition', summary: 'Ensures target exit price is exceeded (>= $2,800)' },
+      { name: 'Stateless Cooldown Guard', type: 'condition', summary: 'Rejects rapid duplicate calls within 600s window' },
+      { name: 'Vault Liquidate Action', type: 'action', summary: 'Swaps 50% Vault ETH balance to USDC safe holding' }
     ],
     rscSnippet: `// Reactive Take-Profit Logic
 if (price >= TARGET_PROFIT && block.timestamp - lastTriggered >= 600) {
     lastTriggered = block.timestamp;
-    bytes memory payload = abi.encodeWithSelector(IActionVault.executeTakeProfit.selector, 25);
+    bytes memory payload = abi.encodeWithSelector(IActionVault.executeTakeProfit.selector, 50);
     emit Callback(CHAIN_ID_BASE, vaultAddress, GAS_LIMIT, payload);
 }`
   },
@@ -121,24 +124,25 @@ if (price >= TARGET_PROFIT && block.timestamp - lastTriggered >= 600) {
     id: 'anti-drainer',
     category: 'security',
     categoryLabel: 'Security',
-    title: 'Anti-Drainer Cold SafeSweep',
-    description: 'Detects unauthorized high-value transfers or drain attempts and immediately sweeps vault collateral to cold storage.',
+    title: 'Anti-Drainer SafeSweep',
+    description: 'Monitors vault transactions and immediately sweeps 100% of all assets to a cold safe if unauthorized outbound transfers exceed 1.0 ETH.',
     icon: Flame,
     tagColor: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10',
     tags: ['Anti-Phishing', '1-Tx Evacuation', 'Cold Safe'],
     nodesCount: 3,
     flow: {
-      trigger: 'Transfer(from == Owner)',
-      condition: 'Value > 1.0 ETH',
-      action: 'ActionVault.executeSafeSweep(coldSafe)'
+      when: 'Outbound > 1.0 ETH',
+      then: 'Sweep 100% to Cold Safe',
+      rawTrigger: 'Transfer(from == ActionVault)',
+      rawAction: 'ActionVault.executeSafeSweep(backupSafe)'
     },
     metrics: {
-      cooldown: 'Stateless 0s (Instant)',
+      cooldown: '60s Cooldown Guard',
     },
     nodesList: [
-      { name: 'Wallet Egress Filter', type: 'trigger', summary: 'Monitors outbound Transfer and Approval events' },
-      { name: 'Anomaly Detector', type: 'condition', summary: 'Identifies non-whitelisted destinations or excess drain' },
-      { name: 'SafeSweep Emergency Evac', type: 'action', summary: 'Sweeps entire vault collateral to cold multi-sig' }
+      { name: 'Watch Transfers', type: 'trigger', summary: 'Monitors outbound native ETH and ERC-20 transfers from vault' },
+      { name: 'Cooldown Rate-Limiter', type: 'condition', summary: 'Enforces 60s cooldown buffer to prevent repeated drain re-entrancy' },
+      { name: 'Emergency SafeSweep', type: 'action', summary: 'Sweeps 100% of vault ETH and ERC-20 collateral to secure cold multi-sig' }
     ],
     rscSnippet: `// 1-Tx Emergency SafeSweep
 if (isUnauthorizedEgress(record)) {
@@ -151,23 +155,24 @@ if (isUnauthorizedEgress(record)) {
     category: 'cron',
     categoryLabel: 'Autonomous Cron',
     title: 'Daily Portfolio Rebalancer',
-    description: 'Zero-server automated portfolio rebalancer triggered every 24 hours directly via ReactVM block interval consensus.',
+    description: 'Zero-server periodic portfolio rebalancer triggered every 24 hours directly via ReactVM consensus to rebalance 10% ETH into USDC.',
     icon: ShieldAlert,
     tagColor: 'text-violet-300 border-violet-500/30 bg-violet-500/10',
     tags: ['Cron Tick', 'Zero Server', 'Reactive Core'],
     nodesCount: 3,
     flow: {
-      trigger: 'ReactVM Block Epoch',
-      condition: 'Delta >= 86,400s',
-      action: 'ActionVault.rebalancePortfolio()'
+      when: 'Every 24 Hours (Cron)',
+      then: 'Rebalance 10% to USDC',
+      rawTrigger: 'ReactVM Block Epoch Tick',
+      rawAction: 'ActionVault.rebalanceSwap(10%)'
     },
     metrics: {
-      cooldown: '86400s Interval',
+      cooldown: '86,400s Interval',
     },
     nodesList: [
-      { name: 'System Block Interval', type: 'trigger', summary: 'Pure on-chain Lasna CometBFT time keeper' },
-      { name: 'Epoch Threshold Check', type: 'condition', summary: 'Asserts 24 hours elapsed since last run' },
-      { name: 'Portfolio Rebalancer', type: 'action', summary: 'Re-allocates collateral ratios' }
+      { name: 'Periodic Cron (24h)', type: 'trigger', summary: 'Pure on-chain Lasna CometBFT 24-hour interval tick' },
+      { name: 'Solvency Check', type: 'condition', summary: 'Asserts ActionVault balance exceeds minimum 0.1 ETH' },
+      { name: 'Rebalance Swap', type: 'action', summary: 'Autonomously swaps 10% ETH into USDC at 1% slippage' }
     ],
     rscSnippet: `// Zero-Keeper Autonomous Cron
 if (block.timestamp - lastRebalance >= 1 days) {
@@ -181,23 +186,26 @@ if (block.timestamp - lastRebalance >= 1 days) {
     category: 'crosschain',
     categoryLabel: 'Cross-Chain',
     title: 'Payday Auto-Splitter',
-    description: 'Autonomously splits incoming payment deposits: routes portions to ETH DCA, yield cold vault, and liquid spending.',
+    description: 'Autonomously splits incoming deposits over 1,000 USDC: DCA 20% into ETH, sweeps 30% to cold safe, and sends a Telegram alert.',
     icon: Wallet,
     tagColor: 'text-cyan-300 border-cyan-500/30 bg-cyan-500/10',
     tags: ['Salary Split', 'Multi-Signal', 'Non-Custodial'],
     nodesCount: 5,
     flow: {
-      trigger: 'ERC20.Transfer(to == Vault)',
-      condition: 'Value >= 1,000 USDC',
-      action: 'ActionVault.splitInflow(20%, 30%, 50%)'
+      when: 'Incoming >= 1,000 USDC',
+      then: '20% DCA · 30% SafeSweep',
+      rawTrigger: 'ERC20.Transfer(to == Connected Wallet)',
+      rawAction: 'DEX Swap (20%) + SafeSweep (30%) + Webhook'
     },
     metrics: {
-      cooldown: '3600s Guard',
+      cooldown: '3,600s Guard',
     },
     nodesList: [
-      { name: 'Inbound Transfer Listener', type: 'trigger', summary: 'Monitors USDC token incoming deposits' },
-      { name: 'Threshold Qualifier', type: 'condition', summary: 'Checks minimum deposit size criteria' },
-      { name: 'Three-Way Splitter Engine', type: 'action', summary: 'Executes DEX swap, Safe routing, and liquid balance retention' }
+      { name: 'Salary Transfer Watcher', type: 'trigger', summary: 'Monitors incoming USDC deposits to connected wallet' },
+      { name: 'Salary > 1,000 USDC', type: 'condition', summary: 'Asserts incoming inflow qualifies minimum $1,000 threshold' },
+      { name: 'DCA 20% into ETH', type: 'action', summary: 'Swaps 20% of inflow into ETH collateral' },
+      { name: 'Sweep 30% to Cold Safe', type: 'action', summary: 'Secures 30% into cold multi-sig vault' },
+      { name: 'Telegram Webhook Alert', type: 'action', summary: 'Dispatches instant mobile notification to owner' }
     ],
     rscSnippet: `// Income Splitter Execution
 if (record.topic2 == bytes32(uint256(uint160(vaultAddress))) && amount >= 1000e6) {
@@ -210,26 +218,29 @@ if (record.topic2 == bytes32(uint256(uint160(vaultAddress))) && amount >= 1000e6
     category: 'crosschain',
     categoryLabel: 'Cross-Chain',
     title: 'Unichain-to-Base Cross Hedge',
-    description: 'Monitors rapid liquidity fluctuations on Unichain Sepolia and triggers an automated defensive hedge swap on Base Sepolia.',
+    description: 'Monitors rapid liquidity price velocity on Unichain Sepolia and fires an automated defensive hedge swap on Base Sepolia.',
     icon: Globe,
     tagColor: 'text-purple-300 border-purple-500/30 bg-purple-500/10',
     tags: ['Cross-Chain', 'Velocity Guard', 'Unichain <-> Base'],
     nodesCount: 4,
     flow: {
-      trigger: 'Unichain Sync Event',
-      condition: 'Drop > 5% in 10s',
-      action: 'Base Vault Hedge Swap'
+      when: 'Unichain Drop > 5% in 10s',
+      then: 'Base Sepolia Hedge Swap',
+      rawTrigger: 'Unichain Sepolia Uniswap Sync',
+      rawAction: 'Base Sepolia ActionVault Swap'
     },
     metrics: {
-      cooldown: '600s Cooldown',
+      cooldown: '300s Cooldown Guard',
     },
     nodesList: [
-      { name: 'Unichain Event Listener', type: 'trigger', summary: 'Cross-chain event ingestion from Unichain testnet' },
-      { name: 'Velocity Drop Calculation', type: 'condition', summary: 'Tracks rolling delta over short block window' },
-      { name: 'Base Vault Cross-Execution', type: 'action', summary: 'Fires callback to ActionVault on Base Sepolia' }
+      { name: 'Watch DEX Unichain', type: 'trigger', summary: 'Cross-chain event ingestion from Unichain testnet (#1301)' },
+      { name: 'Price Velocity Guard', type: 'condition', summary: 'Detects sudden price drops greater than 5% within 10-second window' },
+      { name: 'Cooldown Rate-Limiter', type: 'condition', summary: '300s rate-limiting cooldown guard' },
+      { name: 'Base Sepolia Swap', type: 'action', summary: 'Fires callback to ActionVault on Base Sepolia to hedge into USDC' }
     ],
     rscSnippet: `// Multi-Network Reactive Bridge
-if (velocityDrop > VELOCITY_LIMIT) {
+if (velocityDrop > VELOCITY_LIMIT && block.timestamp - lastTriggered >= 300) {
+    lastTriggered = block.timestamp;
     emit Callback(CHAIN_ID_BASE_SEPOLIA, baseVault, GAS_LIMIT, payload);
 }`
   },
@@ -402,15 +413,21 @@ export default function TemplateLibraryPage() {
                     {recipe.description}
                   </p>
 
-                  {/* Minimal Core Logic Flow */}
-                  <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 py-1.5 px-2.5 rounded-lg bg-[#12141c] border border-white/[0.04]">
-                    <span className="text-cyan-300 truncate max-w-[120px]" title={recipe.flow.trigger}>
-                      {recipe.flow.trigger}
-                    </span>
-                    <ArrowRight className="size-2.5 text-zinc-600 shrink-0" />
-                    <span className="text-emerald-300 truncate max-w-[130px]" title={recipe.flow.action}>
-                      {recipe.flow.action}
-                    </span>
+                  {/* Highly Intuitive When -> Then Mini Flow */}
+                  <div className="flex items-center justify-between text-[10px] font-mono py-1.5 px-2.5 rounded-lg bg-[#12141c] border border-white/[0.04]">
+                    <div className="flex items-center gap-1 min-w-0">
+                      <span className="text-[8px] uppercase tracking-wider text-zinc-500 font-sans font-medium">When</span>
+                      <span className="text-cyan-300 font-medium truncate max-w-[120px]" title={recipe.flow.when}>
+                        {recipe.flow.when}
+                      </span>
+                    </div>
+                    <ArrowRight className="size-2.5 text-zinc-600 shrink-0 mx-1" />
+                    <div className="flex items-center gap-1 min-w-0">
+                      <span className="text-[8px] uppercase tracking-wider text-zinc-500 font-sans font-medium">Then</span>
+                      <span className="text-emerald-300 font-medium truncate max-w-[125px]" title={recipe.flow.then}>
+                        {recipe.flow.then}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -516,14 +533,14 @@ export default function TemplateLibraryPage() {
                 </div>
               </div>
 
-              {/* Security Invariants Callout */}
+              {/* Execution Invariants Callout */}
               <div className="p-3.5 ws-panel space-y-1">
                 <div className="text-[11px] font-mono font-semibold text-violet-300 flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-violet-400" />
-                  <span>Execution checks</span>
+                  <span>Security & Execution Guard</span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Check the deployed contract for the callback permissions, cooldown and price checks it supports.
+                  Configured with {inspectingRecipe.metrics.cooldown}. The destination ActionVault enforces non-custodial ownership and live slippage re-validation on Base Sepolia.
                 </p>
               </div>
             </div>
