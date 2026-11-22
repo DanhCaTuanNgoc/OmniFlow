@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, Suspense } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ReactFlow,
@@ -28,6 +27,7 @@ import { APP_CONFIG } from '@/lib/constants';
 import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph, exportDraftJson, connectionError, simulationPath } from '@/lib/pipelineDraft';
 import { WorkspaceSignInRequired, workspaceRequest } from '@/lib/workspaceSession';
 import { useWorkspaceSignedIn } from '@/components/common/WorkspaceSignIn';
+import { PipelineOpenState } from '@/components/studio/PipelineOpenState';
 import { useStudioHeaderStore } from '@/lib/studioHeaderStore';
 
 import {
@@ -730,10 +730,9 @@ function StudioCanvasInner() {
   };
 
   if ((pipelineParam || deploymentParam || localParam) && !loaded) {
-    return <div className="ws-page" role={loadError ? 'alert' : 'status'}>
-      <p>{signInRequired ? 'Sign in from the Workspace header to open this pipeline.' : loadError ?? 'Loading pipeline...'}</p>
-      <Link href="/workspace/studio" className="ws-button">Back to pipelines</Link>
-    </div>;
+    if (signInRequired) return <PipelineOpenState state="sign-in" />;
+    if (loadError) return <PipelineOpenState state="error" message={loadError} />;
+    return <PipelineOpenState />;
   }
 
   return (
