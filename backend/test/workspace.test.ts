@@ -6,15 +6,28 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { parseSiweMessage } from 'viem/siwe';
-import { keccak256, type Address } from 'viem';
+import { concatHex, encodeFunctionData, keccak256, parseAbi, zeroHash, type Address } from 'viem';
 import { WebSocket } from 'ws';
 import { createApp } from '../src/app.js';
 import { env } from '../src/config/env.js';
 import { DeploymentStore, DeploymentConflict, deploymentEnvironment } from '../src/data/deployments.js';
+import { matchesDelegatedPolicyCall } from '../src/services/deploymentSteps.js';
 import { WorkspaceSessionService } from '../src/services/workspaceSession.service.js';
 
 const alice = privateKeyToAccount(generatePrivateKey());
 const bob = privateKeyToAccount(generatePrivateKey());
+
+test('delegated Vault step requires the exact target, calldata and single-call mode', () => {
+  const manager = '0xdb9b1e94b5b69df7e401ddbede43491141047db3';
+  const abi = parseAbi(['function redeemDelegations(bytes[],bytes32[],bytes[])']);
+  const expected = '0x12345678';
+  const call = concatHex([alice.address, zeroHash, expected]);
+  const input = encodeFunctionData({ abi, functionName: 'redeemDelegations', args: [['0x01'], [zeroHash], [call]] });
+  assert.equal(matchesDelegatedPolicyCall(manager, input, alice.address, expected), true);
+  assert.equal(matchesDelegatedPolicyCall(manager, input, bob.address, expected), false);
+  assert.equal(matchesDelegatedPolicyCall(manager, input, alice.address, '0x12345679'), false);
+  assert.equal(matchesDelegatedPolicyCall(bob.address, input, alice.address, expected), false);
+});
 
 test('Take-Profit preparation pins the wallet, draft, graph and funding across retries', () => {
   const store = new DeploymentStore(':memory:');

@@ -1,14 +1,30 @@
-import { encodeFunctionData, isAddressEqual, parseAbi, parseEventLogs, type Address, type Hash } from 'viem';
+import { concatHex, decodeFunctionData, encodeFunctionData, isAddressEqual, parseAbi, parseEventLogs, zeroHash, type Address, type Hash, type Hex } from 'viem';
 import { ACTION_VAULT_ABI, PRICE_ORDER_VAULT_ABI, STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 import { deploymentStore } from '../data/deployments.js';
 import { chainService } from './chain.service.js';
 import { deployerService, resolveTakeProfit, takeProfitTemplate } from './deployer.service.js';
-import { VAULT_RUNTIME } from '../abis/runtimeFingerprints.js';
+import { PRICE_ORDER_VAULT_RUNTIME, VAULT_RUNTIME } from '../abis/runtimeFingerprints.js';
 import { matchesRuntime } from './runtimeBytecode.js';
 
 export const deploymentSteps = ['register-rsc', 'price-policy', 'authorization', 'principal', 'callback-reserve', 'reactive-reserve'] as const;
 type StepKind = typeof deploymentSteps[number];
 const reserveAbi = parseAbi(['function depositTo(address) payable']);
+
+const delegationManager = '0xdb9b1e94b5b69df7e401ddbede43491141047db3';
+const delegationAbi = parseAbi(['function redeemDelegations(bytes[],bytes32[],bytes[])']);
+
+export function matchesDelegatedPolicyCall(to: Address, input: Hex, vault: Address, expected: Hex) {
+  if (!isAddressEqual(to, delegationManager)) return false;
+  try {
+    const { args: [contexts, modes, executions] } = decodeFunctionData({ abi: delegationAbi, data: input });
+    const packed = concatHex([vault, zeroHash, expected]).toLowerCase();
+    return contexts.length === modes.length && modes.length === executions.length &&
+      executions.filter((execution, index) =>
+        contexts[index] !== '0x' && modes[index] === zeroHash && execution.toLowerCase() === packed).length === 1;
+  } catch {
+    return false;
+  }
+}
 
 export async function recordDeploymentStep(owner: Address, id: string, kind: StepKind, hash: Hash) {
   const deployment = deployerService.getDeployment(owner, id);
@@ -26,16 +42,35 @@ export async function recordDeploymentStep(owner: Address, id: string, kind: Ste
 
   const takeProfit = deployment.template === takeProfitTemplate;
   if (kind === 'register-rsc' || kind === 'price-policy' || (takeProfit && kind === 'authorization')) {
-    if (!takeProfit || !tx.to || !isAddressEqual(tx.to, vaultAddress) || !isAddressEqual(tx.from, owner) ||
-        !isAddressEqual(receipt.from, owner) || tx.value !== 0n) return false;
-    const { config } = resolveTakeProfit(deployment.graph);
-    const expected = kind === 'register-rsc'
-      ? encodeFunctionData({ abi: PRICE_ORDER_VAULT_ABI, functionName: 'registerRSC', args: [rscAddress] })
-      : kind === 'price-policy'
-        ? encodeFunctionData({ abi: PRICE_ORDER_VAULT_ABI, functionName: 'configurePriceOrder',
-          args: [rscAddress, { mode: config.mode, percent: config.percent, threshold: config.threshold }] })
-        : encodeFunctionData({ abi: PRICE_ORDER_VAULT_ABI, functionName: 'setAuthorizedRSC', args: [rscAddress, true] });
-    if (tx.input !== expected) return false;
+    if (!takeProfit) return false;
+    const logs = receipt.logs.filter(log => isAddressEqual(log.address, vaultAddress));
+    const vault = { address: vaultAddress, abi: PRICE_ORDER_VAULT_ABI } as const;
+    const [code, vaultOwner] = await Promise.all([
+      client.getCode({ address: vaultAddress, blockNumber: receipt.blockNumber }),
+      client.readContract({ ...vault, functionName: 'owner', blockNumber: receipt.blockNumber }),
+    ]);
+    if (!matchesRuntime(code, PRICE_ORDER_VAULT_RUNTIME) || !isAddressEqual(vaultOwner, owner)) return false;
+
+    if (kind === 'register-rsc') {
+      const events = parseEventLogs({ abi: PRICE_ORDER_VAULT_ABI, eventName: 'RSCRegistered', logs, strict: true });
+      if (events.filter(log => isAddressEqual(log.args.rsc, rscAddress)).length !== 1) return false;
+    } else if (kind === 'authorization') {
+      const events = parseEventLogs({ abi: PRICE_ORDER_VAULT_ABI, eventName: 'RSCAuthorized', logs, strict: true });
+      if (events.filter(log => isAddressEqual(log.args.rsc, rscAddress)).at(-1)?.args.status !== true) return false;
+    } else {
+      if (!tx.to || tx.value !== 0n || receipt.blockNumber === 0n) return false;
+      const { config } = resolveTakeProfit(deployment.graph);
+      const expected = encodeFunctionData({ abi: PRICE_ORDER_VAULT_ABI, functionName: 'configurePriceOrder',
+        args: [rscAddress, { mode: config.mode, percent: config.percent, threshold: config.threshold }] });
+      const direct = isAddressEqual(tx.to, vaultAddress) && isAddressEqual(tx.from, owner) && tx.input === expected;
+      if (!direct && !matchesDelegatedPolicyCall(tx.to, tx.input, vaultAddress, expected)) return false;
+      const [before, after, policy] = await Promise.all([
+        client.readContract({ ...vault, functionName: 'permissions', args: [rscAddress], blockNumber: receipt.blockNumber - 1n }),
+        client.readContract({ ...vault, functionName: 'permissions', args: [rscAddress], blockNumber: receipt.blockNumber }),
+        client.readContract({ ...vault, functionName: 'pricePolicies', args: [rscAddress], blockNumber: receipt.blockNumber }),
+      ]);
+      if (before !== 0 || after !== 1 || policy[0] !== config.mode || policy[1] !== config.percent || policy[2] !== config.threshold) return false;
+    }
   } else if (kind === 'authorization') {
     const events = parseEventLogs({
       abi: ACTION_VAULT_ABI, eventName: 'RSCAuthorized',
