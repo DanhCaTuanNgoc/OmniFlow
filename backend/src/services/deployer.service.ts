@@ -11,6 +11,7 @@ import { getDraft, publishReservedDraft } from '../data/pipelineDrafts.js';
 import { STOP_LOSS_RUNTIME } from '../abis/runtimeFingerprints.js';
 import { matchesRuntime } from './runtimeBytecode.js';
 import { verifyStopLossVault } from './vaultCompatibility.js';
+import { readDeploymentRuntime } from './deploymentRuntime.js';
 import {
   STOP_LOSS_PIPELINE_ABI, STOP_LOSS_PIPELINE_BYTECODE,
   STOP_LOSS_TEMPLATE, resolveStopLoss, stopLossConstructorArgs,
@@ -333,9 +334,43 @@ export class DeployerService {
     const intents = deploymentStore().list(owner.toLowerCase() as Address, deploymentEnvironment);
     return Promise.all(intents.map(async intent => {
       try {
-        return this.present(await this.reconcile(intent, false));
+        const settled = await this.reconcile(intent, false);
+        const steps = deploymentStore().steps(intent.id);
+        const presented = this.present(settled);
+        let runtime = null;
+        if (settled.status === 'deployed') {
+          try {
+            const deploymentObj = {
+              ...presented,
+              graph: JSON.parse(settled.graphJson) as PipelineGraph,
+              requestKey: settled.key,
+              steps,
+            };
+            runtime = await readDeploymentRuntime(deploymentObj, owner);
+          } catch {
+            runtime = null;
+          }
+        }
+        const hasAuthorizedBefore = steps.some(s => s.kind === 'authorization');
+        const isBaseRpcAvailable = Boolean(runtime?.base);
+        const isAuthorized = Boolean(runtime?.base?.authorized);
+        const isPaused = hasAuthorizedBefore && !isAuthorized && isBaseRpcAvailable;
+
+        return {
+          ...presented,
+          steps,
+          runtime,
+          isPaused,
+        };
       } catch {
-        return { ...this.present(intent), reconciliationError: 'Unable to reconcile the Lasna receipt.' };
+        const steps = deploymentStore().steps(intent.id);
+        return {
+          ...this.present(intent),
+          steps,
+          runtime: null,
+          isPaused: false,
+          reconciliationError: 'Unable to reconcile the Lasna receipt.'
+        };
       }
     }));
   }

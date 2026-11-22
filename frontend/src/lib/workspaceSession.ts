@@ -226,7 +226,7 @@ export async function workspaceRequest<T>(owner: Address, path: string, options?
   const headers = new Headers(request.headers);
   headers.set('Authorization', `Bearer ${token}`);
   if (request.body) headers.set('Content-Type', 'application/json');
-  const response = await fetch(`${APP_CONFIG.backendUrl}/api${path}`, { ...request, headers });
+  const response = await fetch(`${APP_CONFIG.backendUrl}/api${path}`, { ...request, headers, cache: 'no-store' });
   if (response.status === 401) {
     invalidateWorkspaceSession(token);
     if (sessionOnly) throw new WorkspaceSignInRequired();

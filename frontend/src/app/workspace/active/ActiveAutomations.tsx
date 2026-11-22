@@ -15,12 +15,108 @@ import {
   AlertTriangle,
   Zap,
   Network,
-  Loader2
+  Loader2,
+  Pause,
 } from 'lucide-react';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
 import { type DeploymentSummary } from '@/lib/deployments';
 import { workspaceRequest } from '@/lib/workspaceSession';
+
+export type AutomationCardStatus = {
+  type: 'active' | 'paused' | 'setup' | 'pending' | 'reverted';
+  label: string;
+  description: string;
+  badgeClass: string;
+  icon: React.ReactNode;
+};
+
+export function getCardStatus(dep: DeploymentSummary): AutomationCardStatus {
+  const hasAuthorizedBefore = dep.steps?.some((s) => s.kind === 'authorization') ?? false;
+  const isBaseRpcAvailable = Boolean(dep.runtime?.base);
+  const isAuthorized = Boolean(dep.runtime?.base?.authorized);
+  const isPaused = dep.isPaused ?? (hasAuthorizedBefore && !isAuthorized && isBaseRpcAvailable);
+
+  if (isPaused) {
+    return {
+      type: 'paused',
+      label: 'PAUSED',
+      description: 'Vault execution paused (Permission revoked)',
+      badgeClass: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
+      icon: <Pause className="size-2.5" />,
+    };
+  }
+
+  if (dep.status === 'signed') {
+    return {
+      type: 'pending',
+      label: 'LASNA PENDING',
+      description: 'Waiting for Lasna transaction receipt',
+      badgeClass: 'bg-sky-500/10 border-sky-500/30 text-sky-300',
+      icon: <Zap className="size-2.5" />,
+    };
+  }
+
+  if (dep.status === 'reverted') {
+    return {
+      type: 'reverted',
+      label: 'REVERTED',
+      description: 'Deployment reverted on Lasna',
+      badgeClass: 'bg-rose-500/10 border-rose-500/30 text-rose-300',
+      icon: <AlertTriangle className="size-2.5" />,
+    };
+  }
+
+  // dep.status === 'deployed'
+  if (dep.runtime?.status === 'ready') {
+    return {
+      type: 'active',
+      label: 'ACTIVE',
+      description: 'Ready and monitoring cross-chain events',
+      badgeClass: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
+      icon: <CheckCircle2 className="size-2.5" />,
+    };
+  }
+
+  if (dep.runtime?.status === 'awaiting-authorization') {
+    return {
+      type: 'setup',
+      label: 'AWAITING AUTH',
+      description: 'Vault owner permission required',
+      badgeClass: 'bg-orange-500/10 border-orange-500/30 text-orange-300',
+      icon: <Clock className="size-2.5" />,
+    };
+  }
+
+  if (dep.runtime?.status === 'awaiting-principal') {
+    return {
+      type: 'setup',
+      label: 'AWAITING FUNDS',
+      description: 'Deposit principal into Vault',
+      badgeClass: 'bg-orange-500/10 border-orange-500/30 text-orange-300',
+      icon: <Clock className="size-2.5" />,
+    };
+  }
+
+  if (dep.runtime?.status === 'awaiting-fees') {
+    return {
+      type: 'setup',
+      label: 'AWAITING FEES',
+      description: 'Refuel gas reserves for execution',
+      badgeClass: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
+      icon: <Clock className="size-2.5" />,
+    };
+  }
+
+  // Deployed default (runtime unverified or checking)
+  return {
+    type: 'active',
+    label: 'ACTIVE',
+    description: 'Deployed and active on testnet',
+    badgeClass: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
+    icon: <CheckCircle2 className="size-2.5" />,
+  };
+}
 
 export default function ActiveAutomations() {
   const { address, isConnected } = useAccount();
@@ -59,7 +155,7 @@ function WalletDeployments({ owner }: { owner: Address }) {
 
   // Filter & Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'DEPLOYED' | 'SETUP' | 'PENDING'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'PAUSED' | 'SETUP' | 'PENDING'>('ALL');
 
   async function load() {
     setPending(true);
@@ -81,6 +177,22 @@ function WalletDeployments({ owner }: { owner: Address }) {
     }
   }, [owner, isCorrectChain]);
 
+  const counts = useMemo(() => {
+    if (!list) return { all: 0, active: 0, paused: 0, setup: 0, pending: 0 };
+    let active = 0;
+    let paused = 0;
+    let setup = 0;
+    let pending = 0;
+    for (const item of list) {
+      const status = getCardStatus(item);
+      if (status.type === 'active') active++;
+      else if (status.type === 'paused') paused++;
+      else if (status.type === 'setup') setup++;
+      else if (status.type === 'pending') pending++;
+    }
+    return { all: list.length, active, paused, setup, pending };
+  }, [list]);
+
   const filteredList = useMemo(() => {
     if (!list) return [];
     return list.filter((item) => {
@@ -92,15 +204,20 @@ function WalletDeployments({ owner }: { owner: Address }) {
         const matchTpl = item.template.toLowerCase().includes(q);
         if (!matchName && !matchId && !matchTpl) return false;
       }
+
       // Status filter
-      if (statusFilter === 'DEPLOYED') {
-        return item.status === 'deployed';
+      const cardStatus = getCardStatus(item);
+      if (statusFilter === 'ACTIVE') {
+        return cardStatus.type === 'active';
+      }
+      if (statusFilter === 'PAUSED') {
+        return cardStatus.type === 'paused';
       }
       if (statusFilter === 'SETUP') {
-        return item.status === 'reverted';
+        return cardStatus.type === 'setup';
       }
       if (statusFilter === 'PENDING') {
-        return item.status === 'signed';
+        return cardStatus.type === 'pending';
       }
       return true;
     });
@@ -124,10 +241,11 @@ function WalletDeployments({ owner }: { owner: Address }) {
         <div className="flex items-center gap-2 overflow-x-auto text-xs">
           {(
             [
-              { key: 'ALL', label: `All (${list?.length ?? 0})` },
-              { key: 'DEPLOYED', label: 'Deployed' },
-              { key: 'SETUP', label: 'Reverted' },
-              { key: 'PENDING', label: 'Pending' },
+              { key: 'ALL', label: `All (${counts.all})` },
+              { key: 'ACTIVE', label: `Active (${counts.active})` },
+              { key: 'PAUSED', label: `Paused (${counts.paused})` },
+              { key: 'SETUP', label: `Setup Required (${counts.setup})` },
+              { key: 'PENDING', label: `Pending (${counts.pending})` },
             ] as const
           ).map((tab) => (
             <button
@@ -214,8 +332,7 @@ function WalletDeployments({ owner }: { owner: Address }) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredList.map((dep) => {
-              const isDeployed = dep.status === 'deployed';
-              const isPendingStatus = dep.status === 'signed';
+              const cardStatus = getCardStatus(dep);
 
               return (
                 <Link
@@ -227,36 +344,55 @@ function WalletDeployments({ owner }: { owner: Address }) {
                   {/* Top row: Badges */}
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      {isDeployed ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300">
-                          <CheckCircle2 className="size-2.5" />
-                          <span>DEPLOYED</span>
-                        </span>
-                      ) : isPendingStatus ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-sky-500/10 border border-sky-500/30 px-1.5 py-0.5 text-[10px] font-medium text-sky-300">
-                          <Zap className="size-2.5" />
-                          <span>LASNA PENDING</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
-                          <Clock className="size-2.5" />
-                          <span>REVERTED</span>
-                        </span>
-                      )}
+                      <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium ${cardStatus.badgeClass}`}>
+                        {cardStatus.icon}
+                        <span>{cardStatus.label}</span>
+                      </span>
                     </div>
                     <span className="font-mono text-[10px] text-zinc-500">
                       Base Sepolia
                     </span>
                   </div>
 
-                  {/* Middle: Title & Revision */}
-                  <div className="my-3 space-y-1">
-                    <h3 className="text-sm font-semibold tracking-tight text-white group-hover:text-[var(--ws-accent)] transition-colors truncate">
-                      {dep.name}
-                    </h3>
-                    <p className="text-xs text-[var(--ws-muted)] font-mono truncate">
-                      {dep.template} · {dep.revisionId}
+                  {/* Middle: Title, Revision & Status description */}
+                  <div className="my-3 space-y-1.5">
+                    <div>
+                      <h3 className="text-sm font-semibold tracking-tight text-white group-hover:text-[var(--ws-accent)] transition-colors truncate">
+                        {dep.name}
+                      </h3>
+                      <p className="text-xs text-[var(--ws-muted)] font-mono truncate">
+                        {dep.template} · {dep.revisionId}
+                      </p>
+                    </div>
+                    <p className={`text-[11px] font-medium ${
+                      cardStatus.type === 'paused'
+                        ? 'text-amber-400'
+                        : cardStatus.type === 'active'
+                        ? 'text-emerald-400/90'
+                        : cardStatus.type === 'setup'
+                        ? 'text-orange-400/90'
+                        : 'text-zinc-400'
+                    }`}>
+                      {cardStatus.description}
                     </p>
+                  </div>
+
+                  {/* Contracts info snippet */}
+                  <div className="mb-3 grid grid-cols-2 gap-2 rounded bg-black/25 p-2 text-[10px] font-mono border border-white/5">
+                    <div className="truncate">
+                      <span className="text-zinc-500 block text-[9px] uppercase tracking-wider">RSC (Lasna)</span>
+                      <span className="text-zinc-300">
+                        {dep.contracts.rscAddress
+                          ? `${dep.contracts.rscAddress.slice(0, 6)}...${dep.contracts.rscAddress.slice(-4)}`
+                          : 'Pending'}
+                      </span>
+                    </div>
+                    <div className="truncate">
+                      <span className="text-zinc-500 block text-[9px] uppercase tracking-wider">Vault (Base)</span>
+                      <span className="text-zinc-300">
+                        {`${dep.contracts.vaultAddress.slice(0, 6)}...${dep.contracts.vaultAddress.slice(-4)}`}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Bottom row: CTA */}

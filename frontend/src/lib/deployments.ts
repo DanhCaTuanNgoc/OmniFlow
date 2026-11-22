@@ -24,6 +24,14 @@ export type DeploymentSummary = {
   };
   reconciliationError?: string;
   broadcastLimitReached?: boolean;
+  steps?: { kind: DeploymentStep; txHash: Hash; chainId: number; blockNumber: string; blockHash: Hash }[];
+  runtime?: {
+    status: 'unverified' | 'awaiting-authorization' | 'awaiting-principal' | 'awaiting-fees' | 'ready';
+    base: { authorized: boolean; principal: string; callback: FeeState; onboarding?: 'register-rsc' | 'price-policy' | 'policy-mismatch' | null } | null;
+    lasna: { native: string; reactive: FeeState } | null;
+    readAt: string;
+  } | null;
+  isPaused?: boolean;
 };
 
 export type DeploymentExecution = {

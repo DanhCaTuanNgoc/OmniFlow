@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import { formatEther, parseEther, type Address } from 'viem';
 import {
-  Activity, AlertTriangle, ArrowLeft, CheckCircle2, CirclePlus, Code2, ExternalLink,
-  ListChecks, Loader2, Pause, Play, RefreshCw, ShieldCheck, Wallet,
+  Activity, AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Circle, CirclePlus, Code2, Coins, ExternalLink,
+  HelpCircle, Info, KeyRound, ListChecks, Loader2, Pause, Play, RefreshCw, ShieldCheck, Sparkles, Wallet, X,
 } from 'lucide-react';
 import { resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
@@ -14,6 +14,8 @@ import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/Works
 import { deploymentStepKey, runDeploymentAction, setVaultRscAuthorization, takeProfitTemplate, type DeploymentDetail, type DeploymentSummary } from '@/lib/deployments';
 import { WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspaceSession';
 import { ToastContainer, type ToastNotification } from '@/components/common/ToastContainer';
+import { DeployDialog } from '@/components/canvas/DeployConfirmation';
+import { truncateAddress } from '@/lib/utils';
 
 const runtimeLabel = {
   unverified: 'RPC data unavailable',
@@ -137,6 +139,7 @@ function DeploymentPanel({
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState<string>();
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const { contracts, runtime, status } = deployment;
 
   const pushToast = useCallback((toast: Omit<ToastNotification, 'id'>) => {
@@ -150,6 +153,49 @@ function DeploymentPanel({
 
   const onboarding = runtime?.base?.onboarding;
   const profit = deployment.template === takeProfitTemplate;
+
+  // Onboarding & Readiness state evaluation
+  const isRegistered = Boolean(deployment.steps.some((s) => s.kind === 'register-rsc') || (onboarding && onboarding !== 'register-rsc'));
+  const isPolicyConfigured = Boolean(deployment.steps.some((s) => s.kind === 'price-policy') || (onboarding === null && isRegistered));
+  const isPolicyMismatch = onboarding === 'policy-mismatch';
+  const principalBalance = runtime?.base?.principal ? BigInt(runtime.base.principal) : 0n;
+  const isPrincipalFunded = principalBalance > 0n || Boolean(deployment.steps.some((s) => s.kind === 'principal'));
+  const callbackReserves = runtime?.base?.callback?.reserves ? BigInt(runtime.base.callback.reserves) : 0n;
+  const callbackBudget = runtime?.base?.callback?.budget ? BigInt(runtime.base.callback.budget) : 0n;
+  const isCallbackFunded = (callbackReserves >= callbackBudget && callbackBudget > 0n) || Boolean(deployment.steps.some((s) => s.kind === 'callback-reserve'));
+  const hasAuthorizedBefore = deployment.steps.some((s) => s.kind === 'authorization');
+  const isBaseRpcAvailable = Boolean(runtime?.base);
+  const isAuthorized = Boolean(runtime?.base?.authorized);
+  const isPaused = hasAuthorizedBefore && !isAuthorized && isBaseRpcAvailable;
+  const isAuthorizedOrOnboarded = isAuthorized || hasAuthorizedBefore;
+  const isFullyConfigured = profit
+    ? isRegistered && isPolicyConfigured && isPrincipalFunded && isCallbackFunded && isAuthorizedOrOnboarded
+    : isAuthorizedOrOnboarded && isPrincipalFunded && isCallbackFunded;
+
+  let nextStep: 'register-rsc' | 'price-policy' | 'principal' | 'callback-reserve' | 'authorization' | 'done' = 'done';
+  if (profit) {
+    if (isPolicyMismatch) {
+      nextStep = 'price-policy';
+    } else if (!isRegistered) {
+      nextStep = 'register-rsc';
+    } else if (!isPolicyConfigured) {
+      nextStep = 'price-policy';
+    } else if (!isPrincipalFunded) {
+      nextStep = 'principal';
+    } else if (!isCallbackFunded) {
+      nextStep = 'callback-reserve';
+    } else if (!isAuthorizedOrOnboarded) {
+      nextStep = 'authorization';
+    }
+  } else {
+    if (!isAuthorizedOrOnboarded) {
+      nextStep = 'authorization';
+    } else if (!isPrincipalFunded) {
+      nextStep = 'principal';
+    } else if (!isCallbackFunded) {
+      nextStep = 'callback-reserve';
+    }
+  }
 
   async function doStep(kind: keyof typeof stepLabels) {
     setBusy(kind);
@@ -216,11 +262,6 @@ function DeploymentPanel({
       setBusy(undefined);
     }
   }
-
-  const hasAuthorizedBefore = deployment.steps.some((s) => s.kind === 'authorization');
-  const isBaseRpcAvailable = Boolean(runtime?.base);
-  const isAuthorized = Boolean(runtime?.base?.authorized);
-  const isPaused = hasAuthorizedBefore && !isAuthorized && isBaseRpcAvailable;
 
   const label = isPaused
     ? 'Vault execution paused'

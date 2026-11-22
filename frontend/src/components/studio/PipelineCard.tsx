@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Archive, ArrowRight, Layers, Clock, FileText, Shield, Activity, Radio } from 'lucide-react';
+import { Archive, ArrowRight, Layers, Clock, FileText, Shield, Activity, Radio, Pause } from 'lucide-react';
 import { PipelineKebabMenu } from './PipelineKebabMenu';
 import type { DeploymentSummary } from '@/lib/deployments';
 
@@ -11,7 +11,7 @@ export interface PipelineItem {
   description?: string;
   updatedAt: number;
   source: 'local' | 'wallet' | 'recipe';
-  status?: 'draft' | 'deployed' | 'pending' | 'failed' | 'archived';
+  status?: 'draft' | 'deployed' | 'pending' | 'failed' | 'archived' | 'paused';
   hasDraft?: boolean;
   deployment?: DeploymentSummary;
   nodeCount?: number;
@@ -49,6 +49,14 @@ export function PipelineCard({
 
   const getSourceBadge = () => {
     if (pipeline.deployment) {
+      if (pipeline.status === 'paused' || pipeline.deployment.isPaused) {
+        return (
+          <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
+            <Pause className="size-2.5 text-amber-400" />
+            <span>PAUSED</span>
+          </span>
+        );
+      }
       if (pipeline.status === 'deployed') {
         return (
           <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">

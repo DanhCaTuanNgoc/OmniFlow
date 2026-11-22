@@ -266,7 +266,9 @@ export function PipelineStudioHub() {
 
       const isArchived = walletArchivedIds.includes(wDraft.id);
       const status: PipelineItem['status'] = matchingDep
-        ? matchingDep.status === 'deployed'
+        ? matchingDep.isPaused
+          ? 'paused'
+          : matchingDep.status === 'deployed'
           ? 'deployed'
           : matchingDep.status === 'signed'
           ? 'pending'
@@ -300,7 +302,7 @@ export function PipelineStudioHub() {
         source: 'wallet',
         hasDraft: false,
         deployment: dep,
-        status: dep.status === 'deployed' ? 'deployed' : dep.status === 'signed' ? 'pending' : 'failed',
+        status: dep.isPaused ? 'paused' : dep.status === 'deployed' ? 'deployed' : dep.status === 'signed' ? 'pending' : 'failed',
         isArchived,
       });
     }
