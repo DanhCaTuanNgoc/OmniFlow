@@ -157,7 +157,8 @@ function StudioCanvasInner() {
         setTimeout(() => {
           pushNotification({
             type: issue.severity === 'error' ? 'error' : 'warning',
-            title: issue.nodeLabel ? `Issue in [${issue.nodeLabel}]` : 'Pipeline Issue',
+            nodeLabel: issue.nodeLabel,
+            title: issue.severity === 'error' ? 'Validation Error' : 'Configuration Warning',
             message: issue.message,
             nodeId: issue.nodeId,
             duration: 2800 + index * 400,
@@ -403,19 +404,19 @@ function StudioCanvasInner() {
         if (!leave && editVersion.current === version && pipelineParam !== result.id) {
           router.replace('/workspace/studio?pipeline=' + result.id, { scroll: false });
         }
-        pushNotification({ type: 'success', message: 'Draft saved to your wallet workspace.' });
+        pushNotification({ type: 'success', title: 'Draft Saved', message: 'Revision saved to your wallet workspace.' });
       } else {
         const id = localParam ?? crypto.randomUUID();
         saveBrowserDraft(id, draftName, graph, description);
         if (!leave && localParam !== id) router.replace('/workspace/studio?local=' + id, { scroll: false });
-        pushNotification({ type: 'info', message: 'Draft saved in this browser.' });
+        pushNotification({ type: 'info', title: 'Draft Saved', message: 'Revision saved in local browser storage.' });
       }
       const current = editVersion.current === version;
       if (current) setIsDirty(false);
       return current;
     } catch (error) {
       if (active.current) {
-        pushNotification({ type: 'error', message: error instanceof Error ? error.message : 'Unable to save the draft.' });
+        pushNotification({ type: 'error', title: 'Save Failed', message: error instanceof Error ? error.message : 'Unable to save draft revision.' });
       }
       return false;
     } finally {
@@ -443,7 +444,7 @@ function StudioCanvasInner() {
         router.push(`/workspace/studio?local=${encodeURIComponent(newId)}`);
       }
     } catch (err) {
-      pushNotification({ type: 'error', message: err instanceof Error ? err.message : 'Unable to create editable draft.' });
+      pushNotification({ type: 'error', title: 'Duplicate Failed', message: err instanceof Error ? err.message : 'Unable to create editable draft.' });
     } finally {
       setDraftBusy(false);
     }
@@ -491,7 +492,7 @@ function StudioCanvasInner() {
 
       const error = connectionError(sourceNode, targetNode, connection);
       if (error) {
-        pushNotification({ type: 'warning', message: error });
+        pushNotification({ type: 'warning', title: 'Invalid Connection', message: error });
         return false;
       }
       // Check cycles (DAG enforcement)
@@ -506,7 +507,7 @@ function StudioCanvasInner() {
       };
 
       if (hasCycle(connection.target, new Set([connection.source]))) {
-        pushNotification({ type: 'warning', message: 'Cyclic connections are strictly prohibited in DAG pipelines.' });
+        pushNotification({ type: 'warning', title: 'DAG Restriction', message: 'Cyclic connections are strictly prohibited in DAG pipelines.' });
         return false;
       }
 
@@ -642,7 +643,7 @@ function StudioCanvasInner() {
       setEdges([]);
       setDraftNetworks(undefined);
       setActiveRecipeId('');
-      pushNotification({ type: 'info', message: 'Pipeline cleared.' });
+      pushNotification({ type: 'info', title: 'Pipeline Cleared', message: 'All nodes and connections have been reset.' });
     }
   }, [nodes.length, isSnapshot, setNodes, setEdges, markDirty, pushNotification]);
 
@@ -658,7 +659,7 @@ function StudioCanvasInner() {
         ownerAddress: address ?? undefined,
       },
     });
-    pushNotification({ type: 'success', message: 'Pipeline configuration exported to JSON.' });
+    pushNotification({ type: 'success', title: 'Export Complete', message: 'Pipeline configuration exported to JSON.' });
   }, [nodes, edges, draftNetworks, draftName, address, description, pushNotification]);
 
   // Import Pipeline from JSON
@@ -685,9 +686,9 @@ function StudioCanvasInner() {
         setEdges(draft.edges);
         setDraftNetworks(draft.networks);
         setActiveRecipeId('');
-        pushNotification({ type: 'success', message: 'Pipeline imported successfully.' });
+        pushNotification({ type: 'success', title: 'Import Complete', message: 'Pipeline imported successfully.' });
       } catch (error) {
-        pushNotification({ type: 'error', message: error instanceof Error ? error.message : 'Unable to import JSON file.' });
+        pushNotification({ type: 'error', title: 'Import Failed', message: error instanceof Error ? error.message : 'Unable to import JSON file.' });
       }
     },
     [nodes.length, isSnapshot, setNodes, setEdges, markDirty, pushNotification]
