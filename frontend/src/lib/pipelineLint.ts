@@ -65,6 +65,8 @@ export function lintPipelineGraph(nodes: readonly Node[], edges: readonly Edge[]
     if (err) {
       addIssue({
         id: `edge-${edge.id}`,
+        nodeId: tgt.id,
+        nodeLabel: String(tgt.data.label || tgt.id),
         severity: 'error',
         message: `Edge ${src.data.label || src.id} -> ${tgt.data.label || tgt.id}: ${err}`,
       });

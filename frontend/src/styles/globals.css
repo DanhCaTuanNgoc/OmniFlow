@@ -240,17 +240,20 @@ code, kbd, samp, pre, .font-mono {
   transition: opacity 160ms ease;
 }
 
-:is(.studio-flow-edge[data-simulation-pulse], [data-execution-pulse]) .studio-flow-edge-stream {
-  opacity: 0.72;
+[data-flow-walkthrough] .studio-flow-edge-stream {
   animation-play-state: paused;
 }
 
-:is(.studio-flow-edge[data-simulation-pulse], [data-execution-pulse]) .studio-flow-edge-signal {
-  opacity: 1;
-  animation: studio-edge-signal 800ms linear infinite;
+.studio-flow-edge[data-simulation-pulse] .studio-flow-edge-stream {
+  opacity: 0.72;
 }
 
-:is(.studio-flow-edge[data-simulation-pulse], [data-execution-pulse]) .studio-flow-edge-target {
+.studio-flow-edge[data-simulation-pulse] .studio-flow-edge-signal {
+  opacity: 1;
+  animation: studio-edge-signal 800ms linear both;
+}
+
+.studio-flow-edge[data-simulation-pulse] .studio-flow-edge-target {
   opacity: 0.85;
 }
 
@@ -264,7 +267,7 @@ code, kbd, samp, pre, .font-mono {
     transition: none;
   }
 
-  :is(.studio-flow-edge[data-simulation-pulse], [data-execution-pulse]) .studio-flow-edge-signal {
+  .studio-flow-edge[data-simulation-pulse] .studio-flow-edge-signal {
     animation: none;
     stroke-dasharray: none;
   }

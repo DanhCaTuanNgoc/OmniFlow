@@ -9,6 +9,7 @@ import {
   BackgroundVariant,
   useNodesState,
   useEdgesState,
+  useNodesInitialized,
   addEdge,
   Connection,
   Edge,
@@ -21,9 +22,10 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useAccount } from 'wagmi';
 import { RECIPE_PRESETS } from '@/lib/recipes';
-import { isPhaseTwoGraph, resolvePhaseTwo, resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
+import { isPhaseTwoGraph, resolvePhaseTwo, resolveStopLoss, STOP_LOSS_TEMPLATE, StopLossValidationError, type StopLossGraph } from '@omniflow/shared';
 import { APP_CONFIG } from '@/lib/constants';
-import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph, studioEdgeData, exportDraftJson, connectionError, simulationPath } from '@/lib/pipelineDraft';
+import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph, studioEdgeData, exportDraftJson, connectionError } from '@/lib/pipelineDraft';
+import { planPipelineWalkthrough } from '@/lib/pipelineWalkthrough';
 import { WorkspaceSignInRequired, workspaceRequest } from '@/lib/workspaceSession';
 import { useWorkspaceSignedIn } from '@/components/common/WorkspaceSignIn';
 import { PipelineOpenState } from '@/components/studio/PipelineOpenState';
@@ -91,6 +93,23 @@ const edgeTypes: EdgeTypes = {
 };
 const draftNodeTypes = new Map(PALETTE_ITEMS.map(item => [item.type, item.category]));
 
+const walkthroughLabels = {
+  sandbox: 'Sandbox',
+  preflight: 'Deploy checks',
+  snapshot: 'Snapshot preview',
+  execution: 'Confirmed execution',
+};
+
+type WalkthroughMode = keyof typeof walkthroughLabels;
+type Walkthrough = {
+  mode: WalkthroughMode;
+  message: string;
+  running: boolean;
+  nodeIds: ReadonlySet<string>;
+  edgeIds?: ReadonlySet<string>;
+  issue?: PipelineIssue;
+};
+
 let idCounter = 10;
 function getId(prefix: string, nodes: readonly Node[]) {
   let id = `${prefix}-${idCounter++}`;
@@ -103,6 +122,7 @@ function StudioCanvasInner() {
   const { address, isConnected } = useAccount();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const nodesInitialized = useNodesInitialized();
   const [draftNetworks, setDraftNetworks] = useState<StopLossGraph['networks']>();
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
@@ -113,10 +133,10 @@ function StudioCanvasInner() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isDeployOpen, setIsDeployOpen] = useState(false);
   const [isSolidityOpen, setIsSolidityOpen] = useState(false);
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [simulationStep, setSimulationStep] = useState(0);
-  const [simulationMessage, setSimulationMessage] = useState<string | null>(null);
-  const simTimersRef = useRef<NodeJS.Timeout[]>([]);
+  const [walkthrough, setWalkthrough] = useState<Walkthrough>();
+  const walkthroughTimer = useRef<ReturnType<typeof setTimeout>>();
+  const autoWalkthroughStarted = useRef(false);
+  const [isDeployedSnapshot, setIsDeployedSnapshot] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [savedDraft, setSavedDraft] = useState<{ id: string; updatedAt: number }>();
@@ -130,26 +150,20 @@ function StudioCanvasInner() {
   const signedIn = useWorkspaceSignedIn(isConnected ? address : undefined);
   const active = useRef(false);
   const editVersion = useRef(0);
-  const restoreSimulation = useRef<() => void>();
   useLayoutEffect(() => {
     active.current = true;
     return () => { active.current = false; };
   }, []);
-  const stopSimulation = useCallback(() => {
-    simTimersRef.current.forEach(clearTimeout);
-    simTimersRef.current = [];
-    if (!restoreSimulation.current) return;
-    restoreSimulation.current();
-    restoreSimulation.current = undefined;
-    setIsSimulating(false);
-    setSimulationStep(0);
-    setSimulationMessage(null);
+  const stopWalkthrough = useCallback(() => {
+    clearTimeout(walkthroughTimer.current);
+    walkthroughTimer.current = undefined;
+    setWalkthrough(undefined);
   }, []);
   const markDirty = useCallback(() => {
     editVersion.current++;
-    stopSimulation();
+    stopWalkthrough();
     setIsDirty(true);
-  }, [stopSimulation]);
+  }, [stopWalkthrough]);
   const [isDirty, setIsDirty] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
 
@@ -160,23 +174,30 @@ function StudioCanvasInner() {
     ? null : searchParams.get('recipe');
   const isSnapshot = Boolean(deploymentParam);
   const draftName = pipelineName.trim() || RECIPE_PRESETS[activeRecipeId]?.title || 'Custom pipeline';
+  const activeNodeIds = walkthrough?.nodeIds;
+  const activeEdgeIds = walkthrough?.edgeIds;
+  const activeIssue = walkthrough?.issue;
+  const displayedEdges = useMemo(() => activeEdgeIds
+    ? edges.map(edge => activeEdgeIds.has(edge.id) ? { ...edge, data: { ...edge.data, isBurst: true } } : edge)
+    : edges, [activeEdgeIds, edges]);
 
   const lintResult = useMemo(() => lintPipelineGraph(nodes, edges), [nodes, edges]);
   const annotatedNodes = useMemo(() => {
     return nodes.map((n) => {
       const issues = lintResult.nodeIssues.get(n.id);
       const isOrphan = lintResult.isOrphanMap.get(n.id) ?? false;
-      const firstWarning = issues?.[0]?.message ?? null;
+      const firstWarning = activeIssue?.nodeId === n.id ? activeIssue.message : issues?.[0]?.message ?? null;
       return {
         ...n,
         data: {
           ...n.data,
           warning: firstWarning,
           isOrphan,
+          state: activeNodeIds?.has(n.id) && !activeIssue ? 'CHECKING' : n.data.state,
         },
       };
     });
-  }, [nodes, lintResult]);
+  }, [nodes, lintResult, activeNodeIds, activeIssue]);
 
   const handleAutoLayout = useCallback(() => {
     if (isSnapshot) return;
@@ -258,7 +279,7 @@ function StudioCanvasInner() {
     const controller = new AbortController();
     const resource = deploymentParam ? 'deployments' : 'drafts';
     const id = deploymentParam ?? pipelineParam!;
-    void workspaceRequest<{ graph: unknown; id?: string; updatedAt?: number }>(
+    void workspaceRequest<{ graph: unknown; status?: string; id?: string; updatedAt?: number }>(
       address, '/pipeline/' + resource + '/' + encodeURIComponent(id), { signal: controller.signal, sessionOnly: true },
     ).then(snapshot => {
       if (controller.signal.aborted || !active.current) return;
@@ -270,6 +291,7 @@ function StudioCanvasInner() {
       setDraftNetworks(draft.networks);
       setPipelineName(draft.name ?? '');
       setDescription(draft.description);
+      setIsDeployedSnapshot(Boolean(deploymentParam) && snapshot.status === 'deployed');
       if (!deploymentParam && snapshot.id && snapshot.updatedAt !== undefined) {
         setSavedDraft({ id: snapshot.id, updatedAt: snapshot.updatedAt });
       }
@@ -519,11 +541,8 @@ function StudioCanvasInner() {
     if (!isSnapshot) markDirty();
   };
 
-  // Cleanup simulation timers on unmount
   useEffect(() => {
-    return () => {
-      simTimersRef.current.forEach(clearTimeout);
-    };
+    return () => clearTimeout(walkthroughTimer.current);
   }, []);
 
   // Clear Graph (Reset Pipeline)
@@ -590,133 +609,99 @@ function StudioCanvasInner() {
     [nodes.length, isSnapshot, setNodes, setEdges, markDirty]
   );
 
-  // Simulate Flow (Dry-Run Sandbox)
-  const handleSimulateFlow = useCallback(() => {
-    if (isSimulating || !nodes.length) return;
+  const startWalkthrough = useCallback((mode: WalkthroughMode, preflightIssue?: PipelineIssue) => {
+    stopWalkthrough();
+    const checkConfiguration = mode === 'sandbox' || mode === 'preflight';
+    const issues = checkConfiguration ? [...lintResult.errors] : [];
+    if (preflightIssue) issues.push(preflightIssue);
+    const steps = planPipelineWalkthrough(nodes, edges, issues);
+    if (!steps.length) return;
 
-    const path = simulationPath(nodes, edges);
-    if (!path.edges.size) {
-      setValidationWarning('Connect a Trigger to an Action before running the Sandbox.');
-      return;
-    }
-    const states = new Map(nodes.filter(node => path.nodes.has(node.id)).map(node => [node.id, node.data.state]));
-    const bursts = new Map(edges.filter(edge => path.edges.has(edge.id)).map(edge => [edge.id, edge.data?.isBurst]));
-    restoreSimulation.current = () => {
-      setNodes(items => items.map(node => states.has(node.id)
-        ? { ...node, data: { ...node.data, state: states.get(node.id) } } : node));
-      setEdges(items => items.map(edge => bursts.has(edge.id)
-        ? { ...edge, data: { ...edge.data, isBurst: bursts.get(edge.id) } } : edge));
-    };
     setValidationWarning(null);
-    setIsSimulating(true);
-    setSimulationStep(1);
-    setSimulationMessage('Sandbox 1/3: Example trigger received');
+    const label = walkthroughLabels[mode];
+    const schedule = (run: () => void, delay: number) => {
+      walkthroughTimer.current = setTimeout(run, delay);
+    };
 
-    // Step 1: Trigger captured & conditions evaluating
-    setNodes((nds) =>
-      nds.map((n) => {
-        if (!path.nodes.has(n.id)) return n;
-        if (n.data.category === 'trigger') {
-          return {
-            ...n,
-            data: { ...n.data, state: 'EVENT_CAPTURED' as const },
-          };
+    function showStep(index: number) {
+      const step = steps[index];
+      if (!step) {
+        if (mode === 'preflight') {
+          stopWalkthrough();
+          setIsDeployOpen(true);
+          return;
         }
-        if (n.data.category === 'condition' || n.data.category === 'logic') {
-          return {
-            ...n,
-            data: { ...n.data, state: 'EVALUATING' as const },
-          };
-        }
-        return n;
-      })
-    );
-
-    // Accelerate only the edges participating in the sandbox run.
-    setEdges((eds) =>
-      eds.map((e) => path.edges.has(e.id) ? ({
-        ...e,
-        data: { ...e.data, isBurst: true },
-      }) : e)
-    );
-
-    // Step 2: Reactive Omni ReactVM Condition Met
-    const t1 = setTimeout(() => {
-      setSimulationStep(2);
-      setSimulationMessage('Sandbox 2/3: Example conditions pass');
-      setNodes((nds) =>
-        nds.map((n) => {
-        if (!path.nodes.has(n.id)) return n;
-          if (n.data.category === 'condition' || n.data.category === 'logic') {
-            return {
-              ...n,
-              data: { ...n.data, state: 'CONDITION_MET' as const },
-            };
-          }
-          if (n.data.category === 'action') {
-            return {
-              ...n,
-              data: { ...n.data, state: 'FIRING_CALLBACK' as const },
-            };
-          }
-          return n;
-        })
-      );
-    }, 1500);
-    simTimersRef.current.push(t1);
-
-    // Step 3: Destination Action Callback Executed on Base Sepolia
-    const t2 = setTimeout(() => {
-      setSimulationStep(3);
-      setSimulationMessage('Sandbox 3/3: Example action completed');
-      setNodes((nds) =>
-        nds.map((n) => {
-        if (!path.nodes.has(n.id)) return n;
-          if (n.data.category === 'action') {
-            return {
-              ...n,
-              data: { ...n.data, state: 'SUCCESS' as const },
-            };
-          }
-          return n;
-        })
-      );
-    }, 3200);
-    simTimersRef.current.push(t2);
-
-    // End simulation and revert state
-    simTimersRef.current.push(setTimeout(stopSimulation, 5500));
-  }, [isSimulating, nodes, edges, setNodes, setEdges, stopSimulation]);
-
-  const handleOpenDeploy = () => {
-    if (isSnapshot || !isConnected) return;
-    if (!savedDraft || isDirty) {
-      setValidationWarning('Save this revision to your wallet workspace before deploying.');
-      return;
-    }
-    if (!lintResult.canDeploy) {
-      const topError = lintResult.errors[0]?.message || 'Please resolve all highlighted configuration errors before deploying.';
-      setValidationWarning(topError);
-      setShowDiagnostics(true);
-      setTimeout(() => setValidationWarning(null), 6000);
-      return;
-    }
-    try {
-      const graph = { nodes, edges, networks: draftNetworks };
-      if (phaseTwo) {
-        resolvePhaseTwo(graph);
-        setValidationWarning('Phase 2 validation passed. Deployment remains disabled until the versioned Vault policy setup is available.');
-        setTimeout(() => setValidationWarning(null), 6000);
+        setWalkthrough({
+          mode, running: false, nodeIds: new Set(),
+          message: mode === 'execution' ? 'Execution confirmed.' : label + ' complete.',
+        });
+        schedule(stopWalkthrough, 1500);
         return;
       }
-      resolveStopLoss(graph);
-    } catch (error) {
-      setValidationWarning(error instanceof Error ? error.message : 'Unable to validate this graph.');
-      setTimeout(() => setValidationWarning(null), 4000);
-      return;
+
+      const nodeIds = new Set(step.nodes.map(node => node.id));
+      const names = step.nodes.map(node => String(node.data.label || node.type || node.id)).join(', ');
+      const arrive = () => {
+        if (step.issue) {
+          walkthroughTimer.current = undefined;
+          setShowDiagnostics(checkConfiguration && lintResult.errors.length > 0);
+          setWalkthrough({
+            mode, nodeIds, running: false, issue: step.issue,
+            message: (names ? label + ' stopped at ' + names : label + ' blocked') + '. ' + step.issue.message,
+          });
+          return;
+        }
+        setWalkthrough({ mode, nodeIds, running: true, message: label + ' · ' + names });
+        schedule(() => showStep(index + 1), 450);
+      };
+
+      if (step.edges.length) {
+        setWalkthrough({
+          mode, running: true, nodeIds: new Set(), message: label + ' · ' + names,
+          edgeIds: new Set(step.edges.map(edge => edge.id)),
+        });
+        schedule(arrive, 800);
+      } else {
+        arrive();
+      }
     }
-    setValidationWarning(null);
-    setIsDeployOpen(true);
+
+    showStep(0);
+  }, [edges, lintResult.errors, nodes, stopWalkthrough]);
+
+  useEffect(() => {
+    if (!isDeployedSnapshot || !loaded || !nodesInitialized || autoWalkthroughStarted.current) return;
+    autoWalkthroughStarted.current = true;
+    startWalkthrough('snapshot');
+  }, [isDeployedSnapshot, loaded, nodesInitialized, startWalkthrough]);
+
+  const handleConfirmedExecution = useCallback(() => {
+    if (!walkthroughTimer.current) startWalkthrough('execution');
+  }, [startWalkthrough]);
+
+  const handleOpenDeploy = () => {
+    if (isSnapshot || !isConnected || walkthrough?.running) return;
+
+    let issue: PipelineIssue | undefined;
+    const graph = { nodes, edges, networks: draftNetworks };
+    try {
+      if (phaseTwo) {
+        resolvePhaseTwo(graph);
+        issue = { id: 'phase-two', severity: 'error', message: 'Phase 2 deployment requires the versioned Vault policy setup.' };
+      } else {
+        resolveStopLoss(graph);
+      }
+    } catch (error) {
+      issue = {
+        id: 'deployment-configuration', severity: 'error',
+        nodeId: error instanceof StopLossValidationError ? error.nodeId : undefined,
+        message: error instanceof Error ? error.message : 'Unable to validate this graph.',
+      };
+    }
+    if (!issue && (!savedDraft || isDirty)) {
+      issue = { id: 'draft-required', severity: 'error', message: 'Save this revision to your wallet workspace before deploying.' };
+    }
+    startWalkthrough('preflight', issue);
   };
 
   if ((pipelineParam || deploymentParam || localParam) && !loaded) {
@@ -881,17 +866,17 @@ function StudioCanvasInner() {
             {/* Simulate Flow (Dry-Run) */}
             <button
               type="button"
-              onClick={handleSimulateFlow}
-              disabled={isSimulating || !nodes.length}
+              onClick={() => startWalkthrough('sandbox')}
+              disabled={walkthrough?.running || !nodes.length}
               className={`ws-button inline-flex items-center gap-1.5 text-xs cursor-pointer transition-all ${
-                isSimulating
+                walkthrough?.running && walkthrough.mode === 'sandbox'
                   ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-300'
                   : 'text-cyan-400 hover:text-cyan-300'
               }`}
               title="Simulate end-to-end event execution without spending gas"
             >
-              <FlaskConical className={`size-3.5 ${isSimulating ? 'motion-safe:animate-spin text-cyan-300' : 'text-cyan-400'}`} />
-              <span>{isSimulating ? `Simulating (${simulationStep}/3)...` : 'Simulate Flow'}</span>
+              <FlaskConical aria-hidden="true" className="size-3.5" />
+              <span>{walkthrough?.running && walkthrough.mode === 'sandbox' ? 'Simulating…' : 'Simulate Flow'}</span>
             </button>
 
             {/* Deploy */}
@@ -900,10 +885,10 @@ function StudioCanvasInner() {
                 type="button"
                 className="ws-button ws-button-primary inline-flex items-center gap-1.5 text-xs"
                 onClick={handleOpenDeploy}
-                disabled={!isConnected || !nodes.length}
+                disabled={!isConnected || !nodes.length || walkthrough?.running}
               >
                 <Rocket className="size-3.5" aria-hidden="true" />
-                <span>{isConnected ? 'Deploy' : 'Connect wallet to deploy'}</span>
+                <span>{walkthrough?.running && walkthrough.mode === 'preflight' ? 'Checking…' : isConnected ? 'Deploy' : 'Connect wallet to deploy'}</span>
               </button>
             )}
           </div>
@@ -989,15 +974,17 @@ function StudioCanvasInner() {
         )}
 
         <div className="relative min-h-0 flex-1 flex overflow-hidden bg-[var(--ws-bg)]">
-          <div className="relative min-h-0 flex-1 h-full" ref={reactFlowWrapper}>
+          <div className="relative min-h-0 flex-1 h-full" ref={reactFlowWrapper} data-flow-walkthrough={walkthrough ? '' : undefined}>
             {deploymentParam && address && signedIn && (
-              <SnapshotExecutionPulse owner={address} deploymentId={deploymentParam} canvasRef={reactFlowWrapper} />
+              <SnapshotExecutionPulse owner={address} deploymentId={deploymentParam} onExecution={handleConfirmedExecution} />
             )}
-            {/* Simulation Watermark Banner */}
-            {simulationMessage && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-full bg-[#0d091a]/95 border border-cyan-500/40 text-cyan-300 text-xs font-mono shadow-2xl backdrop-blur-md flex items-center gap-2 animate-fade-in pointer-events-none">
-                <span className="size-2 rounded-full bg-cyan-400 motion-safe:animate-ping" />
-                <span>{simulationMessage}</span>
+            {walkthrough && (
+              <div role={walkthrough.issue ? 'alert' : 'status'} className={`pointer-events-none absolute inset-x-3 top-3 z-30 mx-auto flex w-fit max-w-[calc(100%-1.5rem)] items-start gap-2 rounded-lg border bg-[var(--ws-panel)] px-3 py-2 text-xs leading-relaxed ${
+                walkthrough.issue ? 'border-rose-500/40 text-rose-200' : 'border-[var(--ws-border)] text-[var(--ws-text)]'
+              }`}>
+                {walkthrough.issue ? <AlertCircle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-rose-400" />
+                  : <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[var(--ws-accent)]" />}
+                <span className="break-words">{walkthrough.message}</span>
               </div>
             )}
 
@@ -1008,7 +995,7 @@ function StudioCanvasInner() {
             )}
             <ReactFlow
               nodes={annotatedNodes}
-              edges={edges}
+              edges={displayedEdges}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               onNodesChange={handleNodesChange}

@@ -1,6 +1,7 @@
 export type VisualNodeState =
   | 'IDLE'
   | 'CONFIGURED'
+  | 'CHECKING'
   | 'LISTENING'
   | 'EVENT_CAPTURED'
   | 'EVALUATING'

@@ -75,6 +75,11 @@ const STATE_CONFIG: Record<VisualNodeState, { label: string; dot: string; text: 
     dot: 'bg-[var(--ws-accent)]',
     text: 'text-[var(--ws-accent)]',
   },
+  CHECKING: {
+    label: 'Current step',
+    dot: 'bg-[var(--ws-accent)]',
+    text: 'text-[var(--ws-accent)] font-medium',
+  },
   LISTENING: {
     label: 'Listening',
     dot: 'bg-sky-400',
@@ -143,7 +148,7 @@ export function NodeCard({
           ? isOrphan
             ? 'border-amber-500/50 shadow-amber-500/10'
             : 'border-rose-500/50 shadow-rose-500/10'
-          : selected
+          : selected || state === 'CHECKING'
           ? 'ring-2 ring-[var(--ws-accent)] border-transparent'
           : 'border-[var(--ws-border)] hover:border-white/20'
       )}
