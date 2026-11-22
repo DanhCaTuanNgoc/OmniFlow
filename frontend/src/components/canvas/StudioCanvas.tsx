@@ -883,15 +883,15 @@ function StudioCanvasInner() {
             <button
               type="button"
               onClick={handleSimulateFlow}
-              disabled={isSnapshot || isSimulating || !nodes.length}
+              disabled={isSimulating || !nodes.length}
               className={`ws-button inline-flex items-center gap-1.5 text-xs cursor-pointer transition-all ${
                 isSimulating
-                  ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-300 animate-pulse'
+                  ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-300'
                   : 'text-cyan-400 hover:text-cyan-300'
               }`}
               title="Simulate end-to-end event execution without spending gas"
             >
-              <FlaskConical className={`size-3.5 ${isSimulating ? 'animate-spin text-cyan-300' : 'text-cyan-400'}`} />
+              <FlaskConical className={`size-3.5 ${isSimulating ? 'motion-safe:animate-spin text-cyan-300' : 'text-cyan-400'}`} />
               <span>{isSimulating ? `Simulating (${simulationStep}/3)...` : 'Simulate Flow'}</span>
             </button>
 
@@ -997,7 +997,7 @@ function StudioCanvasInner() {
             {/* Simulation Watermark Banner */}
             {simulationMessage && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-full bg-[#0d091a]/95 border border-cyan-500/40 text-cyan-300 text-xs font-mono shadow-2xl backdrop-blur-md flex items-center gap-2 animate-fade-in pointer-events-none">
-                <span className="size-2 rounded-full bg-cyan-400 animate-ping" />
+                <span className="size-2 rounded-full bg-cyan-400 motion-safe:animate-ping" />
                 <span>{simulationMessage}</span>
               </div>
             )}

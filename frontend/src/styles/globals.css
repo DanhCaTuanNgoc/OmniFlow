@@ -220,10 +220,19 @@ code, kbd, samp, pre, .font-mono {
   to { stroke-dashoffset: 0; }
 }
 
+@keyframes studio-edge-signal {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: -100; }
+}
+
 .studio-flow-edge-stream {
   opacity: 0.46;
   animation: studio-edge-flow 4s linear infinite;
   transition: opacity 160ms ease;
+}
+
+.studio-flow-edge-signal {
+  opacity: 0;
 }
 
 .studio-flow-edge-target {
@@ -231,14 +240,17 @@ code, kbd, samp, pre, .font-mono {
   transition: opacity 160ms ease;
 }
 
-.studio-flow-edge[data-simulation-pulse] .studio-flow-edge-stream,
-[data-execution-pulse] .studio-flow-edge-stream {
-  opacity: 0.95;
-  animation-duration: 800ms;
+:is(.studio-flow-edge[data-simulation-pulse], [data-execution-pulse]) .studio-flow-edge-stream {
+  opacity: 0.72;
+  animation-play-state: paused;
 }
 
-.studio-flow-edge[data-simulation-pulse] .studio-flow-edge-target,
-[data-execution-pulse] .studio-flow-edge-target {
+:is(.studio-flow-edge[data-simulation-pulse], [data-execution-pulse]) .studio-flow-edge-signal {
+  opacity: 1;
+  animation: studio-edge-signal 800ms linear infinite;
+}
+
+:is(.studio-flow-edge[data-simulation-pulse], [data-execution-pulse]) .studio-flow-edge-target {
   opacity: 0.85;
 }
 
@@ -250,6 +262,11 @@ code, kbd, samp, pre, .font-mono {
 
   .studio-flow-edge-target {
     transition: none;
+  }
+
+  :is(.studio-flow-edge[data-simulation-pulse], [data-execution-pulse]) .studio-flow-edge-signal {
+    animation: none;
+    stroke-dasharray: none;
   }
 }
 

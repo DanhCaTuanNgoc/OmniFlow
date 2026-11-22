@@ -50,6 +50,17 @@ export const CustomEdge = memo(function CustomEdge({
           strokeDasharray="5 8"
           className="studio-flow-edge-stream pointer-events-none"
         />
+        <path
+          aria-hidden="true"
+          d={edgePath}
+          pathLength={100}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth={3.5}
+          strokeDasharray="24 120"
+          strokeLinecap="round"
+          className="studio-flow-edge-signal pointer-events-none"
+        />
         <circle aria-hidden="true" cx={targetX} cy={targetY} r={3.5} fill={strokeColor}
           className="studio-flow-edge-target pointer-events-none" />
       </g>
