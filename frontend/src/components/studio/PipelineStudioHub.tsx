@@ -33,7 +33,7 @@ import {
   type BrowserDraft 
 } from '@/lib/pipelineDraft';
 import { STOP_LOSS_TEMPLATE } from '@omniflow/shared';
-import type { DeploymentSummary } from '@/lib/deployments';
+import { setDeploymentArchived, type DeploymentSummary } from '@/lib/deployments';
 import { WorkspaceSignInRequired, WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspaceSession';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { PALETTE_ITEMS } from '@/components/canvas/NodePalette';
@@ -157,24 +157,6 @@ export function PipelineStudioHub() {
     };
   }, [isConnected, address, reload, signedIn]);
 
-  // Track wallet-archived pipeline IDs in localStorage
-  const [walletArchivedIds, setWalletArchivedIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (address && typeof window !== 'undefined') {
-      const stored = localStorage.getItem(`omniflow.archived.pipelines.${address.toLowerCase()}`);
-      if (stored) {
-        try {
-          setWalletArchivedIds(JSON.parse(stored));
-        } catch {
-          setWalletArchivedIds([]);
-        }
-      } else {
-        setWalletArchivedIds([]);
-      }
-    }
-  }, [address]);
-
   // Handle Guest-to-Wallet Drafts Import (Section 1 & 7.2)
   const handleImportAllGuestDrafts = async () => {
     if (!address || localDrafts.length === 0) return;
@@ -252,9 +234,12 @@ export function PipelineStudioHub() {
       if (previous) {
         // Prefer a confirmed deployment over a later attempt that is pending or reverted.
         if (previous.status === 'deployed' && dep.status !== 'deployed') continue;
-        if ((previous.status === 'deployed') === (dep.status === 'deployed') &&
-            (dep.createdAt < previous.createdAt ||
-              (dep.createdAt === previous.createdAt && dep.pipelineId <= previous.pipelineId))) continue;
+        if ((previous.status === 'deployed') === (dep.status === 'deployed')) {
+          if (!previous.archivedAt && dep.archivedAt) continue;
+          if (Boolean(previous.archivedAt) === Boolean(dep.archivedAt) &&
+              (dep.createdAt < previous.createdAt ||
+                (dep.createdAt === previous.createdAt && dep.pipelineId <= previous.pipelineId))) continue;
+        }
       }
       displayedDeployments.set(id, dep);
     }
@@ -264,7 +249,7 @@ export function PipelineStudioHub() {
       const matchingDep = displayedDeployments.get(wDraft.id);
       if (matchingDep) processed.add(wDraft.id);
 
-      const isArchived = walletArchivedIds.includes(wDraft.id);
+      const isArchived = Boolean(matchingDep?.archivedAt);
       const status: PipelineItem['status'] = matchingDep
         ? matchingDep.isPaused
           ? 'paused'
@@ -288,12 +273,12 @@ export function PipelineStudioHub() {
       });
     }
 
-    // Standalone deployments that don't have a separate draft revision
-    for (const [id, dep] of displayedDeployments) {
-      if (processed.has(id)) continue;
-      const isArchived = walletArchivedIds.includes(id) || walletArchivedIds.includes(dep.pipelineId);
+    for (const dep of walletDeployments) {
+      const groupId = dep.workspacePipelineId ?? dep.pipelineId;
+      const primary = displayedDeployments.get(groupId)?.pipelineId === dep.pipelineId;
+      if (primary ? processed.has(groupId) : !dep.archivedAt) continue;
       items.push({
-        id,
+        id: dep.pipelineId,
         name: dep.name,
         description: dep.contracts.rscAddress
           ? `Reactive contract ${dep.contracts.rscAddress.slice(0, 10)}… on Lasna.`
@@ -303,19 +288,19 @@ export function PipelineStudioHub() {
         hasDraft: false,
         deployment: dep,
         status: dep.isPaused ? 'paused' : dep.status === 'deployed' ? 'deployed' : dep.status === 'signed' ? 'pending' : 'failed',
-        isArchived,
+        isArchived: Boolean(dep.archivedAt),
       });
     }
 
     return items.sort((a, b) => b.updatedAt - a.updatedAt);
-  }, [localDrafts, walletDrafts, walletDeployments, walletArchivedIds]);
+  }, [localDrafts, walletDrafts, walletDeployments]);
 
   // Filtered pipelines based on search and status
   const filteredPipelines = useMemo(() => {
     return unifiedPipelines.filter((item) => {
       // Status filter
       if (statusFilter === 'DRAFTS' && ((!item.hasDraft && item.source !== 'local') || item.isArchived)) return false;
-      if (statusFilter === 'ACTIVE' && !item.deployment) return false;
+      if (statusFilter === 'ACTIVE' && (!item.deployment || item.isArchived)) return false;
       if (statusFilter === 'ARCHIVED' && !item.isArchived) return false;
       if (statusFilter === 'ALL' && item.isArchived) return false;
 
@@ -438,14 +423,25 @@ export function PipelineStudioHub() {
     }
   });
 
-  const handleArchive = (item: PipelineItem) => void runAction(async () => {
-    archiveBrowserDraft(item.id, !item.isArchived);
-    refreshLocalDrafts();
+  const handleArchive = (item: PipelineItem) => void runAction(async signal => {
+    const deployment = item.deployment;
+    if (deployment && address) {
+      const archived = !deployment.archivedAt;
+      await setDeploymentArchived(address, deployment.pipelineId, archived, signal);
+      if (!signal.aborted) {
+        setWalletDeployments(items => items.map(item => item.pipelineId === deployment.pipelineId
+          ? { ...item, archivedAt: archived ? Date.now() : null } : item));
+        setReload(value => value + 1);
+      }
+    } else if (item.source === 'local') {
+      archiveBrowserDraft(item.id, !item.isArchived);
+      refreshLocalDrafts();
+    }
   });
 
   const handleDeleteConfirm = () => {
     const item = deletingPipeline;
-    if (!item) return;
+    if (!item || item.deployment) return;
     void runAction(async (signal) => {
       if (item.source === 'local') {
         deleteBrowserDraft(item.id);
@@ -612,7 +608,7 @@ export function PipelineStudioHub() {
             [
               { key: 'ALL', label: `All (${unifiedPipelines.filter(p => !p.isArchived).length})` },
               { key: 'DRAFTS', label: `Drafts (${unifiedPipelines.filter(p => (p.hasDraft || p.source === 'local') && !p.isArchived).length})` },
-              { key: 'ACTIVE', label: `Deployments (${unifiedPipelines.filter(p => p.deployment).length})` },
+              { key: 'ACTIVE', label: `Deployments (${unifiedPipelines.filter(p => p.deployment && !p.isArchived).length})` },
               { key: 'ARCHIVED', label: `Archived (${unifiedPipelines.filter(p => p.isArchived).length})` },
             ] as const
           ).map((tab) => (
@@ -648,9 +644,11 @@ export function PipelineStudioHub() {
                 setRenamingPipeline(item);
               } : undefined}
               onDuplicate={handleDuplicate}
-              onDelete={pipeline.source === 'local' || pipeline.hasDraft ? setDeletingPipeline : undefined}
+              onDelete={!pipeline.deployment && (pipeline.source === 'local' || pipeline.hasDraft) ? setDeletingPipeline : undefined}
               onExport={handleExport}
-              onArchive={pipeline.source === 'local' ? handleArchive : undefined}
+              onArchive={pipeline.source === 'local' || pipeline.deployment?.archivedAt ||
+                (pipeline.deployment?.isPaused && pipeline.deployment.runtime?.base?.authorized === false)
+                ? handleArchive : undefined}
             />
           ))}
         </div>
@@ -729,7 +727,6 @@ export function PipelineStudioHub() {
         <DeletePipelineModal
           isOpen={!!deletingPipeline}
           pipelineName={deletingPipeline.name}
-          deploymentId={deletingPipeline.deployment?.pipelineId}
           onClose={() => setDeletingPipeline(null)}
           onConfirm={handleDeleteConfirm}
         />

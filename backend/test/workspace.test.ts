@@ -202,23 +202,25 @@ test('the deployment store keeps the same transaction and revision after restart
     assert.ok(updatedDraft);
     assert.equal(store.saveDraft(owner, draft.graphJson, 'Stale name', draft), undefined);
 
-    // Delete Draft tests: wallet authorization, revision conflict, and deployment recovery
-    assert.equal(store.deleteDraft(other, updatedDraft.id), false);
-    assert.equal(store.deleteDraft(owner, updatedDraft.id, { updatedAt: draft.updatedAt }), false); // Stale revision
-    assert.equal(store.deleteDraft(owner, updatedDraft.id, { updatedAt: updatedDraft.updatedAt }), true); // Correct revision
-    assert.equal(store.getDraft(owner, updatedDraft.id), undefined);
+    const standalone = store.saveDraft(owner, draft.graphJson, 'Undeployed draft')!;
+    assert.equal(store.deleteDraft(other, standalone.id), false);
+    assert.equal(store.deleteDraft(owner, standalone.id, { updatedAt: standalone.updatedAt + 1 }), false);
+    assert.equal(store.deleteDraft(owner, standalone.id, { updatedAt: standalone.updatedAt }), true);
+    assert.equal(store.getDraft(owner, standalone.id), undefined);
 
-    // Verified deployment recovery: deleting draft leaves deployment intact
+    assert.equal(store.deleteDraft(owner, updatedDraft.id, { updatedAt: updatedDraft.updatedAt }), false);
     assert.equal(store.owns(owner, original.id), true);
     assert.equal(store.get(owner, deploymentEnvironment, input.key)?.graphJson, input.graphJson);
     assert.equal(store.settle(original, 'deployed', owner).rscAddress, owner);
     assert.equal(store.get(owner, deploymentEnvironment, input.key)?.status, 'deployed');
+    assert.equal(store.deleteDraft(owner, updatedDraft.id), false);
     assert.equal(store.setArchived(other, original.id, true), false);
     assert.equal(store.setArchived(owner, original.id, true), true);
     const archivedAt = store.get(owner, deploymentEnvironment, input.key)?.archivedAt;
     assert.ok(archivedAt);
     assert.equal(store.setArchived(owner, original.id, true), true);
     assert.equal(store.get(owner, deploymentEnvironment, input.key)?.archivedAt, archivedAt);
+    assert.equal(store.deleteDraft(owner, updatedDraft.id), false);
     const txHash = keccak256(signedTransaction);
     const entry = { deploymentId: original.id, reactiveTxHash: txHash, originTxHash: txHash, originLogIndex: 2 };
     store.ingestExecutionLogs(original.id, 101n, [entry, entry]);

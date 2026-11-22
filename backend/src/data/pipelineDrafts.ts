@@ -70,6 +70,7 @@ export async function saveDraft(owner: Address, graphJson: string, name: string,
 export async function deleteDraft(owner: Address, id: string, revision?: Revision) {
   const db = draftPool();
   if (!db) return deploymentStore().deleteDraft(owner, id, revision);
+  if (deploymentStore().hasDraftDeployment(owner, id)) return false;
   const result = revision
     ? await db.query(
       `DELETE FROM omniflow.pipeline_drafts

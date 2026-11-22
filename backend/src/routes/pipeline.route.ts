@@ -89,7 +89,12 @@ pipelineRouter.delete('/drafts/:id', async (req, res, next) => {
     if (!existing) return res.status(404).json({ error: 'Pipeline draft not found.' });
     const revision = validation.data?.revision ? { id: req.params.id, updatedAt: validation.data.revision.updatedAt } : undefined;
     const deleted = await deleteDraft(owner, req.params.id, revision);
-    if (!deleted) return res.status(409).json({ error: 'The draft changed since you opened it. Reopen before deleting.' });
+    if (!deleted) {
+      const error = deploymentStore().hasDraftDeployment(owner, req.params.id)
+        ? 'This draft is linked to a deployment. Use Manage Automation to change its status.'
+        : 'The draft changed since you opened it. Reopen before deleting.';
+      return res.status(409).json({ error });
+    }
     return res.json({ success: true, id: req.params.id });
   } catch (error) {
     next(error);

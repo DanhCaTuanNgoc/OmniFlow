@@ -58,6 +58,12 @@ export type DeploymentDetail = DeploymentSummary & {
 
 export const takeProfitTemplate = 'take-profit@1';
 
+export function setDeploymentArchived(owner: Address, id: string, archived: boolean, signal?: AbortSignal) {
+  return workspaceRequest(owner, `/pipeline/deployments/${encodeURIComponent(id)}/archive`, {
+    method: 'PUT', body: JSON.stringify({ archived }), sessionOnly: true, signal,
+  });
+}
+
 type FeeState = { debt: string; reserves: string; budget: string };
 
 export function deploymentStepKey(owner: Address, pipelineId: string, kind: DeploymentStep) {

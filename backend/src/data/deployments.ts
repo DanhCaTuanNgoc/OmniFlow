@@ -270,18 +270,23 @@ export class DeploymentStore {
     return draft;
   }
 
+  hasDraftDeployment(owner: Address, id: string) {
+    return Boolean(this.db.prepare(`
+      SELECT 1 FROM deployments WHERE owner = ? AND environment = ? AND workspacePipelineId = ? LIMIT 1
+    `).get(owner.toLowerCase(), deploymentEnvironment, id));
+  }
+
   deleteDraft(owner: Address, id: string, revision?: { updatedAt: number }) {
-    if (revision) {
-      const result = this.db.prepare(`
-        DELETE FROM pipeline_drafts
-        WHERE id = ? AND owner = ? AND environment = ? AND updatedAt = ?
-      `).run(id, owner.toLowerCase(), deploymentEnvironment, revision.updatedAt);
-      return result.changes === 1;
-    }
+    const updatedAt = revision?.updatedAt ?? null;
     const result = this.db.prepare(`
       DELETE FROM pipeline_drafts
-      WHERE id = ? AND owner = ? AND environment = ?
-    `).run(id, owner.toLowerCase(), deploymentEnvironment);
+      WHERE id = @id AND owner = @owner AND environment = @environment
+        AND (@updatedAt IS NULL OR updatedAt = @updatedAt)
+        AND NOT EXISTS (
+          SELECT 1 FROM deployments
+          WHERE owner = @owner AND environment = @environment AND workspacePipelineId = @id
+        )
+    `).run({ id, owner: owner.toLowerCase(), environment: deploymentEnvironment, updatedAt });
     return result.changes === 1;
   }
 

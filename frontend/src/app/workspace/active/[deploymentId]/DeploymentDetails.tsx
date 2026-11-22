@@ -11,7 +11,7 @@ import {
 import { resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
-import { deploymentStepKey, runDeploymentAction, setVaultRscAuthorization, takeProfitTemplate, type DeploymentDetail, type DeploymentSummary } from '@/lib/deployments';
+import { deploymentStepKey, runDeploymentAction, setDeploymentArchived, setVaultRscAuthorization, takeProfitTemplate, type DeploymentDetail, type DeploymentSummary } from '@/lib/deployments';
 import { WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspaceSession';
 import { ToastContainer, type ToastNotification } from '@/components/common/ToastContainer';
 import { DeployDialog } from '@/components/canvas/DeployConfirmation';
@@ -315,11 +315,7 @@ function DeploymentPanel({
     setBusy('archive');
     try {
       if (archived && isAuthorized) await setVaultRscAuthorization(owner, deployment, false);
-      await workspaceRequest(owner, `/pipeline/deployments/${encodeURIComponent(deployment.pipelineId)}/archive`, {
-        method: 'PUT',
-        body: JSON.stringify({ archived }),
-        sessionOnly: true,
-      });
+      await setDeploymentArchived(owner, deployment.pipelineId, archived);
     } catch (error) {
       if (!(error instanceof WorkspaceWalletPromptCancelled)) {
         pushToast({

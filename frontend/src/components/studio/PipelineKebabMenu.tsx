@@ -148,7 +148,7 @@ export function PipelineKebabMenu({
               {isArchived ? (
                 <>
                   <ArchiveRestore className="size-3.5 text-amber-400" />
-                  <span>Restore pipeline</span>
+                  <span>Unarchive</span>
                 </>
               ) : (
                 <>
