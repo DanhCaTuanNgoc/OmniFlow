@@ -26,8 +26,8 @@ import { RECIPE_PRESETS } from '@/lib/recipes';
 import { isPhaseTwoGraph, resolvePhaseTwo, resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { APP_CONFIG } from '@/lib/constants';
 import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph, exportDraftJson, connectionError, simulationPath } from '@/lib/pipelineDraft';
-import { WorkspaceSignInRequired, workspaceRequest } from '@/lib/workspaceSession';
-import { useWorkspaceSignedIn } from '@/components/common/WorkspaceSignIn';
+import { workspaceRequest } from '@/lib/workspaceSession';
+import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
 import { useStudioHeaderStore } from '@/lib/studioHeaderStore';
 
 import {
@@ -126,7 +126,6 @@ function StudioCanvasInner() {
   const [description, setDescription] = useState<string>();
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string>();
-  const [signInRequired, setSignInRequired] = useState(false);
   const signedIn = useWorkspaceSignedIn(isConnected ? address : undefined);
   const active = useRef(false);
   const editVersion = useRef(0);
@@ -159,6 +158,7 @@ function StudioCanvasInner() {
   const recipeParam = ['deployment', 'pipeline', 'local'].some(key => searchParams.has(key))
     ? null : searchParams.get('recipe');
   const isSnapshot = Boolean(deploymentParam);
+  const privateGraph = Boolean(pipelineParam || deploymentParam);
   const draftName = pipelineName.trim() || RECIPE_PRESETS[activeRecipeId]?.title || 'Custom pipeline';
 
   const lintResult = useMemo(() => lintPipelineGraph(nodes, edges), [nodes, edges]);
@@ -200,6 +200,7 @@ function StudioCanvasInner() {
 
   // Synchronize active pipeline name and rename handler with top Workspace Header breadcrumb
   useEffect(() => {
+    if (privateGraph && !loaded) return;
     setStudioHeader({
       pipelineName: draftName,
       isEditable: !isSnapshot,
@@ -208,7 +209,7 @@ function StudioCanvasInner() {
     return () => {
       clearStudioHeader();
     };
-  }, [draftName, isSnapshot, handleRenameFromHeader, setStudioHeader, clearStudioHeader]);
+  }, [draftName, isSnapshot, privateGraph, loaded, handleRenameFromHeader, setStudioHeader, clearStudioHeader]);
 
   // Warn user before closing window/tab if there are unsaved edits
   useEffect(() => {
@@ -254,7 +255,7 @@ function StudioCanvasInner() {
   }, [localParam, setNodes, setEdges]);
 
   useEffect(() => {
-    if (loaded || !address || (!pipelineParam && !deploymentParam)) return;
+    if (loaded || !signedIn || !address || (!pipelineParam && !deploymentParam)) return;
     const controller = new AbortController();
     const resource = deploymentParam ? 'deployments' : 'drafts';
     const id = deploymentParam ?? pipelineParam!;
@@ -262,7 +263,6 @@ function StudioCanvasInner() {
       address, '/pipeline/' + resource + '/' + encodeURIComponent(id), { signal: controller.signal, sessionOnly: true },
     ).then(snapshot => {
       if (controller.signal.aborted || !active.current) return;
-      setSignInRequired(false);
       setLoadError(undefined);
       const draft = parsePipelineDraft(JSON.stringify(snapshot.graph), draftNodeTypes);
       setNodes(draft.nodes);
@@ -276,9 +276,7 @@ function StudioCanvasInner() {
       setLoaded(true);
     }).catch(error => {
       if (controller.signal.aborted || !active.current) return;
-      const needsSignIn = error instanceof WorkspaceSignInRequired;
-      setSignInRequired(needsSignIn);
-      setLoadError(needsSignIn ? undefined : error instanceof Error ? error.message : 'Unable to load pipeline.');
+      setLoadError(error instanceof Error ? error.message : 'Unable to load pipeline.');
     });
     return () => controller.abort();
   }, [address, pipelineParam, deploymentParam, setNodes, setEdges, signedIn, loaded]);
@@ -729,9 +727,16 @@ function StudioCanvasInner() {
     setIsDeployOpen(true);
   };
 
+  if (privateGraph && !loaded && !signedIn) {
+    return <div className="ws-page ws-page--sign-in">
+      <Link href="/workspace/studio" className="ws-button self-start">Back to pipelines</Link>
+      <WorkspaceSignIn />
+    </div>;
+  }
+
   if ((pipelineParam || deploymentParam || localParam) && !loaded) {
     return <div className="ws-page" role={loadError ? 'alert' : 'status'}>
-      <p>{signInRequired ? 'Sign in from the Workspace header to open this pipeline.' : loadError ?? 'Loading pipeline...'}</p>
+      <p>{loadError ?? 'Loading pipeline...'}</p>
       <Link href="/workspace/studio" className="ws-button">Back to pipelines</Link>
     </div>;
   }
