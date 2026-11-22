@@ -245,17 +245,23 @@ export function PipelineStudioHub() {
     }
 
     // Wallet drafts & deployments (grouped by workspacePipelineId per Section 7.2)
-    const latest = new Map<string, DeploymentSummary>();
+    const displayedDeployments = new Map<string, DeploymentSummary>();
     for (const dep of walletDeployments) {
       const id = dep.workspacePipelineId ?? dep.pipelineId;
-      const previous = latest.get(id);
-      if (!previous || dep.createdAt > previous.createdAt ||
-          (dep.createdAt === previous.createdAt && dep.pipelineId > previous.pipelineId)) latest.set(id, dep);
+      const previous = displayedDeployments.get(id);
+      if (previous) {
+        // Prefer a confirmed deployment over a later attempt that is pending or reverted.
+        if (previous.status === 'deployed' && dep.status !== 'deployed') continue;
+        if ((previous.status === 'deployed') === (dep.status === 'deployed') &&
+            (dep.createdAt < previous.createdAt ||
+              (dep.createdAt === previous.createdAt && dep.pipelineId <= previous.pipelineId))) continue;
+      }
+      displayedDeployments.set(id, dep);
     }
     const processed = new Set<string>();
 
     for (const wDraft of walletDrafts) {
-      const matchingDep = latest.get(wDraft.id);
+      const matchingDep = displayedDeployments.get(wDraft.id);
       if (matchingDep) processed.add(wDraft.id);
 
       const isArchived = walletArchivedIds.includes(wDraft.id);
@@ -270,7 +276,7 @@ export function PipelineStudioHub() {
       items.push({
         id: wDraft.id,
         name: wDraft.name,
-        description: matchingDep ? 'Saved draft with a deployment revision.' : undefined,
+        description: matchingDep ? 'Deployment snapshot. Open the saved draft from the menu.' : undefined,
         updatedAt: wDraft.updatedAt,
         source: 'wallet',
         hasDraft: true,
@@ -281,13 +287,15 @@ export function PipelineStudioHub() {
     }
 
     // Standalone deployments that don't have a separate draft revision
-    for (const [id, dep] of latest) {
+    for (const [id, dep] of displayedDeployments) {
       if (processed.has(id)) continue;
       const isArchived = walletArchivedIds.includes(id) || walletArchivedIds.includes(dep.pipelineId);
       items.push({
         id,
         name: dep.name,
-        description: `Deployed RSC (${dep.contracts.rscAddress?.slice(0, 10)}...) on Lasna & ActionVault on Base Sepolia.`,
+        description: dep.contracts.rscAddress
+          ? `Reactive contract ${dep.contracts.rscAddress.slice(0, 10)}… on Lasna.`
+          : 'Deployment snapshot on Reactive Lasna.',
         updatedAt: dep.createdAt,
         source: 'wallet',
         hasDraft: false,
@@ -325,10 +333,10 @@ export function PipelineStudioHub() {
     if (pipeline.source === 'local') {
       router.push(`/workspace/studio?local=${encodeURIComponent(pipeline.id)}`);
     } else if (pipeline.source === 'wallet') {
-      if (pipeline.hasDraft) {
-        router.push(`/workspace/studio?pipeline=${encodeURIComponent(pipeline.id)}`);
-      } else if (pipeline.deployment) {
+      if (pipeline.deployment) {
         router.push(`/workspace/studio?deployment=${encodeURIComponent(pipeline.deployment.pipelineId)}`);
+      } else if (pipeline.hasDraft) {
+        router.push(`/workspace/studio?pipeline=${encodeURIComponent(pipeline.id)}`);
       }
     } else if (pipeline.source === 'recipe') {
       router.push(`/workspace/studio?recipe=${encodeURIComponent(pipeline.id)}`);
@@ -359,11 +367,12 @@ export function PipelineStudioHub() {
     });
   }
 
-  async function readPipeline(item: PipelineItem, signal: AbortSignal): Promise<{ graph: unknown; updatedAt?: number }> {
+  async function readPipeline(item: PipelineItem, signal: AbortSignal, source: 'deployment' | 'draft' = 'deployment'): Promise<{ graph: unknown; updatedAt?: number }> {
     if (item.source === 'local') return { graph: item.graph };
     if (!address) throw new Error('Connect the workspace wallet.');
-    const path = item.hasDraft ? 'drafts/' + encodeURIComponent(item.id)
-      : 'deployments/' + encodeURIComponent(item.deployment!.pipelineId);
+    const path = source === 'deployment' && item.deployment
+      ? 'deployments/' + encodeURIComponent(item.deployment.pipelineId)
+      : 'drafts/' + encodeURIComponent(item.id);
     return workspaceRequest(address, '/pipeline/' + path, { signal });
   }
 
@@ -396,7 +405,7 @@ export function PipelineStudioHub() {
         renameBrowserDraft(item.id, name, description);
         refreshLocalDrafts();
       } else if (item.hasDraft) {
-        const snapshot = await readPipeline(item, signal);
+        const snapshot = await readPipeline(item, signal, 'draft');
         if (signal.aborted) return;
         if (snapshot.updatedAt !== item.updatedAt) throw new Error('The saved draft changed. Refresh the list and try again.');
         const draft = parsePipelineDraft(JSON.stringify(snapshot.graph), draftNodeTypes);
@@ -418,8 +427,13 @@ export function PipelineStudioHub() {
     const { graph } = await readPipeline(item, signal);
     if (signal.aborted) return;
     const draft = parsePipelineDraft(JSON.stringify(graph), draftNodeTypes);
-    await storeWalletDraft(item.name + ' (Copy)', studioGraph(draft.nodes, draft.edges, draft.networks), signal);
-    if (!signal.aborted) setReload(value => value + 1);
+    const copy = await storeWalletDraft(`${draft.name ?? item.name} (Copy)`, studioGraph(draft.nodes, draft.edges, draft.networks), signal);
+    if (signal.aborted) return;
+    if (item.deployment) {
+      router.push(`/workspace/studio?pipeline=${encodeURIComponent(copy.id)}`);
+    } else {
+      setReload(value => value + 1);
+    }
   });
 
   const handleArchive = (item: PipelineItem) => void runAction(async () => {
@@ -624,6 +638,9 @@ export function PipelineStudioHub() {
               key={`${pipeline.source}-${pipeline.id}`}
               pipeline={pipeline}
               onOpen={handleOpenPipeline}
+              onOpenDraft={pipeline.deployment && pipeline.hasDraft
+                ? () => router.push(`/workspace/studio?pipeline=${encodeURIComponent(pipeline.id)}`)
+                : undefined}
               onRename={pipeline.source === 'local' || pipeline.hasDraft ? item => {
                 setImportError(null);
                 setRenamingPipeline(item);

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ArrowRight, Layers, Clock, Zap, Shield, Cpu, Activity, Radio } from 'lucide-react';
+import { Archive, ArrowRight, Layers, Clock, FileText, Shield, Activity, Radio } from 'lucide-react';
 import { PipelineKebabMenu } from './PipelineKebabMenu';
 import type { DeploymentSummary } from '@/lib/deployments';
 
@@ -25,6 +25,7 @@ export interface PipelineItem {
 export interface PipelineCardProps {
   pipeline: PipelineItem;
   onOpen: (pipeline: PipelineItem) => void;
+  onOpenDraft?: () => void;
   onRename?: (pipeline: PipelineItem) => void;
   onDuplicate: (pipeline: PipelineItem) => void;
   onDelete?: (pipeline: PipelineItem) => void;
@@ -35,6 +36,7 @@ export interface PipelineCardProps {
 export function PipelineCard({
   pipeline,
   onOpen,
+  onOpenDraft,
   onRename,
   onDuplicate,
   onDelete,
@@ -43,22 +45,15 @@ export function PipelineCard({
 }: PipelineCardProps) {
   const isWallet = pipeline.source === 'wallet';
   const isRecipe = pipeline.source === 'recipe';
+  const opensDraft = !pipeline.deployment && !isRecipe;
 
   const getSourceBadge = () => {
     if (pipeline.deployment) {
-      if (pipeline.hasDraft) {
-        return (
-          <span className="inline-flex items-center gap-1 rounded bg-teal-500/10 border border-teal-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300">
-            <Radio className="size-2.5 animate-pulse text-teal-400" />
-            <span>DRAFT + LIVE</span>
-          </span>
-        );
-      }
       if (pipeline.status === 'deployed') {
         return (
           <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
             <Radio className="size-2.5 text-emerald-400" />
-            <span>LIVE V1</span>
+            <span>DEPLOYED</span>
           </span>
         );
       }
@@ -86,9 +81,9 @@ export function PipelineCard({
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
-        <Zap className="size-2.5 text-amber-400" />
-        <span>DRAFT</span>
+      <span className="inline-flex items-center gap-1 rounded border border-white/15 bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-200">
+        {pipeline.isArchived ? <Archive className="size-2.5" /> : <FileText className="size-2.5" />}
+        <span>{pipeline.isArchived ? 'ARCHIVED' : 'DRAFT'}</span>
       </span>
     );
   };
@@ -138,8 +133,9 @@ export function PipelineCard({
 
         {/* 3-dots kebab menu */}
         <PipelineKebabMenu
+          onOpenDraft={onOpenDraft}
           onRename={onRename ? () => onRename(pipeline) : undefined}
-          renameLabel={isWallet ? 'Rename pipeline' : undefined}
+          renameLabel={isWallet ? 'Rename draft' : undefined}
           onDuplicate={() => onDuplicate(pipeline)}
           onExport={() => onExport(pipeline)}
           onDelete={onDelete ? () => onDelete(pipeline) : undefined}
@@ -176,7 +172,7 @@ export function PipelineCard({
         </div>
 
         <span className="inline-flex items-center gap-1 font-semibold text-xs text-[var(--ws-accent)] group-hover:translate-x-0.5 transition-transform">
-          <span>{pipeline.hasDraft ? 'Open Draft' : pipeline.status === 'deployed' ? 'View Snapshot' : 'Open Pipeline'}</span>
+          <span>{opensDraft ? 'Open Draft' : 'Open Pipeline'}</span>
           <ArrowRight className="size-3" />
         </span>
       </div>

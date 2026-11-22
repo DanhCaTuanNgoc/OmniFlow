@@ -284,7 +284,7 @@ function StudioCanvasInner() {
   }, [address, pipelineParam, deploymentParam, setNodes, setEdges, signedIn, loaded]);
 
   async function saveGraph(leave = false) {
-    if (draftBusy) return false;
+    if (isSnapshot || draftBusy) return false;
     const version = editVersion.current;
     setDraftBusy(true);
     setValidationWarning(null);
@@ -320,22 +320,22 @@ function StudioCanvasInner() {
   }
 
   const handleCreateDraftFromSnapshot = async () => {
-    if (draftBusy || nodes.length === 0) return;
+    if (!isSnapshot || draftBusy || nodes.length === 0) return;
     setDraftBusy(true);
     try {
-      const v2Name = `${draftName} (Draft v2)`;
+      const copyName = `${draftName} (Copy)`;
       const graph = studioGraph(nodes, edges, draftNetworks);
       if (isConnected && address) {
         const result = await workspaceRequest<{ id: string; updatedAt: number }>(address, '/pipeline/drafts', {
           method: 'POST',
           body: JSON.stringify({
-            graph: { ...graph, metadata: { name: v2Name, ownerAddress: address, description } },
+            graph: { ...graph, metadata: { name: copyName, ownerAddress: address, description } },
           }),
         });
         if (active.current) router.push(`/workspace/studio?pipeline=${result.id}`);
       } else {
         const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
-        saveBrowserDraft(newId, v2Name, graph, description);
+        saveBrowserDraft(newId, copyName, graph, description);
         router.push(`/workspace/studio?local=${encodeURIComponent(newId)}`);
       }
     } catch (err) {
@@ -699,7 +699,7 @@ function StudioCanvasInner() {
   }, [isSimulating, nodes, edges, setNodes, setEdges, stopSimulation]);
 
   const handleOpenDeploy = () => {
-    if (!isConnected) return;
+    if (isSnapshot || !isConnected) return;
     if (!savedDraft || isDirty) {
       setValidationWarning('Save this revision to your wallet workspace before deploying.');
       return;
@@ -867,14 +867,16 @@ function StudioCanvasInner() {
             <div className="h-4 w-px bg-white/10 hidden sm:block" />
 
             {/* Save draft */}
-            <button
-              type="button"
-              className="ws-button text-xs"
-              disabled={draftBusy}
-              onClick={() => void (isSnapshot ? handleCreateDraftFromSnapshot() : saveGraph())}
-            >
-              {isSnapshot ? 'Save a draft copy' : 'Save draft'}
-            </button>
+            {!isSnapshot && (
+              <button
+                type="button"
+                className="ws-button text-xs"
+                disabled={draftBusy}
+                onClick={() => void saveGraph()}
+              >
+                Save draft
+              </button>
+            )}
 
             {/* View Solidity */}
             <button
@@ -891,7 +893,7 @@ function StudioCanvasInner() {
             <button
               type="button"
               onClick={handleSimulateFlow}
-              disabled={isSimulating || !nodes.length}
+              disabled={isSnapshot || isSimulating || !nodes.length}
               className={`ws-button inline-flex items-center gap-1.5 text-xs cursor-pointer transition-all ${
                 isSimulating
                   ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-300 animate-pulse'
@@ -904,15 +906,17 @@ function StudioCanvasInner() {
             </button>
 
             {/* Deploy */}
-            <button
-              type="button"
-              className="ws-button ws-button-primary inline-flex items-center gap-1.5 text-xs"
-              onClick={handleOpenDeploy}
-              disabled={!isConnected || !nodes.length || isSnapshot}
-            >
-              <Rocket className="size-3.5" aria-hidden="true" />
-              <span>{isConnected ? 'Deploy' : 'Connect wallet to deploy'}</span>
-            </button>
+            {!isSnapshot && (
+              <button
+                type="button"
+                className="ws-button ws-button-primary inline-flex items-center gap-1.5 text-xs"
+                onClick={handleOpenDeploy}
+                disabled={!isConnected || !nodes.length}
+              >
+                <Rocket className="size-3.5" aria-hidden="true" />
+                <span>{isConnected ? 'Deploy' : 'Connect wallet to deploy'}</span>
+              </button>
+            )}
           </div>
           {validationWarning && <p role="alert" className="flex w-full items-center gap-2 text-xs text-amber-200">
             <AlertTriangle size={14} aria-hidden="true" />{validationWarning}
@@ -980,17 +984,17 @@ function StudioCanvasInner() {
             <div className="flex items-center gap-2">
               <ShieldCheck className="size-4 text-indigo-400 shrink-0" />
               <span>
-                Viewing a deployed snapshot. Check Active Automations for current Vault permissions and reserves.
+                Read-only deployment snapshot. Duplicate the pipeline to edit a new draft.
               </span>
             </div>
             <button
               type="button"
               onClick={() => void handleCreateDraftFromSnapshot()}
-              disabled={draftBusy}
+              disabled={draftBusy || !nodes.length}
               className="ws-button ws-button-primary text-xs inline-flex items-center gap-1.5 shrink-0 self-start sm:self-auto disabled:opacity-50"
             >
               <Plus className="size-3.5" />
-              <span>Create Editable Draft (v2)</span>
+              <span>Duplicate pipeline</span>
             </button>
           </div>
         )}
@@ -1078,7 +1082,7 @@ function StudioCanvasInner() {
       {/* Deploy Modal */}
       <DeployModal
         key={isConnected ? address : 'guest'}
-        isOpen={isDeployOpen}
+        isOpen={!isSnapshot && isDeployOpen}
         onClose={() => setIsDeployOpen(false)}
         graph={studioGraph(nodes, edges, draftNetworks)}
         workspacePipelineId={savedDraft?.id}

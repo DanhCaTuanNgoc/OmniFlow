@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreVertical, Edit3, Copy, Download, Trash2, Archive, ArchiveRestore } from 'lucide-react';
+import { MoreVertical, Edit3, Copy, Download, Trash2, Archive, ArchiveRestore, FileText } from 'lucide-react';
 
 export interface PipelineKebabMenuProps {
+  onOpenDraft?: () => void;
   onRename?: () => void;
   renameLabel?: string;
   onDuplicate?: () => void;
@@ -15,6 +16,7 @@ export interface PipelineKebabMenuProps {
 }
 
 export function PipelineKebabMenu({
+  onOpenDraft,
   onRename,
   renameLabel = 'Rename & Notes',
   onDuplicate,
@@ -78,6 +80,18 @@ export function PipelineKebabMenu({
           className="absolute right-0 top-full z-50 mt-1 w-44 origin-top-right rounded-lg border border-[var(--ws-border)] bg-[#191c24] py-1 shadow-2xl backdrop-blur-md focus:outline-none animate-in fade-in zoom-in-95 duration-100"
           onClick={(e) => e.stopPropagation()}
         >
+          {onOpenDraft && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={(e) => handleAction(e, onOpenDraft)}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 transition-colors hover:bg-white/5 hover:text-white"
+            >
+              <FileText className="size-3.5 text-zinc-300" />
+              <span>Open Draft</span>
+            </button>
+          )}
+
           {onRename && (
             <button
               type="button"
@@ -145,7 +159,7 @@ export function PipelineKebabMenu({
                 className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-rose-400 transition-colors hover:bg-rose-950/40 hover:text-rose-300"
               >
                 <Trash2 className="size-3.5" />
-                <span>Delete pipeline</span>
+              <span>Delete draft</span>
               </button>
             </>
           )}

@@ -47,7 +47,7 @@ export function DeletePipelineModal({
             </div>
             <div>
               <h2 id="delete-pipeline-title" className="text-sm font-semibold tracking-tight text-white">
-                Delete Pipeline
+                Delete Draft
               </h2>
               <p className="text-xs text-[var(--ws-muted)]">
                 Permanent draft removal
@@ -70,7 +70,7 @@ export function DeletePipelineModal({
             Are you sure you want to delete <strong className="text-white font-semibold break-all">"{pipelineName}"</strong>? This action cannot be undone.
           </p>
           <div className="rounded-md border border-rose-900/40 bg-rose-950/20 p-2.5 text-[11px] text-rose-300">
-            Removing this pipeline will erase the stored visual DAG and node configurations from your workspace.
+            Deleting this draft removes its saved graph and node configuration from your workspace.
           </div>
         </div>
 
@@ -92,7 +92,7 @@ export function DeletePipelineModal({
             className="ws-button border-rose-600 bg-rose-600 text-white hover:bg-rose-600 hover:border-rose-600 hover:text-white cursor-pointer"
           >
             <Trash2 className="size-3.5" />
-            <span>Delete Pipeline</span>
+            <span>Delete Draft</span>
           </button>
         </div>
       </div>
