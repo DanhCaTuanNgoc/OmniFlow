@@ -5,10 +5,21 @@ import { AlertCircle, Rocket, ShieldCheck, X } from 'lucide-react';
 import type { Address } from 'viem';
 import { truncateAddress } from '@/lib/utils';
 
-export function DeployDialog({ children, error, busy, onClose }: {
+export function DeployDialog({
+  children,
+  error,
+  busy,
+  title = 'Deploy Reactive Automation',
+  subtitle = 'Autonomous execution on Reactive Lasna Testnet (Chain ID: 5318007)',
+  icon,
+  onClose,
+}: {
   children: ReactNode;
   error?: string | null;
   busy?: boolean;
+  title?: ReactNode;
+  subtitle?: ReactNode;
+  icon?: ReactNode;
   onClose: () => void;
 }) {
   const titleId = useId();
@@ -32,11 +43,11 @@ export function DeployDialog({ children, error, busy, onClose }: {
       <header className="flex items-center justify-between gap-3 border-b border-[var(--ws-border)] pb-3">
         <div className="flex items-center gap-2.5">
           <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[var(--ws-accent)]/20 bg-[var(--ws-accent-bg)] text-[var(--ws-accent)]">
-            <Rocket aria-hidden="true" className="size-4" />
+            {icon ?? <Rocket aria-hidden="true" className="size-4" />}
           </div>
           <div>
-            <h2 id={titleId} className="text-sm font-semibold tracking-tight text-white">Deploy Reactive Automation</h2>
-            <p className="text-xs text-[var(--ws-muted)]">Autonomous execution on Reactive Lasna Testnet (Chain ID: 5318007)</p>
+            <h2 id={titleId} className="text-sm font-semibold tracking-tight text-white">{title}</h2>
+            {subtitle && <p className="text-xs text-[var(--ws-muted)]">{subtitle}</p>}
           </div>
         </div>
         <button type="button" onClick={onClose} disabled={busy} aria-label="Close deploy dialog"
