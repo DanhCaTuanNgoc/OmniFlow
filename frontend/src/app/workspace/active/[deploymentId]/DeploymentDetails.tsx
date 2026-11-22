@@ -13,6 +13,7 @@ import { WorkspacePageHeader, WorkspaceState } from '@/components/common/Workspa
 import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
 import { deploymentStepKey, runDeploymentAction, setVaultRscAuthorization, takeProfitTemplate, type DeploymentDetail, type DeploymentSummary } from '@/lib/deployments';
 import { WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspaceSession';
+import { ToastContainer, type ToastNotification } from '@/components/common/ToastContainer';
 
 const runtimeLabel = {
   unverified: 'RPC data unavailable',
@@ -135,27 +136,50 @@ function DeploymentPanel({
 }) {
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState<string>();
-  const [message, setMessage] = useState<{ text: string; error: boolean }>();
+  const [toasts, setToasts] = useState<ToastNotification[]>([]);
   const { contracts, runtime, status } = deployment;
+
+  const pushToast = useCallback((toast: Omit<ToastNotification, 'id'>) => {
+    const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `toast-${Date.now()}-${Math.random()}`;
+    setToasts((prev) => [...prev.slice(-4), { ...toast, id }]);
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   const onboarding = runtime?.base?.onboarding;
   const profit = deployment.template === takeProfitTemplate;
 
   async function doStep(kind: keyof typeof stepLabels) {
     setBusy(kind);
-    setMessage(undefined);
     try {
       const funding = kind === 'principal' || kind === 'callback-reserve' || kind === 'reactive-reserve';
       if (funding && amount && !/^\d+(\.\d{1,18})?$/.test(amount)) {
-        throw new Error('Enter a decimal amount with up to 18 places.');
+        pushToast({
+          type: 'error',
+          title: 'Invalid Amount',
+          message: 'Enter a decimal amount with up to 18 places.',
+        });
+        return;
       }
       await runDeploymentAction(owner, deployment, kind, !funding || !amount ? undefined : parseEther(amount), deployment.graph);
       setAmount('');
-      setMessage({ text: 'Receipt verified and saved.', error: false });
+      pushToast({
+        type: 'success',
+        tag: stepLabels[kind],
+        title: 'Step Completed',
+        message: `Receipt for ${stepLabels[kind]} verified and saved.`,
+      });
       await reload();
     } catch (err) {
       if (err instanceof WorkspaceWalletPromptCancelled) return;
-      setMessage({ text: err instanceof Error ? err.message : 'Unable to complete the step.', error: true });
+      pushToast({
+        type: 'error',
+        tag: stepLabels[kind],
+        title: 'Step Failed',
+        message: err instanceof Error ? err.message : 'Unable to complete the step.',
+      });
     } finally {
       setBusy(undefined);
     }
@@ -163,7 +187,6 @@ function DeploymentPanel({
 
   async function retryDeployment() {
     setBusy('deploy');
-    setMessage(undefined);
     try {
       if (profit) { await reload(); return; }
       const result = await workspaceRequest<DeploymentSummary>(owner, '/pipeline/compile-and-deploy', {
@@ -175,12 +198,20 @@ function DeploymentPanel({
         body: JSON.stringify(deployment.graph),
       });
       if (result.status === 'signed') {
-        setMessage({ text: 'The stored Lasna transaction is still awaiting its receipt.', error: false });
+        pushToast({
+          type: 'info',
+          title: 'Pending Receipt',
+          message: 'The stored Lasna transaction is still awaiting its receipt.',
+        });
       }
       await reload();
     } catch (err) {
       if (err instanceof WorkspaceWalletPromptCancelled) return;
-      setMessage({ text: err instanceof Error ? err.message : 'Unable to resume the deployment.', error: true });
+      pushToast({
+        type: 'error',
+        title: 'Deployment Failed',
+        message: err instanceof Error ? err.message : 'Unable to resume the deployment.',
+      });
     } finally {
       setBusy(undefined);
     }
@@ -201,7 +232,11 @@ function DeploymentPanel({
 
   async function handleTogglePauseResume() {
     if (!isBaseRpcAvailable) {
-      setMessage({ text: 'Base Sepolia RPC connection is currently unavailable. Please verify network.', error: true });
+      pushToast({
+        type: 'error',
+        title: 'RPC Unavailable',
+        message: 'Base Sepolia RPC connection is currently unavailable. Please verify network.',
+      });
       return;
     }
     const willAuthorize = !isAuthorized;
@@ -212,17 +247,23 @@ function DeploymentPanel({
       if (!confirmed) return;
     }
     setBusy(willAuthorize ? 'resume' : 'pause');
-    setMessage(undefined);
     try {
       await setVaultRscAuthorization(owner, deployment, willAuthorize);
-      setMessage({
-        text: willAuthorize ? 'Vault permission restored. Checking principal and reserves.' : 'Vault execution permission revoked.',
-        error: false,
+      pushToast({
+        type: willAuthorize ? 'success' : 'warning',
+        tag: 'Vault Permission',
+        title: willAuthorize ? 'Automation Resumed' : 'Automation Paused',
+        message: willAuthorize ? 'Vault permission restored. Checking principal and reserves.' : 'Vault execution permission revoked.',
       });
       await reload();
     } catch (err) {
       if (err instanceof WorkspaceWalletPromptCancelled) return;
-      setMessage({ text: err instanceof Error ? err.message : 'Failed to update automation status.', error: true });
+      pushToast({
+        type: 'error',
+        tag: 'Vault Permission',
+        title: 'Update Failed',
+        message: err instanceof Error ? err.message : 'Failed to update automation status.',
+      });
     } finally {
       setBusy(undefined);
     }
@@ -412,18 +453,6 @@ function DeploymentPanel({
         </div>
       )}
 
-      {/* Messages */}
-      {message && (
-        <p
-          role={message.error ? 'alert' : 'status'}
-          className={`break-words text-xs rounded-lg p-2.5 border ${
-            message.error ? 'text-rose-300 bg-rose-950/20 border-rose-900/40' : 'text-emerald-300 bg-emerald-950/20 border-emerald-900/40'
-          }`}
-        >
-          {message.text}
-        </p>
-      )}
-
       <section aria-labelledby="pipeline-config" className="ws-panel space-y-4 p-4 sm:p-5">
         <h2 id="pipeline-config" className="text-sm font-semibold text-white">Configuration and contracts</h2>
         {configuration && (
@@ -571,6 +600,9 @@ function DeploymentPanel({
           </div>
         )}
       </section>
+
+      {/* Floating Toast Notifications */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
