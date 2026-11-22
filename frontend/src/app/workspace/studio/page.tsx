@@ -35,6 +35,10 @@ function StudioRoute() {
   const { address, isConnected } = useAccount();
   const owner = isConnected ? address?.toLowerCase() : undefined;
   const source = ['deployment', 'pipeline', 'local', 'recipe', 'new'].find(key => params.has(key));
+  const privateGraph = source === 'pipeline' || source === 'deployment';
+  if (privateGraph && !owner) {
+    return <WorkspaceState title="Sign in from the Workspace header to open this pipeline." />;
+  }
   if (source && ['deployment', 'pipeline', 'local'].includes(source) && !params.get(source)?.trim()) {
     return <WorkspaceState title="This pipeline link is missing an ID." />;
   }
