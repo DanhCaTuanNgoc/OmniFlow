@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAccount, useSwitchChain } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { formatEther, type Address } from 'viem';
 import { 
   Activity, 
@@ -15,10 +15,7 @@ import {
   AlertCircle, 
   AlertTriangle,
   Layers, 
-  Zap, 
-  Radio,
-  Wifi,
-  WifiOff,
+  ChevronDown,
   Loader2,
   FileCheck2
 } from 'lucide-react';
@@ -36,17 +33,137 @@ export type Execution = {
   originTxHash: string;
   reactiveTxHash?: string;
   destinationTxHash?: string;
-  details: { reason?: string; executionId?: string; amountIn?: string; amountOut?: string };
+  details: {
+    reason?: string;
+    executionId?: string;
+    amountIn?: string;
+    amountOut?: string;
+    triggerPrice?: string;
+    thresholdPrice?: string;
+    executedPrice?: string;
+  };
 };
 
-const outcome: Record<string, string> = {
-  PENDING: 'Pending confirmation',
-  UNVERIFIED: 'Reconciling receipts',
-  REORGED: 'Reorganized',
-  SUCCESS: 'Executed',
-  SKIPPED: 'Skipped',
-  FAILED: 'Failed',
-};
+const outcome = {
+  PENDING: { label: 'Confirming', icon: Clock, tone: 'text-amber-200' },
+  UNVERIFIED: { label: 'Unverified', icon: AlertTriangle, tone: 'text-amber-200' },
+  REORGED: { label: 'Needs recheck', icon: AlertTriangle, tone: 'text-amber-200' },
+  SUCCESS: { label: 'Sold', icon: CheckCircle2, tone: 'text-emerald-300' },
+  SKIPPED: { label: 'Skipped', icon: CheckCircle2, tone: 'text-slate-300' },
+  FAILED: { label: 'Failed', icon: AlertCircle, tone: 'text-rose-300' },
+} satisfies Record<Execution['status'], { label: string; icon: typeof Clock; tone: string }>;
+
+function formatActivityAmount(raw?: string) {
+  if (!raw || !/^\d+$/.test(raw)) return undefined;
+  const [whole, fraction] = formatEther(BigInt(raw)).split('.');
+  return fraction ? `${BigInt(whole).toLocaleString('en-US')}.${fraction}` : BigInt(whole).toLocaleString('en-US');
+}
+
+function describeExecution(entry: Execution) {
+  const { status, details } = entry;
+  const amountIn = formatActivityAmount(details.amountIn);
+  const amountOut = formatActivityAmount(details.amountOut);
+  const triggerPrice = formatActivityAmount(details.triggerPrice);
+  const vaultPrice = formatActivityAmount(details.executedPrice);
+  const threshold = formatActivityAmount(details.thresholdPrice);
+  const priceContext = [
+    triggerPrice && `Trigger price ${triggerPrice}`,
+    threshold && `Threshold ${threshold}`,
+    vaultPrice && details.executedPrice !== '0' && `Price at Vault check ${vaultPrice}`,
+  ].filter(Boolean).join(' · ');
+
+  switch (status) {
+    case 'SUCCESS':
+      return {
+        title: amountIn ? `Sold ${amountIn} ETH` : 'Sale completed',
+        description: amountOut ? `Your wallet received ${amountOut} payout tokens.` : 'The Vault completed this sale.',
+        priceContext,
+      };
+    case 'SKIPPED': {
+      const reasons: Record<string, string> = {
+        'Price bounced back above stop threshold': 'The price recovered above your stop-loss threshold before the Vault could sell.',
+        'Price fell below take-profit threshold': 'The price fell below your take-profit threshold before the Vault could sell.',
+        'Order already settled': 'The Vault had already processed this order.',
+        'Callback expired': 'The request expired before the Vault could act.',
+      };
+      const reason = details.reason ? reasons[details.reason] : undefined;
+      return { title: 'No sale', description: reason ? `${reason} No ETH was sold in this run.` : 'The Vault skipped this run. No ETH was sold.', priceContext };
+    }
+    case 'PENDING':
+      return {
+        title: 'Trade signal received',
+        description: details.reason?.includes('finality')
+          ? 'Waiting for Base Sepolia to confirm the result.'
+          : 'Checking whether the Vault sold or skipped this order.',
+        priceContext,
+      };
+    case 'UNVERIFIED':
+      return { title: 'Trade result unverified', description: 'We could not match all the transaction records for this run.', priceContext };
+    case 'REORGED':
+      return { title: 'Trade result needs rechecking', description: 'The network changed which block is recorded for this run.', priceContext };
+    case 'FAILED':
+      return { title: 'Sale failed', description: 'The request to sell failed. Open the transaction details for the reported reason.', priceContext };
+  }
+}
+
+const transactionSteps = [
+  { field: 'originTxHash', label: 'Price trigger · Base Sepolia', explorer: 'https://sepolia.basescan.org/tx/' },
+  { field: 'reactiveTxHash', label: 'Automation request · Lasna', explorer: 'https://lasna.reactscan.net/tx/' },
+  { field: 'destinationTxHash', label: 'Vault result · Base Sepolia', explorer: 'https://sepolia.basescan.org/tx/' },
+] as const;
+
+function ActivityEntry({ entry }: { entry: Execution }) {
+  const { title, description, priceContext } = describeExecution(entry);
+  const { label, icon: Icon, tone } = outcome[entry.status];
+  return (
+    <article className="space-y-3 rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-4">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1.5 text-xs">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="break-words font-medium text-slate-300">{entry.pipelineName}</span>
+          <span className={`inline-flex items-center gap-1.5 font-medium ${tone}`}>
+            <Icon aria-hidden="true" className="size-3.5" />
+            {label}
+          </span>
+        </div>
+        <time className="tabular-nums text-[var(--ws-muted)]" dateTime={entry.timestamp}>{new Date(entry.timestamp).toLocaleString()}</time>
+      </div>
+      <div>
+        <h3 className="break-words text-base font-semibold tracking-tight text-white tabular-nums">{title}</h3>
+        <p className="mt-1 break-words text-sm leading-relaxed text-slate-300 tabular-nums">{description}</p>
+        {priceContext && (
+          <p className="mt-1.5 text-xs leading-relaxed text-[var(--ws-muted)] tabular-nums">{priceContext} · payout tokens per ETH</p>
+        )}
+      </div>
+      <details className="group border-t border-[var(--ws-border)] pt-2">
+        <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 rounded text-xs font-medium text-[var(--ws-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 [&::-webkit-details-marker]:hidden">
+          <ChevronDown aria-hidden="true" className="size-3.5 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+          On-chain details
+        </summary>
+        <div className="mt-2.5 space-y-2 text-xs">
+          <ul className="space-y-1.5">
+            {transactionSteps.map(({ field, label: stepLabel, explorer }) => {
+              const hash = entry[field];
+              return (
+                <li key={field} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <span className="text-slate-300">{stepLabel}</span>
+                  {hash ? (
+                    <a href={explorer + hash} target="_blank" rel="noopener noreferrer" aria-label={`View ${stepLabel} transaction`}
+                      title={hash} className="inline-flex items-center gap-1 font-mono text-[var(--ws-accent)] underline underline-offset-2">
+                      {hash.slice(0, 10)}…{hash.slice(-6)}
+                      <ExternalLink aria-hidden="true" className="size-3" />
+                    </a>
+                  ) : <span className="text-[var(--ws-muted)]">Receipt unavailable</span>}
+                </li>
+              );
+            })}
+          </ul>
+          {entry.details.executionId && <p className="break-all text-[var(--ws-muted)]">Execution ID <code>{entry.details.executionId}</code></p>}
+          {entry.details.reason && <p className="break-words text-[var(--ws-muted)]">{entry.details.reason}</p>}
+        </div>
+      </details>
+    </article>
+  );
+}
 
 type History = {
   logs: Execution[];
@@ -106,9 +223,6 @@ function LogsRoute() {
 }
 
 function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: string | null }) {
-  const { chainId } = useAccount();
-  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
-  const isCorrectChain = chainId === 84532;
   const [history, setHistory] = useState<History>();
   const [lastSyncedAt, setLastSyncedAt] = useState<Date>();
   const [pending, setPending] = useState(false);
@@ -118,7 +232,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
 
   // Filter & Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SUCCESS' | 'PENDING' | 'FAILED' | 'SKIPPED'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SUCCESS' | 'PENDING' | 'FAILED' | 'SKIPPED' | 'UNVERIFIED'>('ALL');
 
   const load = useCallback(async () => {
     setPending(true);
@@ -136,12 +250,9 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
 
   const hasHistory = history !== undefined;
 
-  // Auto-load activity on mount or when switching to correct chain
   useEffect(() => {
-    if (isCorrectChain) {
-      void load();
-    }
-  }, [load, isCorrectChain]);
+    void load();
+  }, [load]);
 
   async function loadEarlier() {
     const next = history?.next;
@@ -191,7 +302,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
 
   // Periodic polling when not live-subscribed to WebSocket
   useEffect(() => {
-    if (!isCorrectChain || !hasHistory) return;
+    if (!hasHistory) return;
     const isLive = status === 'CONNECTED' && Boolean(deploymentId);
     if (!isLive) {
       const interval = setInterval(() => {
@@ -199,25 +310,29 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
       }, 15000);
       return () => clearInterval(interval);
     }
-  }, [status, deploymentId, isCorrectChain, hasHistory, load]);
+  }, [status, deploymentId, hasHistory, load]);
 
   const filteredLogs = useMemo(() => {
     if (!history?.logs) return [];
     return history.logs.filter((entry) => {
       // Search
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
+        const q = searchQuery.trim().toLowerCase();
         const matchName = entry.pipelineName.toLowerCase().includes(q);
         const matchReason = entry.details?.reason?.toLowerCase().includes(q);
         const matchOrigin = entry.originTxHash?.toLowerCase().includes(q);
         const matchReactive = entry.reactiveTxHash?.toLowerCase().includes(q);
         const matchDest = entry.destinationTxHash?.toLowerCase().includes(q);
-        if (!matchName && !matchReason && !matchOrigin && !matchReactive && !matchDest) return false;
+        const summary = describeExecution(entry);
+        const matchOutcome = [outcome[entry.status].label, summary.title, summary.description]
+          .some(value => value.toLowerCase().includes(q));
+        if (!matchName && !matchReason && !matchOrigin && !matchReactive && !matchDest && !matchOutcome) return false;
       }
       // Status
       if (statusFilter === 'SUCCESS') return entry.status === 'SUCCESS';
-      if (statusFilter === 'PENDING') return entry.status === 'PENDING' || entry.status === 'UNVERIFIED';
-      if (statusFilter === 'FAILED') return entry.status === 'FAILED' || entry.status === 'REORGED';
+      if (statusFilter === 'PENDING') return entry.status === 'PENDING';
+      if (statusFilter === 'FAILED') return entry.status === 'FAILED';
+      if (statusFilter === 'UNVERIFIED') return entry.status === 'UNVERIFIED' || entry.status === 'REORGED';
       if (statusFilter === 'SKIPPED') return entry.status === 'SKIPPED';
       return true;
     });
@@ -233,7 +348,8 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search activity by pipeline, tx hash, or reason..."
+            aria-label="Search activity"
+            placeholder="Search pipeline, outcome, or transaction"
             className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] pl-9 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-[var(--ws-accent)] focus:outline-none"
           />
         </div>
@@ -242,8 +358,9 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
           {(
             [
               { key: 'ALL', label: `All (${history?.logs.length ?? 0})` },
-              { key: 'SUCCESS', label: 'Executed' },
-              { key: 'PENDING', label: 'Pending' },
+              { key: 'SUCCESS', label: 'Sold' },
+              { key: 'PENDING', label: 'Confirming' },
+              { key: 'UNVERIFIED', label: 'Needs review' },
               { key: 'FAILED', label: 'Failed' },
               { key: 'SKIPPED', label: 'Skipped' },
             ] as const
@@ -251,6 +368,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
             <button
               key={tab.key}
               type="button"
+              aria-pressed={statusFilter === tab.key}
               onClick={() => setStatusFilter(tab.key)}
               className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
                 statusFilter === tab.key
@@ -267,12 +385,12 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
           {status === 'CONNECTED' && Boolean(deploymentId) ? (
             <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 px-2 py-1 text-[11px] text-emerald-300 font-mono">
               <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Live WS</span>
+              <span>Live updates</span>
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-md bg-zinc-500/10 border border-zinc-500/30 px-2 py-1 text-[11px] text-zinc-400 font-mono" title="Auto-polling receipts every 15s">
-              <WifiOff className="size-3" />
-              <span>Polling</span>
+              <Clock aria-hidden="true" className="size-3" />
+              <span>Refreshing automatically</span>
             </span>
           )}
 
@@ -289,37 +407,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
         </div>
       </div>
 
-      {/* Network Warning Banner or Error Display */}
-      {(!isCorrectChain || error?.includes('Base Sepolia')) ? (
-        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <AlertTriangle className="size-4 text-rose-400 shrink-0" />
-            <span>
-              {chainId
-                ? `Your wallet is currently on Chain ID ${chainId}. Please switch to Base Sepolia (84532) to stream activity receipts.`
-                : 'Connect the deployment wallet to Base Sepolia (84532) to sign in.'}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => switchChain?.({ chainId: 84532 })}
-            disabled={isSwitchingChain}
-            className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs px-3 py-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50 shrink-0"
-          >
-            {isSwitchingChain ? (
-              <>
-                <Loader2 className="size-3.5 animate-spin" />
-                <span>Switching...</span>
-              </>
-            ) : (
-              <>
-                <Zap className="size-3.5" />
-                <span>Switch to Base Sepolia</span>
-              </>
-            )}
-          </button>
-        </div>
-      ) : error ? (
+      {error ? (
         <div role="alert" className="flex items-center gap-2 rounded-lg border border-rose-900/60 bg-rose-950/30 p-3 text-xs text-rose-300">
           <AlertCircle className="size-4 shrink-0 text-rose-400" />
           <span>{error}</span>
@@ -328,7 +416,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
 
       {history?.indexer?.error && (
         <p role="status" className="text-xs text-amber-200 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-lg">
-          Some recent receipts could not be indexed yet. Pull to refresh.
+          Some recent trades are still being checked.
         </p>
       )}
 
@@ -338,7 +426,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
           <div className="flex items-center gap-2">
             <Clock className="size-3.5 text-amber-400 shrink-0" />
             <span>
-              Live WebSocket stream disconnected. Displaying cached receipts{lastSyncedAt ? ` (last synced at ${lastSyncedAt.toLocaleTimeString()})` : ''}.
+              Live updates are unavailable. Activity refreshes automatically{lastSyncedAt ? ` (last synced at ${lastSyncedAt.toLocaleTimeString()})` : ''}.
             </span>
           </div>
           <button
@@ -355,130 +443,28 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
       {/* Loading State or Logs List */}
       {pending && !history ? (
         <WorkspaceState
-          title="Loading activity logs..."
-          description="Fetching cross-chain execution receipts from Base Sepolia and Lasna..."
+          title="Loading activity..."
+          description="Checking for recent automation runs."
           icon={<Activity className="size-6 animate-spin text-[var(--ws-accent)]" />}
         />
       ) : history && (
         filteredLogs.length === 0 ? (
           <WorkspaceState
-            title={history.logs.length === 0 ? 'No matching execution receipts yet.' : 'No activity matches your search filter.'}
-            description={history.logs.length === 0 ? 'Trigger a DEX trade or deposit to ActionVault to produce verifiable Reactive callbacks.' : undefined}
+            title={history.logs.length === 0 ? 'No automation activity yet.' : 'No activity matches your search filter.'}
+            description={history.logs.length === 0 ? 'Runs appear here after an active automation requests a trade.' : undefined}
             icon={<Activity className="size-6" />}
             action={{ label: 'Back to Active Automations', href: deploymentId ? `/workspace/active/${encodeURIComponent(deploymentId)}` : '/workspace/active' }}
           />
         ) : (
           <div className="space-y-3">
-            {filteredLogs.map((entry) => {
-              const isSuccess = entry.status === 'SUCCESS';
-              const isPendingStatus = entry.status === 'PENDING' || entry.status === 'UNVERIFIED';
-
-              return (
-                <div
-                  key={entry.id}
-                  className="rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-4 space-y-3 transition-colors hover:border-[var(--ws-accent)]/50"
-                >
-                  {/* Top row: Pipeline name, status badge, timestamp */}
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-white tracking-tight">
-                        {entry.pipelineName}
-                      </h3>
-                      {isSuccess ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300">
-                          <CheckCircle2 className="size-2.5" />
-                          <span>EXECUTED</span>
-                        </span>
-                      ) : isPendingStatus ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
-                          <Clock className="size-2.5" />
-                          <span>{entry.status}</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded bg-rose-500/10 border border-rose-500/30 px-1.5 py-0.5 text-[10px] font-medium text-rose-300">
-                          <AlertCircle className="size-2.5" />
-                          <span>{outcome[entry.status] || entry.status}</span>
-                        </span>
-                      )}
-                    </div>
-
-                    <time className="text-xs font-mono text-[var(--ws-muted)] tabular-nums" dateTime={entry.timestamp}>
-                      {new Date(entry.timestamp).toLocaleString()}
-                    </time>
-                  </div>
-
-                  {entry.details.executionId && (
-                    <p className="break-all text-xs text-slate-300" title={entry.details.executionId}>
-                      Execution ID <span className="font-mono">{entry.details.executionId.slice(0, 10)}...{entry.details.executionId.slice(-6)}</span>
-                      {entry.details.amountIn && entry.details.amountOut && (
-                        <span className="ml-2 tabular-nums">{formatEther(BigInt(entry.details.amountIn))} ETH sold for {formatEther(BigInt(entry.details.amountOut))} quote tokens</span>
-                      )}
-                    </p>
-                  )}
-                  {/* Details or Reason */}
-                  {entry.details.reason && (
-                    <div className="rounded-md border border-[var(--ws-border)] bg-[#111318] p-2.5 text-xs font-mono text-zinc-300 leading-relaxed">
-                      {entry.details.reason}
-                    </div>
-                  )}
-
-                  {/* Verifiable 3-tier Transaction Hashes */}
-                  <div className="flex flex-wrap items-center gap-2 pt-1 text-xs font-mono">
-                    <a
-                      className="inline-flex items-center gap-1.5 rounded border border-[var(--ws-border)] bg-[#111318] px-2.5 py-1 text-zinc-300 hover:text-white hover:border-[var(--ws-accent)] transition-colors"
-                      href={`https://sepolia.basescan.org/tx/${entry.originTxHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <span className="size-1.5 rounded-full bg-cyan-400" />
-                      <span>Origin: {entry.originTxHash.slice(0, 8)}...</span>
-                      <ExternalLink className="size-2.5 text-zinc-500" />
-                    </a>
-
-                    {entry.reactiveTxHash && (
-                      <a
-                        className="inline-flex items-center gap-1.5 rounded border border-[var(--ws-border)] bg-[#111318] px-2.5 py-1 text-zinc-300 hover:text-white hover:border-[var(--ws-accent)] transition-colors"
-                        href={`https://lasna.reactscan.net/tx/${entry.reactiveTxHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <span className="size-1.5 rounded-full bg-purple-400" />
-                        <span>RSC Lasna: {entry.reactiveTxHash.slice(0, 8)}...</span>
-                        <ExternalLink className="size-2.5 text-zinc-500" />
-                      </a>
-                    )}
-
-                    {entry.destinationTxHash && (
-                      <a
-                        className="inline-flex items-center gap-1.5 rounded border border-[var(--ws-border)] bg-[#111318] px-2.5 py-1 text-zinc-300 hover:text-white hover:border-[var(--ws-accent)] transition-colors"
-                        href={`https://sepolia.basescan.org/tx/${entry.destinationTxHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <span className="size-1.5 rounded-full bg-emerald-400" />
-                        <span>Callback Vault: {entry.destinationTxHash.slice(0, 8)}...</span>
-                        <ExternalLink className="size-2.5 text-zinc-500" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-
-            {history?.next && (
-              <div className="pt-2">
-                <button
-                  type="button"
-                  className="ws-button text-xs"
-                  disabled={pending}
-                  onClick={() => void loadEarlier()}
-                >
-                  Load Earlier Receipts
-                </button>
-              </div>
-            )}
+            {filteredLogs.map(entry => <ActivityEntry key={entry.id} entry={entry} />)}
           </div>
         )
+      )}
+      {history?.next && (
+        <button type="button" className="ws-button text-xs" disabled={pending} onClick={() => void loadEarlier()}>
+          Load earlier activity
+        </button>
       )}
     </div>
   );

@@ -152,6 +152,7 @@ class EventListenerService {
     const [sync] = syncs;
     if (sync.args.reserve0 === 0n) return result('UNVERIFIED', 'Source reserves cannot establish the trigger price.');
     report.details.triggerPrice = (sync.args.reserve1 * 10n ** 18n / sync.args.reserve0).toString();
+    if (params.priceThresholdWei > 0n) report.details.thresholdPrice = params.priceThresholdWei.toString();
 
     const callbacks = parseEventLogs({
       abi: [omniCallback], eventName: 'OmniCallbackRequested', logs: reaction.logs.filter(log => isAddressEqual(log.address, rsc)),

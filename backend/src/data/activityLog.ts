@@ -22,6 +22,7 @@ export interface ActivityLogEntry {
     tokenPair?: string;
     executionId?: string;
     triggerPrice?: string;
+    thresholdPrice?: string;
     executedPrice?: string;
     amountIn?: string;
     amountOut?: string;
