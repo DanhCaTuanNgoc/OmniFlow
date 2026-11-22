@@ -315,3 +315,71 @@ stateDiagram-v2
    * Đối với các pipeline cùng trỏ về một Vault, gắn nhãn thông tin: `Vault: 0x202f...630f (N bots sharing)`.
    * Khi thanh lý (Decommission) các bản Copy, hệ thống chỉ thu hồi quyền của RSC tương ứng, hoàn toàn không ảnh hưởng đến số dư tiền và trạng thái hoạt động của bản chính.
 
+---
+
+## 14. Chiến lược Hợp nhất Kiến trúc Triển khai (Universal Pipeline Engine)
+
+### 14.1 Bối cảnh và Vấn đề phân mảnh (Deployment Fragmentation)
+
+Sau khi hoàn thành hai luồng **Stop-Loss (Phase 1)** và **Take-Profit (Phase 2)**, hệ thống phát sinh phân mảnh lớn về mặt kiến trúc triển khai:
+* **Stop-Loss:** Dùng `DeployModal.tsx`, gọi thẳng backend relayer/ví triển khai `StopLoss_Pipeline` trên Lasna; trên Base Sepolia chỉ yêu cầu một bước ủy quyền đơn giản vào `ActionVault`.
+* **Take-Profit:** Dùng `TakeProfitDeployModal.tsx`, ví người dùng ký deploy `PriceOrderPipeline` trên Lasna; trên Base Sepolia yêu cầu quy trình Onboarding 3 giao dịch rời rạc (`registerRSC` $\rightarrow$ `configurePriceOrder` $\rightarrow$ `setAuthorizedRSC`) vào `PriceOrderVault`.
+
+**Nợ kỹ thuật nếu tiếp tục cách làm này:** Kế hoạch còn 6 nhóm flow tồn đọng (Logic Gate AND/OR, Anti-Drainer SafeSweep, Alert/Webhook, Cron Rebalancer, Payday Splitter, Timelock Pause). Nếu mỗi flow tiếp tục tạo modal riêng, luồng onboarding riêng và endpoint backend riêng, hệ thống sẽ có tới **8 modal và 8 đường rẽ nhánh**, gây lãng phí công sức phát triển và làm trải nghiệm người dùng trở nên rời rạc.
+
+### 14.2 Đánh giá 18 kịch bản: Quy nạp thành 8 Hình thái Triển khai (Deployment Archetypes)
+
+Toàn bộ 12 ca Blueprint (BP-01 $\rightarrow$ BP-12), 5 ca mở rộng (EXT-01 $\rightarrow$ EXT-05) và 1 ca cổng logic (CAP-01) được quy nạp về 8 hình thái kiến trúc kỹ thuật:
+
+1. **Flow 1: Simple DEX Swap** (`StopLoss_Pipeline` $\rightarrow$ `ActionVault`) — *Đã hoàn thành Phase 1 (BP-01, BP-11).*
+2. **Flow 2: Price-Order Policy** (`PriceOrderPipeline` $\rightarrow$ `PriceOrderVault`) — *Đã hoàn thành Phase 2 cho Take-Profit (BP-03); hỗ trợ sẵn Ladder (BP-02), One-Shot (EXT-02), Cross-Chain Hedge (EXT-01).*
+3. **Flow 3: Multi-Signal Gate (AND / OR)** (`PriceGatePipeline` $\rightarrow$ `PriceOrderVault`) — *Contract đã có, phục vụ CAP-01 và BP-04.*
+4. **Flow 4: Transfer Watcher & SafeSweep** (`TransferWatcher` $\rightarrow$ `PriceOrderVault.executeSafeSweep`) — *Phục vụ BP-05 Anti-Drainer.*
+5. **Flow 5: Alert & Webhook Only** (`AlertWatcher` $\rightarrow$ WebSocket Gateway) — *Non-financial, không cần Vault tài chính, phục vụ BP-06, BP-07.*
+6. **Flow 6: Periodic Cron Scheduled** (`CronScheduler` $\rightarrow$ Portfolio Vault) — *Dựa trên nhịp tick hệ thống Lasna, phục vụ BP-09, BP-10, BP-12.*
+7. **Flow 7: Payday Auto-Splitter** (`TransferWatcher` $\rightarrow$ Compound Splitter Vault) — *Đa hành động atomic 20/30/50, phục vụ EXT-03, EXT-04.*
+8. **Flow 8: Governance / Timelock Pause** (`TimelockWatcher` $\rightarrow$ Vault Revoke) — *Phục vụ EXT-05.*
+
+### 14.3 Kiến trúc Hợp nhất: Universal Pipeline Flow (Chuẩn hóa 2 giai đoạn)
+
+Thay vì xây dựng 8 đường riêng, toàn bộ hệ thống được quy về **1 Flow Deploy chính duy nhất**:
+
+```mermaid
+flowchart LR
+    A["Canvas Graph (Studio)"] --> B["1. Universal Deploy Modal"]
+    B -->|Ký 1 Tx trên Lasna| C["Deploy RSC (Lasna)"]
+    C -->|Ký 1 Tx trên Base| D["Atomic Onboarding (Vault)"]
+    D --> E["🟢 ACTIVE PIPELINE"]
+```
+
+#### Tầng 1: Frontend — `UniversalDeployModal`
+* Xóa bỏ sự phân tách giữa `DeployModal` và `TakeProfitDeployModal`.
+* Sử dụng một Modal thông minh duy nhất:
+  1. **Tự động phân tích đồ thị (DAG Topology Analyzer):** Tự trích xuất nguồn (Base / Unichain), điều kiện (Giá / Transfer / Cron) và hành động (Swap / SafeSweep / Alert / Split).
+  2. **Giao diện chuẩn hóa 2 bước:**
+     * *Bước 1 (Lasna):* Báo giá gas & nạp quỹ ban đầu $\rightarrow$ Ký deploy RSC trong 1 click.
+     * *Bước 2 (Base Sepolia):* Kích hoạt quyền Vault & nạp vốn trong 1 click.
+
+#### Tầng 2: Smart Contract — Atomic Onboarding trên Vault
+* **Vấn đề cần giải quyết:** Loại bỏ việc người dùng phải ký 3-4 giao dịch rời rạc trên Base Sepolia (`registerRSC` $\rightarrow$ `configurePolicy` $\rightarrow$ `setAuthorizedRSC` $\rightarrow$ `depositPrincipal`).
+* **Giải pháp Atomic:** Cung cấp hàm hợp nhất `setupAndAuthorizeRSC` (hoặc cơ chế `multicall`) trên `PriceOrderVault`:
+  ```solidity
+  function setupAndAuthorizeRSC(
+      address rsc,
+      Permission permission,
+      bytes calldata configData
+  ) external payable onlyOwner;
+  ```
+  Chỉ **1 transaction duy nhất trên Base Sepolia** để hoàn tất toàn bộ cấu hình chính sách, nạp vốn và kích hoạt quyền cho RSC.
+
+#### Tầng 3: Backend — Universal DAG Compiler Service
+* Thay thế các hàm rẽ nhánh cứng (`resolveTakeProfit`, `resolveStopLoss`) bằng bộ biên dịch đồ thị thống nhất `compileGraphToPipeline(graph)`:
+  * Tự động chọn Bytecode RSC tương ứng (PriceOrder, PriceGate, TransferWatcher, CronScheduler).
+  * Trả về cùng một schema `DeploymentSummary` chuẩn cho cả Studio, Active Automations và Logs.
+
+### 14.4 Kế hoạch Thực hiện Hợp nhất (Implementation Roadmap)
+
+1. **Giai đoạn 1 (Ngay lập tức):** Hợp nhất `DeployModal` và `TakeProfitDeployModal` trên Frontend thành `UniversalDeployModal`. Đưa cả Stop-Loss và Take-Profit chạy chung trên một modal duy nhất.
+2. **Giai đoạn 2:** Bổ sung Atomic Onboarding trên `PriceOrderVault` để gom các bước ký trên Base Sepolia thành 1 transaction.
+3. **Giai đoạn 3:** Kích hoạt các flow còn lại (Ladder, Hedge, Gate, SafeSweep, Cron) trực tiếp trên đường ray Universal Flow mà không cần tạo thêm modal mới.
+
