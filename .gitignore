@@ -33,6 +33,8 @@ yarn-debug.log*
 pnpm-debug.log*
 .playwright-mcp/
 canary-landing.png
+.workspace/
+*.sqlite*
 
 # System Files
 .DS_Store

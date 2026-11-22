@@ -232,6 +232,7 @@ export function TakeProfitDeployModal({ owner, graph, draft, onClose }: {
       setError(err instanceof Error ? err.message : 'Step execution failed on Base Sepolia.');
     } finally {
       setBusy(false);
+      void loadDetail(deployment.pipelineId);
     }
   }
 

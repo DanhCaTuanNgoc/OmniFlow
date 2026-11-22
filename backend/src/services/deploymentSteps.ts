@@ -1,4 +1,4 @@
-import { concatHex, decodeFunctionData, encodeFunctionData, isAddressEqual, parseAbi, parseEventLogs, zeroHash, type Address, type Hash, type Hex } from 'viem';
+import { concatHex, decodeFunctionData, encodeFunctionData, hexToBigInt, isAddressEqual, parseAbi, parseEventLogs, zeroHash, type Address, type Hash, type Hex } from 'viem';
 import { ACTION_VAULT_ABI, PRICE_ORDER_VAULT_ABI, STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 import { deploymentStore } from '../data/deployments.js';
 import { chainService } from './chain.service.js';
@@ -13,7 +13,43 @@ const reserveAbi = parseAbi(['function depositTo(address) payable']);
 const delegationManager = '0xdb9b1e94b5b69df7e401ddbede43491141047db3';
 const delegationAbi = parseAbi(['function redeemDelegations(bytes[],bytes32[],bytes[])']);
 
-export function matchesDelegatedPolicyCall(to: Address, input: Hex, vault: Address, expected: Hex) {
+export function matchesDelegatedExecution(
+  to: Address,
+  input: Hex,
+  owner: Address,
+  target: Address,
+  expectedData: Hex,
+  requireValue: boolean
+) {
+  if (!isAddressEqual(to, delegationManager)) return false;
+  try {
+    const { args: [contexts, modes, executions] } = decodeFunctionData({ abi: delegationAbi, data: input });
+    if (contexts.length !== modes.length || modes.length !== executions.length) return false;
+    for (let i = 0; i < executions.length; i++) {
+      const exec = executions[i];
+      const execTarget = exec.slice(0, 42) as Address;
+      const execValueHex = ('0x' + exec.slice(42, 106)) as Hex;
+      const execData = ('0x' + exec.slice(106)) as Hex;
+      const execValue = hexToBigInt(execValueHex);
+      const context = contexts[i].toLowerCase();
+      const hasOwner = context.includes(owner.toLowerCase().replace('0x', ''));
+      if (
+        hasOwner &&
+        isAddressEqual(execTarget, target) &&
+        (expectedData === '0x' ? (execData === '0x' || execData === '0x0') : execData.toLowerCase() === expectedData.toLowerCase()) &&
+        (!requireValue || execValue > 0n)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+export function matchesDelegatedPolicyCall(to: Address, input: Hex, vault: Address, expected: Hex, owner?: Address) {
+  if (owner) return matchesDelegatedExecution(to, input, owner, vault, expected, false);
   if (!isAddressEqual(to, delegationManager)) return false;
   try {
     const { args: [contexts, modes, executions] } = decodeFunctionData({ abi: delegationAbi, data: input });
@@ -86,14 +122,19 @@ export async function recordDeploymentStep(owner: Address, id: string, kind: Ste
     ]);
     if (!matchesRuntime(code, VAULT_RUNTIME) || !isAddressEqual(vaultOwner, owner)) return false;
   } else {
-    if (!tx.to || !receipt.to || !isAddressEqual(tx.from, owner) || !isAddressEqual(receipt.from, owner) ||
-        !isAddressEqual(tx.to, receipt.to) || tx.value <= 0n) return false;
+    const isDirect = Boolean(tx.to && receipt.to && isAddressEqual(tx.from, owner) && isAddressEqual(receipt.from, owner) &&
+      isAddressEqual(tx.to, receipt.to) && tx.value > 0n);
+    const toAddress = tx.to ?? undefined;
     if (kind === 'principal') {
-      if (!isAddressEqual(tx.to, vaultAddress) || tx.input !== '0x') return false;
+      const direct = isDirect && tx.to && isAddressEqual(tx.to, vaultAddress) && tx.input === '0x';
+      const delegated = !reactive && Boolean(toAddress && matchesDelegatedExecution(toAddress, tx.input, owner, vaultAddress, '0x', true));
+      if (!direct && !delegated) return false;
     } else {
       const target = reactive ? STOP_LOSS_TEMPLATE.omniSystem : STOP_LOSS_TEMPLATE.callbackProxy;
       const input = encodeFunctionData({ abi: reserveAbi, functionName: 'depositTo', args: [reactive ? rscAddress : vaultAddress] });
-      if (!isAddressEqual(tx.to, target) || tx.input !== input) return false;
+      const direct = isDirect && tx.to && isAddressEqual(tx.to, target) && tx.input === input;
+      const delegated = !reactive && Boolean(toAddress && matchesDelegatedExecution(toAddress, tx.input, owner, target, input, true));
+      if (!direct && !delegated) return false;
     }
   }
   const block = await client.getBlock({ blockNumber: receipt.blockNumber });

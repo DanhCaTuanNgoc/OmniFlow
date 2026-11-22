@@ -115,11 +115,18 @@ export async function runDeploymentAction(owner: Address, deployment: Deployment
     throw new Error(`Transaction reverted: ${receipt.transactionHash}.`);
   }
   if (receipt.transactionHash !== hash) localStorage.setItem(key, receipt.transactionHash);
-  await workspaceRequest(owner, `/pipeline/deployments/${deployment.pipelineId}/steps`, {
-    method: 'POST', body: JSON.stringify({ kind, hash: receipt.transactionHash }),
-  });
-  localStorage.removeItem(key);
-  return receipt.transactionHash;
+  try {
+    await workspaceRequest(owner, `/pipeline/deployments/${deployment.pipelineId}/steps`, {
+      method: 'POST', body: JSON.stringify({ kind, hash: receipt.transactionHash }),
+    });
+    localStorage.removeItem(key);
+    return receipt.transactionHash;
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('receipt does not match')) {
+      localStorage.removeItem(key);
+    }
+    throw err;
+  }
 }
 
 export async function setVaultRscAuthorization(owner: Address, deployment: DeploymentSummary, authorized: boolean) {
