@@ -6,7 +6,6 @@ import {
   ReactFlow,
   Controls,
   Background,
-  MiniMap,
   BackgroundVariant,
   useNodesState,
   useEdgesState,
@@ -822,7 +821,7 @@ function StudioCanvasInner() {
             </button>
 
             {/* Auto-Arrange Layout */}
-            <button
+            {/* <button
               type="button"
               className="ws-button inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white"
               onClick={handleAutoLayout}
@@ -831,7 +830,7 @@ function StudioCanvasInner() {
             >
               <LayoutGrid className="size-3.5 text-zinc-400" aria-hidden="true" />
               <span className="hidden sm:inline">Auto-Arrange</span>
-            </button>
+            </button> */}
 
             {/* Pipeline Diagnostics Pill */}
             {nodes.length > 0 && (
@@ -1039,16 +1038,6 @@ function StudioCanvasInner() {
                 color="rgba(194, 205, 230, 0.40)"
               />
               <Controls className="!bg-[#0f111a]/90 !border-white/[0.08] !rounded-xl !shadow-2xl" />
-              <MiniMap
-                nodeColor={(node) => {
-                  if (node.data.category === 'trigger') return '#38bdf8';
-                  if (node.data.category === 'condition') return '#fbbf24';
-                  if (node.data.category === 'action') return '#34d399';
-                  return '#a855f7';
-                }}
-                maskColor="rgba(7, 8, 13, 0.75)"
-                className="!bg-[#0f111a]/90 !border !border-white/10 !rounded-xl overflow-hidden shadow-lg"
-              />
             </ReactFlow>
           </div>
 
