@@ -73,15 +73,58 @@ function VaultRoute() {
   return id ? (
     <VaultSelection key={`${owner}:${id}`} owner={owner} id={id} />
   ) : (
-    <VaultForWallet
-      key={`${owner ?? 'guest'}:${customVault ?? 'default'}`}
-      userAddress={owner}
-      vaultAddress={customVault ?? CONTRACT_ADDRESSES.DEFAULT_ACTION_VAULT}
-      isCustomVaultLinked={Boolean(customVault)}
-      onLinkVault={handleLink}
-      onConfirmVerifiedLink={handleConfirmVerifiedLink}
-      onUnlinkVault={handleUnlink}
-    />
+    <>
+      <VaultForWallet
+        key={`${owner ?? 'guest'}:${customVault ?? 'default'}`}
+        userAddress={owner}
+        vaultAddress={customVault ?? CONTRACT_ADDRESSES.DEFAULT_ACTION_VAULT}
+        isCustomVaultLinked={Boolean(customVault)}
+        onLinkVault={handleLink}
+        onConfirmVerifiedLink={handleConfirmVerifiedLink}
+        onUnlinkVault={handleUnlink}
+      />
+      {owner && <VerifiedPipelineVaults key={owner} owner={owner} />}
+    </>
+  );
+}
+
+function VerifiedPipelineVaults({ owner }: { owner: Address }) {
+  const [vaults, setVaults] = useState<{ address: Address; pair: Address; kind: string | null }[]>();
+  const [error, setError] = useState<string>();
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void workspaceRequest<{ vaults: NonNullable<typeof vaults> }>(owner, '/pipeline/vaults', {
+      signal: controller.signal,
+    }).then(result => {
+      if (!controller.signal.aborted) setVaults(result.vaults);
+    }).catch(error => {
+      if (!controller.signal.aborted) {
+        setError(error instanceof Error ? error.message : 'Unable to load linked Vaults.');
+      }
+    });
+    return () => controller.abort();
+  }, [owner]);
+
+  return (
+    <section className="ws-page space-y-3" aria-label="Linked pipeline Vaults">
+      <h2 className="text-sm font-semibold text-slate-100">Linked pipeline Vaults</h2>
+      {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}
+      {!error && !vaults && <p role="status" className="text-sm text-slate-300">Loading linked Vaults?</p>}
+      {vaults?.length === 0 && <p className="text-sm text-slate-300">Link a Vault from a swap node to see it here.</p>}
+      {Boolean(vaults?.length) && (
+        <ul className="space-y-2">
+          {vaults?.map(vault => (
+            <li key={vault.address} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <a className="ws-address" href={`https://sepolia.basescan.org/address/${vault.address}`}
+                title={vault.address}>{truncateAddress(vault.address)}</a>
+              <span className="text-slate-100">{vault.kind === 'price-order' ? 'Price Order Vault' : vault.kind === 'stop-loss' ? 'Stop-loss Vault' : 'Vault'}</span>
+              <span className="text-slate-300" title={vault.pair}>Pool {truncateAddress(vault.pair)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

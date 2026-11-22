@@ -94,6 +94,10 @@ export class DeploymentStore {
         verifiedAt INTEGER NOT NULL, PRIMARY KEY (owner, address, chainId)
       );
     `);
+    const vaultColumns = this.db.pragma('table_info(vault_links)') as { name: string }[];
+    if (!vaultColumns.some(column => column.name === 'kind')) {
+      this.db.exec('ALTER TABLE vault_links ADD COLUMN kind TEXT');
+    }
     const columns = this.db.pragma('table_info(deployments)') as { name: string }[];
     if (!columns.some(column => column.name === 'workspacePipelineId')) {
       this.db.exec('ALTER TABLE deployments ADD COLUMN workspacePipelineId TEXT');
@@ -276,14 +280,24 @@ export class DeploymentStore {
       .all(deploymentId) as { kind: string; txHash: Hash; chainId: number; blockNumber: string; blockHash: Hash }[];
   }
 
+  listVaultLinks(owner: Address, chainId: number) {
+    return this.db.prepare(`
+      SELECT address, pair, kind FROM vault_links WHERE owner = ? AND chainId = ? ORDER BY address
+    `).all(owner.toLowerCase(), chainId) as {
+      address: Address; pair: Address; kind: 'stop-loss' | 'price-order' | null;
+    }[];
+  }
+
   linkVault(link: { owner: Address; address: Address; chainId: number; pair: Address; router: Address;
-    quote: Address; proxy: Address; creationTxHash?: Hash }) {
+    quote: Address; proxy: Address; creationTxHash?: Hash; kind?: 'stop-loss' | 'price-order' }) {
     const input = { ...link, owner: link.owner.toLowerCase(), address: link.address.toLowerCase(),
-      creationTxHash: link.creationTxHash ?? null, verifiedAt: Date.now() };
+      kind: link.kind ?? null, creationTxHash: link.creationTxHash ?? null, verifiedAt: Date.now() };
     this.db.prepare(`
-      INSERT INTO vault_links VALUES (@owner, @address, @chainId, @pair, @router, @quote, @proxy, @creationTxHash, @verifiedAt)
+      INSERT INTO vault_links (owner, address, chainId, pair, router, quote, proxy, creationTxHash, verifiedAt, kind)
+      VALUES (@owner, @address, @chainId, @pair, @router, @quote, @proxy, @creationTxHash, @verifiedAt, @kind)
       ON CONFLICT (owner, address, chainId) DO UPDATE SET
-        creationTxHash = COALESCE(excluded.creationTxHash, vault_links.creationTxHash), verifiedAt = excluded.verifiedAt
+        creationTxHash = COALESCE(excluded.creationTxHash, vault_links.creationTxHash),
+        kind = COALESCE(excluded.kind, vault_links.kind), verifiedAt = excluded.verifiedAt
     `).run(input);
     return this.db.prepare('SELECT * FROM vault_links WHERE owner = ? AND address = ? AND chainId = ?')
       .get(input.owner, input.address, input.chainId);

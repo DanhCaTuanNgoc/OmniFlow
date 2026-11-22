@@ -1,5 +1,5 @@
 import type { Edge, Node } from '@xyflow/react';
-import { isAddress } from 'viem';
+import { isAddress, zeroAddress } from 'viem';
 import { connectionError, simulationPath } from './pipelineDraft';
 
 export interface PipelineIssue {
@@ -23,7 +23,11 @@ export interface PipelineLintResult {
   hasCompletePath: boolean;
 }
 
-export function lintPipelineGraph(nodes: readonly Node[], edges: readonly Edge[]): PipelineLintResult {
+export function hasConfiguredVault(value: unknown) {
+  return typeof value === 'string' && isAddress(value, { strict: false }) && value !== zeroAddress;
+}
+
+export function lintPipelineGraph(nodes: readonly Node[], edges: readonly Edge[], phaseTwo = false): PipelineLintResult {
   const errors: PipelineIssue[] = [];
   const warnings: PipelineIssue[] = [];
   const nodeIssues = new Map<string, PipelineIssue[]>();
@@ -269,6 +273,15 @@ export function lintPipelineGraph(nodes: readonly Node[], edges: readonly Edge[]
         break;
 
       case 'dexSwap':
+        if (phaseTwo && !hasConfiguredVault(data.actionVaultAddress)) {
+          addIssue({
+            id: `vault-${node.id}`,
+            nodeId: node.id,
+            nodeLabel: label,
+            severity: 'warning',
+            message: 'Select a Price Order Vault for this pool before deploying.',
+          });
+        }
         if (!data.amountPercentage || Number(data.amountPercentage) <= 0 || Number(data.amountPercentage) > 100) {
           addIssue({
             id: `param-${node.id}-pct`,

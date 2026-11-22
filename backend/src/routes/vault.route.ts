@@ -24,6 +24,39 @@ function vaultFailure(error: unknown) {
   return { status: 502, error: 'Unable to verify the Vault or market on Base Sepolia.' };
 }
 
+const candidatesSchema = z.object({ pair: address, managerVault: address.optional() });
+
+vaultRouter.get('/', (req, res) => {
+  const owner = res.locals.workspaceOwner as Address;
+  return res.json({ vaults: deploymentStore().listVaultLinks(owner, 84532) });
+});
+
+vaultRouter.get('/price-order-candidates', async (req, res) => {
+  const input = candidatesSchema.safeParse(req.query);
+  if (!input.success) return res.status(400).json({ error: 'A valid Base Sepolia pool is required.' });
+  const owner = res.locals.workspaceOwner as Address;
+  const { pair, managerVault } = input.data;
+  try {
+    const saved = deploymentStore().listVaultLinks(owner, 84532)
+      .filter(vault => vault.kind !== 'stop-loss' && isAddressEqual(vault.pair, pair));
+    const addresses = new Set(saved.map(vault => vault.address.toLowerCase() as Address));
+    if (managerVault) addresses.add(managerVault.toLowerCase() as Address);
+    const verified = await Promise.all([...addresses].map(async candidate => {
+      try {
+        await verifyPriceOrderVault(candidate, owner, pair);
+        return candidate;
+      } catch (error) {
+        if (vaultFailure(error).status === 400) return null;
+        throw error;
+      }
+    }));
+    return res.json({ vaults: verified.filter(candidate => candidate !== null) });
+  } catch (error) {
+    const failure = vaultFailure(error);
+    return res.status(failure.status).json({ error: failure.error });
+  }
+});
+
 vaultRouter.post('/market', async (req, res) => {
   const input = marketSchema.safeParse(req.body);
   if (!input.success) return res.status(400).json({ error: 'A valid pool and router address are required.' });
@@ -50,7 +83,7 @@ vaultRouter.post('/link', async (req, res) => {
         return res.status(400).json({ error: 'The creation receipt does not prove that this wallet deployed the Vault.' });
       }
     }
-    return res.json({ vault: deploymentStore().linkVault({ ...config, address: vault, chainId: 84532, creationTxHash }) });
+    return res.json({ vault: deploymentStore().linkVault({ ...config, address: vault, chainId: 84532, creationTxHash, kind }) });
   } catch (error) {
     const failure = vaultFailure(error);
     return res.status(failure.status).json({ error: failure.error });

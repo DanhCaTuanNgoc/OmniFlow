@@ -31,6 +31,8 @@ interface InspectorPanelProps {
   originPool?: unknown;
   phaseTwo: boolean;
   supportsPriceVault: boolean;
+  vaultLookup?: { vaults?: Address[]; error?: string };
+  checkingVaults: boolean;
   crossChain: boolean;
   nodeIssues?: PipelineIssue[];
 }
@@ -44,6 +46,8 @@ export function InspectorPanel({
   originPool,
   phaseTwo,
   supportsPriceVault,
+  vaultLookup,
+  checkingVaults,
   crossChain,
   nodeIssues,
 }: InspectorPanelProps) {
@@ -638,7 +642,22 @@ export function InspectorPanel({
                 onChange={e => handleChange('destinationPoolAddress', e.target.value.trim())}
                 className="w-full rounded-xl border border-white/[0.08] bg-[#07080D] p-2.5 font-mono text-slate-100" />
             </label>}
-            {phaseTwo && <p className="text-slate-300">Phase 2 uses a versioned Price Order Vault. Deploy opens after testnet acceptance.</p>}
+            {phaseTwo && checkingVaults && <p role="status" className="text-slate-300">Checking compatible Vaults?</p>}
+            {phaseTwo && vaultLookup?.error && <p role="alert" className="text-rose-300">{vaultLookup.error}</p>}
+            {phaseTwo && Boolean(vaultLookup?.vaults?.length) && (
+              <label className="block space-y-1">
+                <span>Verified Vaults for this pool</span>
+                <select className="w-full rounded-md border border-[var(--ws-border)] bg-[#0d0e15] px-2.5 py-2 text-slate-100"
+                  value={vaultLookup?.vaults?.includes(String(data.actionVaultAddress).toLowerCase() as Address)
+                    ? String(data.actionVaultAddress).toLowerCase() : ''}
+                  onChange={event => { if (event.target.value) handleChange('actionVaultAddress', event.target.value); }}>
+                  <option value="" disabled>Select Vault</option>
+                  {vaultLookup?.vaults?.map(vault => (
+                    <option key={vault} value={vault} title={vault}>{vault.slice(0, 8)}?{vault.slice(-6)}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             {(!phaseTwo || supportsPriceVault) && owner && typeof vaultPool === 'string' && isAddress(vaultPool) && (
               <VaultSetup key={`${id}:${owner}:${vaultPool}:${phaseTwo}`} owner={owner} pair={vaultPool}
                 kind={phaseTwo ? 'price-order' : 'stop-loss'}

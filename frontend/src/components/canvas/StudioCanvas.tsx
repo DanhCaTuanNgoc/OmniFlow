@@ -19,6 +19,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAccount } from 'wagmi';
+import type { Address } from 'viem';
+import { getSavedVault } from '@/lib/vaultSelection';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { isPhaseTwoGraph, resolvePhaseTwo, resolveStopLoss, STOP_LOSS_TEMPLATE, StopLossValidationError, type StopLossGraph } from '@omniflow/shared';
 import { APP_CONFIG } from '@/lib/constants';
@@ -67,7 +69,7 @@ import {
   LayoutGrid,
   AlertCircle,
 } from 'lucide-react';
-import { lintPipelineGraph, autoLayoutGraph, type PipelineIssue } from '@/lib/pipelineLint';
+import { lintPipelineGraph, hasConfiguredVault, autoLayoutGraph, type PipelineIssue } from '@/lib/pipelineLint';
 
 // STABLE DEFINITIONS OUTSIDE COMPONENT SCOPE (Mandatory for XYFlow performance)
 const nodeTypes: NodeTypes = {
@@ -215,7 +217,9 @@ function StudioCanvasInner() {
     return isBurst || isTraversed || monitoring ? { ...edge, data: { ...edge.data, isBurst, isTraversed, monitoring } } : edge;
   }), [activeEdgeIds, traversedEdgeIds, monitoredPath, edges]);
 
-  const lintResult = useMemo(() => lintPipelineGraph(nodes, edges), [nodes, edges]);
+  const phaseTwo = isPhaseTwoGraph({ nodes, edges });
+  const lintResult = useMemo(() => lintPipelineGraph(nodes, edges, phaseTwo && !isSnapshot), [nodes, edges, phaseTwo, isSnapshot]);
+  const vaultIssue = lintResult.warnings.find(issue => issue.id === `vault-${issue.nodeId}`);
   const annotatedNodes = useMemo(() => {
     return nodes.map((n) => {
       const issues = lintResult.nodeIssues.get(n.id);
@@ -454,7 +458,6 @@ function StudioCanvasInner() {
   const selectedNodeIds = useMemo(() => selectedNodes.map(node => node.id), [selectedNodes]);
   const selectedEdgeIds = useMemo(() => edges.filter(edge => edge.selected).map(edge => edge.id), [edges]);
   const selectedNode = selectedNodes.length === 1 && !selectedEdgeIds.length ? selectedNodes[0] : undefined;
-  const phaseTwo = isPhaseTwoGraph({ nodes, edges });
   const crossChain = nodes.some(node => node.type === 'priceVelocityGuard');
   const priceGate = nodes.find(node => node.type === 'logicGate');
   const primaryGuard = priceGate && edges.find(edge => edge.target === priceGate.id && edge.targetHandle === 'signal-a');
@@ -462,6 +465,38 @@ function StudioCanvasInner() {
     ['watchDEXPrice', 'priceThresholdGuard', 'priceVelocityGuard', 'logicGate', 'cooldownGuard', 'dexSwap'].includes(node.type ?? ''));
   const originPool = nodes.find(node => node.type === 'watchDEXPrice' &&
     (!priceGate || edges.some(edge => edge.source === node.id && edge.target === primaryGuard?.source)))?.data.pairAddress;
+
+  const swap = nodes.find(node => node.type === 'dexSwap');
+  const swapId = swap?.id;
+  const vaultPool = crossChain ? swap?.data.destinationPoolAddress : originPool;
+  const currentVault = swap?.data.actionVaultAddress;
+  const lookupOwner = supportsPriceVault && signedIn && isConnected && !isSnapshot ? address : undefined;
+  const lookupPair = hasConfiguredVault(vaultPool) ? String(vaultPool) : undefined;
+  const lookupKey = lookupOwner && lookupPair && swapId ? `${lookupOwner}:${lookupPair}:${swapId}` : undefined;
+  const [vaultLookup, setVaultLookup] = useState<{ key: string; vaults?: Address[]; error?: string }>();
+
+  useEffect(() => {
+    if (!lookupKey || !lookupOwner || !lookupPair || !swapId) return;
+    const controller = new AbortController();
+    const query = new URLSearchParams({ pair: lookupPair });
+    const savedVault = getSavedVault(lookupOwner);
+    if (hasConfiguredVault(savedVault) && savedVault) query.set('managerVault', savedVault);
+    void workspaceRequest<{ vaults: Address[] }>(lookupOwner, `/pipeline/vaults/price-order-candidates?${query}`, {
+      signal: controller.signal,
+    }).then(({ vaults }) => {
+      if (controller.signal.aborted) return;
+      setVaultLookup({ key: lookupKey, vaults });
+      if (vaults.length !== 1 || currentVault) return;
+      setNodes(current => current.map(node => node.id === swapId && !node.data.actionVaultAddress
+        ? { ...node, data: { ...node.data, actionVaultAddress: vaults[0] } } : node));
+      markDirty();
+    }).catch(error => {
+      if (!controller.signal.aborted) {
+        setVaultLookup({ key: lookupKey, error: error instanceof Error ? error.message : 'Unable to check compatible Vaults.' });
+      }
+    });
+    return () => controller.abort();
+  }, [lookupKey, lookupOwner, lookupPair, swapId, currentVault, setNodes, markDirty]);
 
   const handleNodesChange = useCallback(
     (changes: any) => {
@@ -727,9 +762,11 @@ function StudioCanvasInner() {
         });
         if (mode === 'sandbox') {
           pushNotification({
-            type: 'success',
-            title: 'Simulation Complete',
-            message: 'All connected nodes and conditions verified successfully.',
+            type: vaultIssue ? 'warning' : 'success',
+            title: 'Flow preview complete',
+            message: vaultIssue ? vaultIssue.message : 'The connected path passed canvas checks.',
+            nodeId: vaultIssue?.nodeId,
+            nodeLabel: vaultIssue?.nodeLabel,
           });
         }
         schedule(stopWalkthrough, 1500);
@@ -767,7 +804,7 @@ function StudioCanvasInner() {
     }
 
     showStep(0);
-  }, [edges, lintResult.errors, lintResult.allIssues, nodes, pushIssuesSequentially, pushNotification, stopWalkthrough]);
+  }, [edges, lintResult.errors, lintResult.allIssues, nodes, pushIssuesSequentially, pushNotification, stopWalkthrough, vaultIssue]);
 
   const handleExecutionUpdate = useCallback((execution: DeploymentExecution) => {
     executionVersion.current++;
@@ -795,12 +832,23 @@ function StudioCanvasInner() {
   const handleOpenDeploy = () => {
     if (isSnapshot || !isConnected || walkthrough?.running) return;
 
+    if (vaultIssue?.nodeId) {
+      handleFocusNode(vaultIssue.nodeId);
+      pushIssuesSequentially([{ ...vaultIssue, severity: 'error' }]);
+      return;
+    }
+
     let issue: PipelineIssue | undefined;
     const graph = { nodes, edges, networks: draftNetworks };
     try {
       if (phaseTwo) {
         resolvePhaseTwo(graph);
-        issue = { id: 'phase-two', severity: 'error', message: 'Phase 2 deployment requires the versioned Vault policy setup.' };
+        pushNotification({
+          type: 'warning',
+          title: 'Deploy unavailable',
+          message: 'This Phase 2 flow is awaiting Vault policy onboarding.',
+        });
+        return;
       } else {
         resolveStopLoss(graph);
       }
@@ -808,7 +856,7 @@ function StudioCanvasInner() {
       issue = {
         id: 'deployment-configuration', severity: 'error',
         nodeId: error instanceof StopLossValidationError ? error.nodeId : undefined,
-        message: error instanceof Error ? error.message : 'Unable to validate this graph.',
+        message: error instanceof Error ? error.message.replace(/^DAG Validation Failed: /, '') : 'Unable to validate this graph.',
       };
     }
     if (!issue && (!savedDraft || isDirty)) {
@@ -962,7 +1010,7 @@ function StudioCanvasInner() {
                   ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-300'
                   : 'text-cyan-400 hover:text-cyan-300'
               }`}
-              title="Simulate end-to-end event execution without spending gas"
+              title="Preview the connected path and check node configuration"
             >
               <FlaskConical aria-hidden="true" className="size-3.5" />
               <span>{walkthrough?.running && walkthrough.mode === 'sandbox' ? 'Simulating…' : 'Simulate Flow'}</span>
@@ -1074,6 +1122,8 @@ function StudioCanvasInner() {
                 owner={isConnected ? address : undefined}
                 phaseTwo={phaseTwo}
                 supportsPriceVault={supportsPriceVault}
+                vaultLookup={vaultLookup?.key === lookupKey ? vaultLookup : undefined}
+                checkingVaults={Boolean(lookupKey && vaultLookup?.key !== lookupKey)}
                 crossChain={crossChain}
                 originPool={originPool}
                 onUpdateNodeData={handleUpdateNodeData}

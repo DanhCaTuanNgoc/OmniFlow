@@ -16,6 +16,32 @@ import { WorkspaceSessionService } from '../src/services/workspaceSession.servic
 const alice = privateKeyToAccount(generatePrivateKey());
 const bob = privateKeyToAccount(generatePrivateKey());
 
+test('linked Vaults are wallet and chain scoped and retain their verified kind', () => {
+  const store = new DeploymentStore(':memory:');
+  try {
+    const link = {
+      owner: alice.address,
+      address: '0x0000000000000000000000000000000000000001',
+      pair: '0x0000000000000000000000000000000000000002',
+      router: '0x0000000000000000000000000000000000000003',
+      quote: '0x0000000000000000000000000000000000000004',
+      proxy: '0x0000000000000000000000000000000000000005',
+      chainId: 84532,
+    } as const;
+    store.linkVault(link);
+    assert.equal(store.listVaultLinks(alice.address, 84532)[0].kind, null);
+    store.linkVault({ ...link, kind: 'price-order' });
+    store.linkVault(link);
+    assert.deepEqual(store.listVaultLinks(alice.address, 84532), [
+      { address: link.address, pair: link.pair, kind: 'price-order' },
+    ]);
+    assert.deepEqual(store.listVaultLinks(bob.address, 84532), []);
+    assert.deepEqual(store.listVaultLinks(alice.address, 5318007), []);
+  } finally {
+    store.close();
+  }
+});
+
 test('SIWE binds the challenge to its origin and wallet, consumes it once, and expires the session', async () => {
   let now = Date.now();
   const service = new WorkspaceSessionService(() => now);
