@@ -51,6 +51,7 @@ import { SnapshotRuntimeStatus, getSnapshotRuntimeState } from './SnapshotRuntim
 import { NodePalette, PALETTE_ITEMS } from './NodePalette';
 import { InspectorPanel } from './InspectorPanel';
 import { DeployModal } from './DeployModal';
+import { StudioToastContainer, type StudioNotification } from './StudioToastContainer';
 import { SolidityPreviewModal } from './SolidityPreviewModal';
 import { 
   ArrowLeft,
@@ -63,8 +64,6 @@ import {
   Upload,
   FlaskConical,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   LayoutGrid,
   AlertCircle,
 } from 'lucide-react';
@@ -138,11 +137,36 @@ function StudioCanvasInner() {
   const [latestExecution, setLatestExecution] = useState<DeploymentExecution>();
   const executionVersion = useRef(0);
   const lastAnimatedExecution = useRef<{ id: string; status: string }>();
-  const [validationWarning, setValidationWarning] = useState<string | null>(null);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [notifications, setNotifications] = useState<StudioNotification[]>([]);
   const [savedDraft, setSavedDraft] = useState<{ id: string; updatedAt: number }>();
-  const [draftMessage, setDraftMessage] = useState<string>();
   const [draftBusy, setDraftBusy] = useState(false);
+
+  const pushNotification = useCallback((toast: Omit<StudioNotification, 'id'>) => {
+    const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `toast-${Date.now()}-${Math.random()}`;
+    setNotifications((prev) => [...prev.slice(-4), { ...toast, id }]);
+  }, []);
+
+  const dismissNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const pushIssuesSequentially = useCallback(
+    (issues: readonly PipelineIssue[]) => {
+      if (!issues.length) return;
+      issues.forEach((issue, index) => {
+        setTimeout(() => {
+          pushNotification({
+            type: issue.severity === 'error' ? 'error' : 'warning',
+            title: issue.nodeLabel ? `Issue in [${issue.nodeLabel}]` : 'Pipeline Issue',
+            message: issue.message,
+            nodeId: issue.nodeId,
+            duration: 2800 + index * 400,
+          });
+        }, index * 200);
+      });
+    },
+    [pushNotification]
+  );
   const [pipelineName, setPipelineName] = useState('');
   const [description, setDescription] = useState<string>();
   const [loaded, setLoaded] = useState(false);
@@ -366,7 +390,6 @@ function StudioCanvasInner() {
     if (isSnapshot || draftBusy) return false;
     const version = editVersion.current;
     setDraftBusy(true);
-    setValidationWarning(null);
     try {
       const graph = studioGraph(nodes, edges, draftNetworks);
       if (isConnected && address) {
@@ -380,18 +403,20 @@ function StudioCanvasInner() {
         if (!leave && editVersion.current === version && pipelineParam !== result.id) {
           router.replace('/workspace/studio?pipeline=' + result.id, { scroll: false });
         }
-        setDraftMessage('Draft saved to your wallet workspace.');
+        pushNotification({ type: 'success', message: 'Draft saved to your wallet workspace.' });
       } else {
         const id = localParam ?? crypto.randomUUID();
         saveBrowserDraft(id, draftName, graph, description);
         if (!leave && localParam !== id) router.replace('/workspace/studio?local=' + id, { scroll: false });
-        setDraftMessage('Draft saved in this browser.');
+        pushNotification({ type: 'info', message: 'Draft saved in this browser.' });
       }
       const current = editVersion.current === version;
       if (current) setIsDirty(false);
       return current;
     } catch (error) {
-      if (active.current) setValidationWarning(error instanceof Error ? error.message : 'Unable to save the draft.');
+      if (active.current) {
+        pushNotification({ type: 'error', message: error instanceof Error ? error.message : 'Unable to save the draft.' });
+      }
       return false;
     } finally {
       setDraftBusy(false);
@@ -418,7 +443,7 @@ function StudioCanvasInner() {
         router.push(`/workspace/studio?local=${encodeURIComponent(newId)}`);
       }
     } catch (err) {
-      setValidationWarning(err instanceof Error ? err.message : 'Unable to create editable draft.');
+      pushNotification({ type: 'error', message: err instanceof Error ? err.message : 'Unable to create editable draft.' });
     } finally {
       setDraftBusy(false);
     }
@@ -466,7 +491,7 @@ function StudioCanvasInner() {
 
       const error = connectionError(sourceNode, targetNode, connection);
       if (error) {
-        setValidationWarning(error);
+        pushNotification({ type: 'warning', message: error });
         return false;
       }
       // Check cycles (DAG enforcement)
@@ -481,14 +506,13 @@ function StudioCanvasInner() {
       };
 
       if (hasCycle(connection.target, new Set([connection.source]))) {
-        setValidationWarning('Cyclic connections are strictly prohibited in DAG pipelines.');
-        setTimeout(() => setValidationWarning(null), 3000);
+        pushNotification({ type: 'warning', message: 'Cyclic connections are strictly prohibited in DAG pipelines.' });
         return false;
       }
 
       return true;
     },
-    [nodes, edges]
+    [nodes, edges, pushNotification]
   );
 
   const onConnect = useCallback(
@@ -520,6 +544,14 @@ function StudioCanvasInner() {
       ? node : { ...node, selected: node.id === id }));
     setEdges(current => current.map(edge => edge.selected ? { ...edge, selected: false } : edge));
   }, [isSnapshot, setEdges, setNodes]);
+
+  const handleFocusNode = useCallback((nodeId: string) => {
+    selectNode(nodeId);
+    const targetNode = nodes.find(n => n.id === nodeId);
+    if (targetNode && reactFlowInstance) {
+      reactFlowInstance.setCenter(targetNode.position.x + 140, targetNode.position.y + 70, { duration: 500, zoom: 1 });
+    }
+  }, [nodes, reactFlowInstance, selectNode]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -610,9 +642,9 @@ function StudioCanvasInner() {
       setEdges([]);
       setDraftNetworks(undefined);
       setActiveRecipeId('');
-      setDraftMessage('Pipeline cleared.');
+      pushNotification({ type: 'info', message: 'Pipeline cleared.' });
     }
-  }, [nodes.length, isSnapshot, setNodes, setEdges, markDirty]);
+  }, [nodes.length, isSnapshot, setNodes, setEdges, markDirty, pushNotification]);
 
   // Export Pipeline to JSON
   const handleExportGraph = useCallback(() => {
@@ -626,8 +658,8 @@ function StudioCanvasInner() {
         ownerAddress: address ?? undefined,
       },
     });
-    setDraftMessage('Pipeline configuration exported to JSON.');
-  }, [nodes, edges, draftNetworks, draftName, address, description]);
+    pushNotification({ type: 'success', message: 'Pipeline configuration exported to JSON.' });
+  }, [nodes, edges, draftNetworks, draftName, address, description, pushNotification]);
 
   // Import Pipeline from JSON
   const handleImportGraph = useCallback(
@@ -653,14 +685,12 @@ function StudioCanvasInner() {
         setEdges(draft.edges);
         setDraftNetworks(draft.networks);
         setActiveRecipeId('');
-        setValidationWarning(null);
-        setDraftMessage('Pipeline imported successfully.');
+        pushNotification({ type: 'success', message: 'Pipeline imported successfully.' });
       } catch (error) {
-        setValidationWarning(error instanceof Error ? error.message : 'Unable to import JSON file.');
-        setTimeout(() => setValidationWarning(null), 4000);
+        pushNotification({ type: 'error', message: error instanceof Error ? error.message : 'Unable to import JSON file.' });
       }
     },
-    [nodes.length, isSnapshot, setNodes, setEdges, markDirty]
+    [nodes.length, isSnapshot, setNodes, setEdges, markDirty, pushNotification]
   );
 
   const startWalkthrough = useCallback((mode: WalkthroughMode, blockingIssue?: PipelineIssue) => {
@@ -669,9 +699,13 @@ function StudioCanvasInner() {
     const issues = checkConfiguration ? [...lintResult.errors] : [];
     if (blockingIssue) issues.push(blockingIssue);
     const steps = planPipelineWalkthrough(nodes, edges, issues);
-    if (!steps.length) return;
+    if (!steps.length) {
+      if (checkConfiguration && lintResult.allIssues.length > 0) {
+        pushIssuesSequentially(lintResult.allIssues);
+      }
+      return;
+    }
 
-    setValidationWarning(null);
     const label = walkthroughLabels[mode];
     let traversedEdgeIds = new Set<string>();
     const schedule = (run: () => void, delay: number) => {
@@ -690,6 +724,13 @@ function StudioCanvasInner() {
           mode, running: false, nodeIds: new Set(), traversedEdgeIds,
           message: mode === 'execution' ? 'Execution confirmed.' : label + ' complete.',
         });
+        if (mode === 'sandbox') {
+          pushNotification({
+            type: 'success',
+            title: 'Simulation Complete',
+            message: 'All connected nodes and conditions verified successfully.',
+          });
+        }
         schedule(stopWalkthrough, 1500);
         return;
       }
@@ -701,7 +742,7 @@ function StudioCanvasInner() {
         if (edgeIds.size) traversedEdgeIds = new Set([...traversedEdgeIds, ...edgeIds]);
         if (step.issue) {
           walkthroughTimer.current = undefined;
-          setShowDiagnostics(checkConfiguration && lintResult.errors.length > 0);
+          pushIssuesSequentially(lintResult.allIssues.length ? lintResult.allIssues : [step.issue]);
           setWalkthrough({
             mode, nodeIds, traversedEdgeIds, running: false, issue: step.issue,
             message: (names ? label + ' stopped at ' + names : label + ' blocked') + '. ' + step.issue.message,
@@ -725,7 +766,7 @@ function StudioCanvasInner() {
     }
 
     showStep(0);
-  }, [edges, lintResult.errors, nodes, stopWalkthrough]);
+  }, [edges, lintResult.errors, lintResult.allIssues, nodes, pushIssuesSequentially, pushNotification, stopWalkthrough]);
 
   const handleExecutionUpdate = useCallback((execution: DeploymentExecution) => {
     executionVersion.current++;
@@ -875,13 +916,12 @@ function StudioCanvasInner() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => setShowDiagnostics((prev) => !prev)}
+                  onClick={() => pushIssuesSequentially(lintResult.allIssues)}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 transition-all cursor-pointer"
                   title="Click to view all configuration issues"
                 >
                   <AlertTriangle className="size-3.5 text-amber-400" aria-hidden="true" />
                   <span>{lintResult.allIssues.length} {lintResult.allIssues.length === 1 ? 'Issue' : 'Issues'}</span>
-                  {showDiagnostics ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
                 </button>
               )
             )}
@@ -940,65 +980,7 @@ function StudioCanvasInner() {
               </button>
             )}
           </div>
-          {validationWarning && <p role="alert" className="flex w-full items-center gap-2 text-xs text-amber-200">
-            <AlertTriangle size={14} aria-hidden="true" />{validationWarning}
-          </p>}
-          {draftMessage && <p role="status" className="w-full text-xs text-[var(--ws-muted)]">{draftMessage}</p>}
         </div>
-
-        {/* Collapsible Diagnostics Drawer */}
-        {showDiagnostics && lintResult.allIssues.length > 0 && (
-          <div className="border-b border-amber-500/25 bg-[#17120a] px-4 py-3 text-xs shrink-0">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2 text-amber-300 font-semibold">
-                <AlertTriangle className="size-4 text-amber-400 shrink-0" />
-                <span>Pipeline Diagnostics ({lintResult.allIssues.length} {lintResult.allIssues.length === 1 ? 'issue' : 'issues'} found)</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowDiagnostics(false)}
-                className="text-zinc-400 hover:text-white text-xs px-2 py-0.5 rounded hover:bg-white/10 cursor-pointer"
-              >
-                Dismiss
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
-              {lintResult.allIssues.map((issue) => (
-                <div
-                  key={issue.id}
-                  onClick={() => {
-                    if (issue.nodeId) {
-                      selectNode(issue.nodeId);
-                      const targetNode = nodes.find(n => n.id === issue.nodeId);
-                      if (targetNode && reactFlowInstance) {
-                        reactFlowInstance.setCenter(targetNode.position.x + 140, targetNode.position.y + 70, { duration: 500, zoom: 1 });
-                      }
-                    }
-                  }}
-                  className={`flex items-start gap-2 p-2 rounded-lg border transition-all cursor-pointer ${
-                    issue.severity === 'error'
-                      ? 'bg-rose-950/20 border-rose-500/30 hover:bg-rose-950/40 text-rose-200'
-                      : 'bg-amber-950/20 border-amber-500/30 hover:bg-amber-950/40 text-amber-200'
-                  }`}
-                >
-                  {issue.severity === 'error' ? (
-                    <AlertCircle className="size-3.5 text-rose-400 shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertTriangle className="size-3.5 text-amber-400 shrink-0 mt-0.5" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    {issue.nodeLabel && (
-                      <span className="font-semibold text-white mr-1.5 font-mono text-[11px]">
-                        [{issue.nodeLabel}]
-                      </span>
-                    )}
-                    <span>{issue.message}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Deployed Snapshot Banner (Section 7.1 & 7.2 of Operations Analysis) */}
         {isSnapshot && (
@@ -1131,8 +1113,7 @@ function StudioCanvasInner() {
                 <AlertTriangle className="size-5" />
               </div>
               <div>
-                {validationWarning && <p role="alert" className="text-xs text-amber-200">{validationWarning}</p>}
-              <h3 className="text-base font-semibold text-white">Unsaved Changes</h3>
+                <h3 className="text-base font-semibold text-white">Unsaved Changes</h3>
                 <p className="text-xs text-[var(--ws-muted)]">You have unsaved edits in this pipeline.</p>
               </div>
             </div>
@@ -1171,6 +1152,13 @@ function StudioCanvasInner() {
           </div>
         </div>
       )}
+
+      {/* Sequential Toast Popups (Bottom-Right) */}
+      <StudioToastContainer
+        notifications={notifications}
+        onDismiss={dismissNotification}
+        onSelectNode={handleFocusNode}
+      />
     </div>
   );
 }
