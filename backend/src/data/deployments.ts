@@ -88,6 +88,10 @@ export class DeploymentStore {
         PRIMARY KEY (deploymentId, reactiveTxHash)
       );
       CREATE INDEX IF NOT EXISTS executions_by_origin ON executions (deploymentId, originTxHash, originLogIndex);
+      CREATE TABLE IF NOT EXISTS take_profit_preparations (
+        owner TEXT NOT NULL, key TEXT NOT NULL, draftId TEXT NOT NULL, graphJson TEXT NOT NULL,
+        fundingWei TEXT NOT NULL, PRIMARY KEY (owner, key)
+      );
       CREATE TABLE IF NOT EXISTS vault_links (
         owner TEXT NOT NULL, address TEXT NOT NULL, chainId INTEGER NOT NULL, pair TEXT NOT NULL,
         router TEXT NOT NULL, quote TEXT NOT NULL, proxy TEXT NOT NULL, creationTxHash TEXT,
@@ -303,6 +307,17 @@ export class DeploymentStore {
       .get(input.owner, input.address, input.chainId);
   }
 
+  getTakeProfitPreparation(owner: Address, key: string) {
+    return this.db.prepare('SELECT draftId, graphJson, fundingWei FROM take_profit_preparations WHERE owner = ? AND key = ?')
+      .get(owner, key) as { draftId: string; graphJson: string; fundingWei: string } | undefined;
+  }
+
+  prepareTakeProfit(owner: Address, key: string, draftId: string, graphJson: string, fundingWei: bigint) {
+    this.db.prepare('INSERT OR IGNORE INTO take_profit_preparations VALUES (?, ?, ?, ?, ?)')
+      .run(owner, key, draftId, graphJson, fundingWei.toString());
+    return this.getTakeProfitPreparation(owner, key)!;
+  }
+
   reserve(input: NewDeploymentIntent, verifiedDraftId?: string) {
     return this.db.transaction(() => {
       const existing = this.get(input.owner, input.environment, input.key);
@@ -317,13 +332,13 @@ export class DeploymentStore {
       const cutoff = createdAt - 24 * 60 * 60_000;
       const limits = this.db.prepare(`
         SELECT COUNT(*) AS total, COUNT(CASE WHEN owner = ? THEN 1 END) AS personal
-        FROM deployments WHERE environment = ? AND createdAt > ?
+        FROM deployments WHERE environment = ? AND createdAt > ? AND signedTransaction <> '0x'
       `).get(input.owner, input.environment, cutoff) as { total: number; personal: number };
-      if (limits.personal >= 3 || limits.total >= 20) {
+      if (input.signedTransaction !== '0x' && (limits.personal >= 3 || limits.total >= 20)) {
         throw new DeploymentLimit('The testnet relay quota has been reached. Try again later.');
       }
       const conflictingNonce = this.db.prepare(`
-        SELECT 1 FROM deployments WHERE signer = ? AND environment = ? AND (status = 'signed' OR nonce = ?)
+        SELECT 1 FROM deployments WHERE signer = ? AND environment = ? AND (nonce = ? OR (status = 'signed' AND signedTransaction <> '0x'))
       `).get(input.signer, input.environment, input.nonce);
       if (conflictingNonce) throw new DeploymentConflict('A relay transaction is pending or the nonce changed. Retry the same deployment.');
 
@@ -351,6 +366,9 @@ export class DeploymentStore {
           @signer, @nonce, @signedTransaction, @txHash, @status, @rscAddress, @workspacePipelineId, @broadcastCount
         )
       `).run(intent);
+      if (input.signedTransaction === '0x') {
+        this.db.prepare('DELETE FROM take_profit_preparations WHERE owner = ? AND key = ?').run(input.owner, input.key);
+      }
       return intent;
     }).immediate();
   }

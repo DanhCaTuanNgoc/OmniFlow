@@ -1,10 +1,10 @@
-import { getAccount, sendTransaction, waitForTransactionReceipt, writeContract } from 'wagmi/actions';
+import { getAccount, sendTransaction, switchChain, waitForTransactionReceipt, writeContract } from 'wagmi/actions';
 import { isAddressEqual, parseAbi, type Address, type Hash } from 'viem';
-import { ACTION_VAULT_ABI, STOP_LOSS_TEMPLATE } from '@omniflow/shared';
+import { ACTION_VAULT_ABI, PRICE_ORDER_VAULT_ABI, resolvePhaseTwo, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { wagmiConfig } from './wagmi';
 import { signInToWorkspace, workspaceRequest } from './workspaceSession';
 
-type DeploymentStep = 'authorization' | 'principal' | 'callback-reserve' | 'reactive-reserve';
+type DeploymentStep = 'register-rsc' | 'price-policy' | 'authorization' | 'principal' | 'callback-reserve' | 'reactive-reserve';
 const reserveAbi = parseAbi(['function depositTo(address) payable']);
 
 export type DeploymentSummary = {
@@ -41,30 +41,52 @@ export type DeploymentDetail = DeploymentSummary & {
   steps: { kind: DeploymentStep; txHash: Hash; chainId: number; blockNumber: string; blockHash: Hash }[];
   runtime: {
     status: 'unverified' | 'awaiting-authorization' | 'awaiting-principal' | 'awaiting-fees' | 'ready';
-    base: { authorized: boolean; principal: string; callback: FeeState } | null;
+    base: { authorized: boolean; principal: string; callback: FeeState; onboarding?: 'register-rsc' | 'price-policy' | 'policy-mismatch' | null } | null;
     lasna: { native: string; reactive: FeeState } | null;
     readAt: string;
   } | null;
 };
 
+export const takeProfitTemplate = 'take-profit@1';
+
 type FeeState = { debt: string; reserves: string; budget: string };
 
-export async function runDeploymentAction(owner: Address, deployment: DeploymentSummary, kind: DeploymentStep, value?: bigint) {
+export function deploymentStepKey(owner: Address, pipelineId: string, kind: DeploymentStep) {
+  return `omniflow.step.v1.${owner.toLowerCase()}.${pipelineId}.${kind}`;
+}
+
+export async function runDeploymentAction(owner: Address, deployment: DeploymentSummary, kind: DeploymentStep, value?: bigint, graph?: unknown) {
   const { rscAddress, vaultAddress } = deployment.contracts;
   if (!rscAddress) throw new Error('Wait for the Lasna deployment receipt.');
   await signInToWorkspace(owner);
   const reactive = kind === 'reactive-reserve';
   const chainId = reactive ? 5318007 : 84532;
-  const key = `omniflow.step.v1.${owner.toLowerCase()}.${deployment.pipelineId}.${kind}`;
+  const key = deploymentStepKey(owner, deployment.pipelineId, kind);
   let hash = localStorage.getItem(key) as Hash | null;
   if (!hash) {
+    if (deployment.template === takeProfitTemplate && getAccount(wagmiConfig).chainId !== chainId) {
+      await switchChain(wagmiConfig, { chainId });
+    }
     const account = getAccount(wagmiConfig);
     if (!account.address || !isAddressEqual(account.address, owner) || account.chainId !== chainId) {
       throw new Error(`Switch the deployment wallet to ${reactive ? 'Reactive Lasna' : 'Base Sepolia'}.`);
     }
-    if (kind === 'authorization') {
+    const profit = deployment.template === takeProfitTemplate;
+    if (kind === 'register-rsc') {
+      if (!profit) throw new Error('This deployment does not use a Price Order Vault.');
+      hash = await writeContract(wagmiConfig, { account: owner, chainId: 84532,
+        address: vaultAddress, abi: PRICE_ORDER_VAULT_ABI, functionName: 'registerRSC', args: [rscAddress] });
+    } else if (kind === 'price-policy') {
+      if (!profit || !graph) throw new Error('The Take-Profit revision is unavailable.');
+      const resolved = resolvePhaseTwo(graph as StopLossGraph);
+      if (resolved.type !== 'price-order' || resolved.config.mode !== 1) throw new Error('Invalid Take-Profit policy.');
+      const { mode, percent, threshold } = resolved.config;
+      hash = await writeContract(wagmiConfig, { account: owner, chainId: 84532,
+        address: vaultAddress, abi: PRICE_ORDER_VAULT_ABI, functionName: 'configurePriceOrder',
+        args: [rscAddress, { mode, percent, threshold }] });
+    } else if (kind === 'authorization') {
       hash = await writeContract(wagmiConfig, {
-        account: owner, chainId: 84532, address: vaultAddress, abi: ACTION_VAULT_ABI,
+        account: owner, chainId: 84532, address: vaultAddress, abi: profit ? PRICE_ORDER_VAULT_ABI : ACTION_VAULT_ABI,
         functionName: 'setAuthorizedRSC', args: [rscAddress, true],
       });
     } else {
@@ -101,7 +123,7 @@ export async function setVaultRscAuthorization(owner: Address, deployment: Deplo
     throw new Error('Switch the deployment wallet to Base Sepolia (84532).');
   }
   const hash = await writeContract(wagmiConfig, {
-    account: owner, chainId: 84532, address: vaultAddress, abi: ACTION_VAULT_ABI,
+    account: owner, chainId: 84532, address: vaultAddress, abi: deployment.template === takeProfitTemplate ? PRICE_ORDER_VAULT_ABI : ACTION_VAULT_ABI,
     functionName: 'setAuthorizedRSC', args: [rscAddress, authorized],
   });
   const receipt = await waitForTransactionReceipt(wagmiConfig, { hash, chainId: 84532, confirmations: 2 });

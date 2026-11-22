@@ -1,3 +1,6 @@
+import { PRICE_ORDER_PIPELINE_ABI, PRICE_ORDER_PIPELINE_BYTECODE, resolvePhaseTwo } from '@omniflow/shared';
+import { PRICE_ORDER_PIPELINE_RUNTIME } from '../abis/runtimeFingerprints.js';
+import { verifyPriceOrderVault } from './vaultCompatibility.js';
 import { encodeDeployData, formatEther, getContractAddress, isAddressEqual, keccak256, parseAbi, parseEventLogs, parseTransaction, TransactionReceiptNotFoundError, type Address } from 'viem';
 import { env } from '../config/env.js';
 import type { PipelineGraph } from '../schemas/pipeline.schema.js';
@@ -19,6 +22,16 @@ const subscriptionAbi = parseAbi([
 // Match REACTIVE_IGNORE in the vendored AbstractReactive used by the template.
 const reactiveIgnore = 0xa65f96fc951c35ead38878e0f0b7a3c744a6f5ccc1476b313353ce31712313adn;
 const template = `${STOP_LOSS_TEMPLATE.id}@${STOP_LOSS_TEMPLATE.version}`;
+
+export const takeProfitTemplate = 'take-profit@1';
+
+export function resolveTakeProfit(graph: PipelineGraph) {
+  const resolved = resolvePhaseTwo(graph);
+  if (resolved.type !== 'price-order' || resolved.config.mode !== 1) {
+    throw new Error('DAG Validation Failed: select a Take-Profit graph.');
+  }
+  return resolved;
+}
 
 export class DeployerService {
   private readonly reconciliations = new Map<string, Promise<DeploymentIntent>>();
@@ -176,10 +189,67 @@ export class DeployerService {
     return this.present(await this.resume(intent));
   }
 
+  public async ownerTakeProfit(graph: PipelineGraph, draftId: string, key: string, hash?: `0x${string}`) {
+    const owner = graph.metadata.ownerAddress.toLowerCase() as Address;
+    const snapshot = graphSnapshot(graph);
+    const store = deploymentStore();
+    const existing = store.get(owner, deploymentEnvironment, key);
+    if (existing) {
+      if (existing.graphJson !== snapshot || existing.template !== takeProfitTemplate ||
+          existing.workspacePipelineId !== draftId || (hash && existing.txHash !== hash)) {
+        throw new DeploymentConflict('The attempt is already bound to a different deployment.');
+      }
+      return { deployment: this.present(await this.reconcile(existing, false)) };
+    }
+
+    const prepared = store.getTakeProfitPreparation(owner, key);
+    if (prepared && (prepared.draftId !== draftId || prepared.graphJson !== snapshot)) {
+      throw new DeploymentConflict('The attempt is already bound to a different revision.');
+    }
+    if (hash && !prepared) throw new DeploymentConflict('Prepare the deployment before submitting a transaction.');
+    if (!hash) {
+      const draft = await getDraft(owner, draftId);
+      if (!draft || graphSnapshot(JSON.parse(draft.graphJson)) !== snapshot) {
+        throw new DeploymentConflict('Save this exact revision before deploying.');
+      }
+    }
+    const { config, vaultPool } = resolveTakeProfit(graph);
+    const data = encodeDeployData({ abi: PRICE_ORDER_PIPELINE_ABI, bytecode: PRICE_ORDER_PIPELINE_BYTECODE, args: [config] });
+    const lasna = chainService.lasnaPublicClient;
+    if (await lasna.getChainId() !== 5318007) throw new Error('Deployment RPC must point to Lasna.');
+
+    if (!hash) {
+      await verifyPriceOrderVault(config.vault, owner, vaultPool);
+      const system = await lasna.getCode({ address: STOP_LOSS_TEMPLATE.omniSystem });
+      if (!system || system === '0x') throw new Error('Reactive Omni system is unavailable on Lasna.');
+      const value = prepared ? BigInt(prepared.fundingWei) : env.RSC_DEPLOY_FUNDING_LREACT;
+      const [balance, gasPrice] = await Promise.all([lasna.getBalance({ address: owner }), lasna.getGasPrice()]);
+      if (balance <= value) throw new Error('The owner wallet has insufficient lREACT.');
+      const estimate = await lasna.estimateGas({ account: owner, data, value, gasPrice, type: 'legacy' });
+      const gas = (estimate * 120n + 99n) / 100n;
+      if (balance < value + gas * gasPrice) throw new Error('The owner wallet has insufficient lREACT.');
+      const reserved = store.prepareTakeProfit(owner, key, draftId, snapshot, value);
+      if (reserved.draftId !== draftId || reserved.graphJson !== snapshot || BigInt(reserved.fundingWei) !== value) {
+        throw new DeploymentConflict('The attempt is already bound to a different quote.');
+      }
+      return { transaction: { data, value: value.toString(), gas: gas.toString(), gasPrice: gasPrice.toString() } };
+    }
+
+    const tx = await lasna.getTransaction({ hash });
+    if (!isAddressEqual(tx.from, owner) || tx.to !== null || tx.input !== data || tx.value !== BigInt(prepared!.fundingWei)) {
+      throw new DeploymentConflict('The Lasna transaction does not match the owner and Take-Profit revision.');
+    }
+    const intent = store.reserve({
+      owner, environment: deploymentEnvironment, key, graphJson: snapshot, template: takeProfitTemplate,
+      workspacePipelineId: draftId, signer: owner, nonce: tx.nonce, signedTransaction: '0x', txHash: hash,
+    }, draftId);
+    return { deployment: this.present(await this.reconcile(intent, false)) };
+  }
+
   public async resumePending() {
     if (!chainService.relayerAccount) return;
     const intent = deploymentStore().pendingForSigner(chainService.relayerAccount.address);
-    if (intent) await this.resume(intent);
+    if (intent && intent.signedTransaction !== '0x') await this.resume(intent);
   }
 
   private async resume(intent: DeploymentIntent) {
@@ -233,9 +303,19 @@ export class DeployerService {
         !isAddressEqual(receipt.from, intent.signer)) {
       throw new Error('The Lasna receipt does not match the signed deployment.');
     }
+    const canonical = await lasna.getBlock({ blockNumber: receipt.blockNumber });
+    if (canonical.hash !== receipt.blockHash) throw new Error('The Lasna deployment receipt is not canonical.');
     const code = await lasna.getCode({ address: predicted, blockNumber: receipt.blockNumber });
-    if (!matchesRuntime(code, STOP_LOSS_RUNTIME)) throw new Error('The Lasna deployment bytecode does not match the template.');
-    const { pairAddress, originChainId, originTopic0 } = this.extractParams(JSON.parse(intent.graphJson));
+    const takeProfit = intent.template === takeProfitTemplate;
+    if (!matchesRuntime(code, takeProfit ? PRICE_ORDER_PIPELINE_RUNTIME : STOP_LOSS_RUNTIME)) {
+      throw new Error('The Lasna deployment bytecode does not match the template.');
+    }
+    const graph = JSON.parse(intent.graphJson) as PipelineGraph;
+    const phaseTwo = takeProfit ? resolveTakeProfit(graph).config : undefined;
+    const stopLoss = phaseTwo ? undefined : this.extractParams(graph);
+    const pairAddress = phaseTwo?.originPool ?? stopLoss!.pairAddress;
+    const originChainId = phaseTwo?.originChainId ?? stopLoss!.originChainId;
+    const originTopic0 = phaseTwo ? STOP_LOSS_TEMPLATE.syncTopic : stopLoss!.originTopic0;
     const subscriptions = parseEventLogs({
       abi: subscriptionAbi, eventName: 'Subscribe',
       logs: receipt.logs.filter(log => isAddressEqual(log.address, STOP_LOSS_TEMPLATE.omniSystem)),
@@ -260,6 +340,13 @@ export class DeployerService {
     }));
   }
 
+  public async refreshOwnerDeployment(owner: Address, id: string) {
+    const intent = deploymentStore().getById(owner, id);
+    if (intent?.template === takeProfitTemplate && intent.status === 'signed') {
+      await this.reconcile(intent, false);
+    }
+  }
+
   public getDeployment(owner: Address, id: string) {
     const intent = deploymentStore().getById(owner, id);
     if (!intent) return undefined;
@@ -273,8 +360,8 @@ export class DeployerService {
 
   private present(intent: DeploymentIntent) {
     const graph = JSON.parse(intent.graphJson) as PipelineGraph;
-    const resolved = this.extractParams(graph);
-    const actionVaultAddress = resolved.actionVaultAddress;
+    const ownerSigned = intent.template === takeProfitTemplate;
+    const actionVaultAddress = ownerSigned ? resolveTakeProfit(graph).config.vault : this.extractParams(graph).actionVaultAddress;
     return {
       success: intent.status === 'deployed',
       pipelineId: intent.id,
@@ -293,7 +380,7 @@ export class DeployerService {
         vaultAddress: actionVaultAddress,
         vaultChainId: 84532,
       },
-      gasSponsored: {
+      gasSponsored: ownerSigned ? null : {
         amountLReact: formatEther(parseTransaction(intent.signedTransaction).value ?? 0n),
       },
       explorerUrls: {

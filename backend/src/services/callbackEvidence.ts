@@ -7,15 +7,19 @@ const outcomes = [
   parseAbiItem('event StopLossExecuted(uint256 ethAmountIn, uint256 minUsdcOut, uint256 timestamp)'),
   parseAbiItem('event OrderSkipped(string reason, uint256 currentPrice)'),
 ];
+const priceOutcomes = [
+  parseAbiItem('event OrderSettled(address indexed rsc, bytes32 indexed executionId, uint256 ethAmountIn, uint256 minAmountOut)'),
+  outcomes[1],
+];
 const evidenceWindowSeconds = 180n;
 
 export async function findStopLossDelivery(
   base: PublicClient,
   criteria: { vault: Address; proxy: Address; payload: Hex; gasLimit: bigint; cooldown: bigint;
-    originBlock: bigint; reactionTimestamp: bigint; finalizedBlock: bigint },
+    executionId?: Hex; originBlock: bigint; reactionTimestamp: bigint; finalizedBlock: bigint },
 ): Promise<{ status: 'pending' | 'unverified' } | { status: 'found'; hash: Hash }> {
   // Repeated requests from this RSC have identical calldata. Only use a time window shorter than its cooldown.
-  if (criteria.cooldown < evidenceWindowSeconds) return { status: 'unverified' };
+  if (!criteria.executionId && criteria.cooldown < evidenceWindowSeconds) return { status: 'unverified' };
   const cap = criteria.originBlock + 2_000n;
   const end = criteria.finalizedBlock < cap ? criteria.finalizedBlock : cap;
   if (end < criteria.originBlock) return { status: 'pending' };
@@ -41,7 +45,7 @@ export async function findStopLossDelivery(
   const candidates = new Set<Hash>();
   for (let cursor = start; cursor < excluded;) {
     const toBlock = cursor + 9n < excluded ? cursor + 9n : excluded - 1n;
-    const logs = await base.getLogs({ address: criteria.vault, events: outcomes, fromBlock: cursor, toBlock, strict: true });
+    const logs = await base.getLogs({ address: criteria.vault, events: criteria.executionId ? priceOutcomes : outcomes, fromBlock: cursor, toBlock, strict: true });
     for (const hash of new Set(logs.map(log => log.transactionHash))) {
       const tx = await base.getTransaction({ hash });
       if (!tx.to || !isAddressEqual(tx.to, criteria.proxy)) continue;

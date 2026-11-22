@@ -1,6 +1,6 @@
 import { isAddressEqual, parseAbi, type Address } from 'viem';
-import { ACTION_VAULT_ABI, STOP_LOSS_TEMPLATE, resolveStopLoss } from '@omniflow/shared';
-import type { deployerService } from './deployer.service.js';
+import { ACTION_VAULT_ABI, PRICE_ORDER_VAULT_ABI, STOP_LOSS_TEMPLATE, resolveStopLoss } from '@omniflow/shared';
+import { type deployerService, resolveTakeProfit, takeProfitTemplate } from './deployer.service.js';
 import { chainService } from './chain.service.js';
 
 const feeAbi = parseAbi([
@@ -29,7 +29,8 @@ export async function readDeploymentRuntime(deployment: Deployment, owner: Addre
   const { rscAddress, vaultAddress } = deployment.contracts;
   if (!rscAddress || deployment.status !== 'deployed') return null;
   const { basePublicClient: base, lasnaPublicClient: lasna } = chainService;
-  const vault = { address: vaultAddress, abi: ACTION_VAULT_ABI } as const;
+  const profit = deployment.template === takeProfitTemplate ? resolveTakeProfit(deployment.graph).config : undefined;
+  const vault = { address: vaultAddress, abi: profit ? PRICE_ORDER_VAULT_ABI : ACTION_VAULT_ABI } as const;
   const [baseRead, lasnaRead] = await Promise.allSettled([
     (async () => {
       if (await base.getChainId() !== 84532) throw new Error('Unexpected Base RPC.');
@@ -39,7 +40,22 @@ export async function readDeploymentRuntime(deployment: Deployment, owner: Addre
         base.readContract({ ...vault, functionName: 'authorizedRSCs', args: [rscAddress] }),
         fees(base, STOP_LOSS_TEMPLATE.callbackProxy, vaultAddress, 350_000n),
       ]);
-      return { principal, authorized: authorized && isAddressEqual(owner, currentOwner), callback };
+      const owned = isAddressEqual(owner, currentOwner);
+      let onboarding: 'register-rsc' | 'price-policy' | 'policy-mismatch' | null = null;
+      if (profit && owned) {
+        const priceVault = { address: vaultAddress, abi: PRICE_ORDER_VAULT_ABI } as const;
+        const [registered, permission, policy] = await Promise.all([
+          base.readContract({ ...priceVault, functionName: 'registeredRSCs', args: [rscAddress] }),
+          base.readContract({ ...priceVault, functionName: 'permissions', args: [rscAddress] }),
+          base.readContract({ ...priceVault, functionName: 'pricePolicies', args: [rscAddress] }),
+        ]);
+        const [mode, percent, threshold] = policy;
+        onboarding = !registered ? 'register-rsc' : permission === 0 ? 'price-policy' :
+          permission !== 1 || mode !== profit.mode || percent !== profit.percent || threshold !== profit.threshold
+            ? 'policy-mismatch' : null;
+      }
+      if (!owned) throw new Error('Vault owner mismatch.');
+      return { principal, authorized: authorized && !onboarding, callback, onboarding };
     })(),
     (async () => {
       if (await lasna.getChainId() !== 5318007) throw new Error('Unexpected Lasna RPC.');
@@ -52,7 +68,7 @@ export async function readDeploymentRuntime(deployment: Deployment, owner: Addre
   ]);
   const baseData = baseRead.status === 'fulfilled' ? baseRead.value : null;
   const lasnaData = lasnaRead.status === 'fulfilled' ? lasnaRead.value : null;
-  const { percentToSwap } = resolveStopLoss(deployment.graph);
+  const percentToSwap = profit ? BigInt(profit.percent) : resolveStopLoss(deployment.graph).percentToSwap;
   const status = !baseData || !lasnaData ? 'unverified' : !baseData.authorized ? 'awaiting-authorization' :
     baseData.principal * percentToSwap / 100n === 0n ? 'awaiting-principal' :
     baseData.callback.debt > 0n || lasnaData.reactive.debt > 0n || baseData.callback.reserves < baseData.callback.budget ||

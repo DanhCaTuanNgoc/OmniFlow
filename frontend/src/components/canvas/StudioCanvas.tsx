@@ -52,6 +52,7 @@ import { SnapshotExecutionPulse, type SnapshotStreamStatus } from './SnapshotExe
 import { SnapshotRuntimeStatus, getSnapshotRuntimeState } from './SnapshotRuntimeStatus';
 import { NodePalette, PALETTE_ITEMS } from './NodePalette';
 import { InspectorPanel } from './InspectorPanel';
+import { TakeProfitDeployModal } from './TakeProfitDeployModal';
 import { DeployModal } from './DeployModal';
 import { StudioToastContainer, type StudioNotification } from './StudioToastContainer';
 import { SolidityPreviewModal } from './SolidityPreviewModal';
@@ -842,13 +843,11 @@ function StudioCanvasInner() {
     const graph = { nodes, edges, networks: draftNetworks };
     try {
       if (phaseTwo) {
-        resolvePhaseTwo(graph);
-        pushNotification({
-          type: 'warning',
-          title: 'Deploy unavailable',
-          message: 'This Phase 2 flow is awaiting Vault policy onboarding.',
-        });
-        return;
+        const resolved = resolvePhaseTwo(graph);
+        if (resolved.type !== 'price-order' || resolved.config.mode !== 1) {
+          pushNotification({ type: 'warning', title: 'Deploy unavailable', message: 'This Phase 2 mode is awaiting deployment support.' });
+          return;
+        }
       } else {
         resolveStopLoss(graph);
       }
@@ -1137,14 +1136,18 @@ function StudioCanvasInner() {
       </div>
 
       {/* Deploy Modal */}
-      <DeployModal
+      {phaseTwo ? (!isSnapshot && isDeployOpen && address && savedDraft && (
+        <TakeProfitDeployModal key={`${address}:${savedDraft.id}:${savedDraft.updatedAt}`} owner={address} draft={savedDraft}
+          graph={{ ...studioGraph(nodes, edges, draftNetworks), metadata: { name: draftName, ownerAddress: address, description } }}
+          onClose={() => setIsDeployOpen(false)} />
+      )) : <DeployModal
         key={isConnected ? address : 'guest'}
         isOpen={!isSnapshot && isDeployOpen}
         onClose={() => setIsDeployOpen(false)}
         graph={studioGraph(nodes, edges, draftNetworks)}
         workspacePipelineId={savedDraft?.id}
         name={draftName}
-      />
+      />}
 
       {/* Solidity Preview Modal */}
       <SolidityPreviewModal

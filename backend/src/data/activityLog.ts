@@ -20,6 +20,7 @@ export interface ActivityLogEntry {
   destinationBlockHash?: string;
   details: {
     tokenPair?: string;
+    executionId?: string;
     triggerPrice?: string;
     executedPrice?: string;
     amountIn?: string;

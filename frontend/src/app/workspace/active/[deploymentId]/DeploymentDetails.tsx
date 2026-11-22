@@ -11,7 +11,7 @@ import {
 import { resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
-import { runDeploymentAction, setVaultRscAuthorization, type DeploymentDetail, type DeploymentSummary } from '@/lib/deployments';
+import { deploymentStepKey, runDeploymentAction, setVaultRscAuthorization, takeProfitTemplate, type DeploymentDetail, type DeploymentSummary } from '@/lib/deployments';
 import { WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspaceSession';
 
 const runtimeLabel = {
@@ -31,6 +31,8 @@ const runtimeDescription = {
 };
 
 const stepLabels = {
+  'register-rsc': 'Register RSC',
+  'price-policy': 'Configure Take-Profit policy',
   authorization: 'Authorize RSC',
   principal: 'Deposit principal',
   'callback-reserve': 'Fund callback reserve',
@@ -136,14 +138,18 @@ function DeploymentPanel({
   const [message, setMessage] = useState<{ text: string; error: boolean }>();
   const { contracts, runtime, status } = deployment;
 
+  const onboarding = runtime?.base?.onboarding;
+  const profit = deployment.template === takeProfitTemplate;
+
   async function doStep(kind: keyof typeof stepLabels) {
     setBusy(kind);
     setMessage(undefined);
     try {
-      if (kind !== 'authorization' && amount && !/^\d+(\.\d{1,18})?$/.test(amount)) {
+      const funding = kind === 'principal' || kind === 'callback-reserve' || kind === 'reactive-reserve';
+      if (funding && amount && !/^\d+(\.\d{1,18})?$/.test(amount)) {
         throw new Error('Enter a decimal amount with up to 18 places.');
       }
-      await runDeploymentAction(owner, deployment, kind, kind === 'authorization' || !amount ? undefined : parseEther(amount));
+      await runDeploymentAction(owner, deployment, kind, !funding || !amount ? undefined : parseEther(amount), deployment.graph);
       setAmount('');
       setMessage({ text: 'Receipt verified and saved.', error: false });
       await reload();
@@ -159,6 +165,7 @@ function DeploymentPanel({
     setBusy('deploy');
     setMessage(undefined);
     try {
+      if (profit) { await reload(); return; }
       const result = await workspaceRequest<DeploymentSummary>(owner, '/pipeline/compile-and-deploy', {
         method: 'POST',
         headers: {
@@ -259,6 +266,7 @@ function DeploymentPanel({
         </div>
       </section>
 
+      {onboarding === 'policy-mismatch' && <p role="alert" className="text-sm text-rose-300">The on-chain Vault policy differs from this Take-Profit revision.</p>}
       {/* Retry if signed / awaiting receipt */}
       {status === 'signed' && (
         <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3.5 space-y-2">
@@ -378,6 +386,10 @@ function DeploymentPanel({
                 )}
 
                 {(Object.keys(stepLabels) as (keyof typeof stepLabels)[]).map((kind) => {
+                  const savedReceipt = profit && typeof window !== 'undefined' &&
+                    Boolean(localStorage.getItem(deploymentStepKey(owner, deployment.pipelineId, kind)));
+                  if ((kind === 'register-rsc' || kind === 'price-policy') && (!profit || (onboarding !== kind && !savedReceipt))) return null;
+                  if (kind === 'authorization' && profit && onboarding && !savedReceipt) return null;
                   if (kind === 'authorization' && hasAuthorizedBefore) return null; // Managed by Pause/Resume toggle
                   const Icon = kind === 'authorization' ? ShieldCheck : CirclePlus;
                   return (
@@ -390,7 +402,7 @@ function DeploymentPanel({
                       data-tone={kind === 'authorization' ? 'positive' : 'accent'}
                     >
                       <Icon aria-hidden="true" className="size-4 shrink-0" />
-                      {busy === kind ? 'Confirming…' : stepLabels[kind]}
+                      {busy === kind ? 'Confirming…' : savedReceipt ? `Check receipt for ${stepLabels[kind]}` : stepLabels[kind]}
                     </button>
                   );
                 })}

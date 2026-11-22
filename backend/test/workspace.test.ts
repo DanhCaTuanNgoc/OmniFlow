@@ -16,6 +16,19 @@ import { WorkspaceSessionService } from '../src/services/workspaceSession.servic
 const alice = privateKeyToAccount(generatePrivateKey());
 const bob = privateKeyToAccount(generatePrivateKey());
 
+test('Take-Profit preparation pins the wallet, draft, graph and funding across retries', () => {
+  const store = new DeploymentStore(':memory:');
+  try {
+    const owner = alice.address.toLowerCase() as Address;
+    const expected = { draftId: 'first-draft', graphJson: '{"name":"first"}', fundingWei: '200' };
+    assert.deepEqual(store.prepareTakeProfit(owner, 'attempt', 'first-draft', expected.graphJson, 200n), expected);
+    assert.deepEqual(store.prepareTakeProfit(owner, 'attempt', 'other-draft', '{}', 300n), expected);
+    assert.equal(store.getTakeProfitPreparation(bob.address.toLowerCase() as Address, 'attempt'), undefined);
+  } finally {
+    store.close();
+  }
+});
+
 test('linked Vaults are wallet and chain scoped and retain their verified kind', () => {
   const store = new DeploymentStore(':memory:');
   try {

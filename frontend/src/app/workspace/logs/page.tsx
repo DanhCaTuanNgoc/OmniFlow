@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAccount, useSwitchChain } from 'wagmi';
-import type { Address } from 'viem';
+import { formatEther, type Address } from 'viem';
 import { 
   Activity, 
   Search, 
@@ -36,7 +36,7 @@ export type Execution = {
   originTxHash: string;
   reactiveTxHash?: string;
   destinationTxHash?: string;
-  details: { reason?: string };
+  details: { reason?: string; executionId?: string; amountIn?: string; amountOut?: string };
 };
 
 const outcome: Record<string, string> = {
@@ -407,6 +407,14 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
                     </time>
                   </div>
 
+                  {entry.details.executionId && (
+                    <p className="break-all text-xs text-slate-300" title={entry.details.executionId}>
+                      Execution ID <span className="font-mono">{entry.details.executionId.slice(0, 10)}...{entry.details.executionId.slice(-6)}</span>
+                      {entry.details.amountIn && entry.details.amountOut && (
+                        <span className="ml-2 tabular-nums">{formatEther(BigInt(entry.details.amountIn))} ETH sold for {formatEther(BigInt(entry.details.amountOut))} quote tokens</span>
+                      )}
+                    </p>
+                  )}
                   {/* Details or Reason */}
                   {entry.details.reason && (
                     <div className="rounded-md border border-[var(--ws-border)] bg-[#111318] p-2.5 text-xs font-mono text-zinc-300 leading-relaxed">

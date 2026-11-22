@@ -213,9 +213,15 @@ Khi đủ quỹ và có bộ địa chỉ riêng, đặt `PAIR_ADDRESS`, `VAULT_
 | AND/OR | Đề xuất chọn hai pool Base Sepolia độc lập làm nguồn A/B, mỗi nguồn là log riêng. Cửa sổ freshness đo theo thời điểm Lasna nhận quan sát, tối đa 180 giây. AND cần cả hai; OR cần một. Episode chống callback trùng và Vault đọc lại reserve hai pool trước khi swap. Đây là quyết định triển khai để có demo cross-pool rõ ràng, chưa phải biểu thức Logic Gate tổng quát cho mọi node. |
 | Foundry | 40/40 pass, gồm 26 ca Phase 1 và 14 ca Price Order. Bộ Price Order có ca hồi quy đăng ký địa chỉ RSC không có code ở chain đích, cùng equality/revalidation/replay, ladder gap/rollback, velocity Unichain, AND/OR, freshness/episode reset, owner-only policy lifecycle, revoke, sai mode/tham số, callback TTL và proxy authorization. Nghiệm thu Reactive system Lasna chờ receipt thật. |
 | ABI/bytecode và compiler preview | `forge build` và `node scripts/extract-abis.js --check` pass. Preview Phase 2 encode constructor arguments bằng ABI thật và hiển thị hash creation bytecode đã chọn. Shared, backend, frontend production build đều pass. Preview chưa phải transaction deploy. |
-| Deploy/backend | Deployer, runtime preflight, authorization/configuration transaction sequence, Active và execution indexer hiện vẫn giả định một `StopLoss_Pipeline` và `ActionVault`. Phase 2 chưa mở nút Deploy. Preview đã ABI-encode constructor theo artifact và hiện hash bytecode; chưa tạo/gửi deploy transaction. Deployer và runtime verification chưa hỗ trợ Phase 2 qua Studio. |
+| Deploy/backend | Take-Profit uses a wallet-signed Lasna deployment from Studio. The other Phase 2 modes still use Solidity Preview. |
 | Vault compatibility | Studio có bước tạo/liên kết `PriceOrderVault` riêng theo kiểu Vault, owner và pool Base. Dữ liệu tiếp tục receipt tạo Vault dùng khóa riêng theo ví và pool. Còn mở các giao dịch đăng ký RSC, cấu hình policy và authorize, kèm đối soát và lưu receipt từng bước. |
 | Full-loop và evidence | Chưa chạy RSC Phase 2 trên Lasna, chưa có Base callback/payout thật, chưa thêm verifier Phase 2 vào `FULL_LOOP_EVIDENCE.json`. Không đánh dấu B hoặc toàn Phase 2 là PASS cho tới khi từng mode có receipt nguồn/Lasna/Base và trạng thái Active/Logs đối chiếu được. |
+
+### Take-Profit Studio deployment
+
+1. Save the wallet-owned draft with a compatible Price Order Vault. Review the Lasna quote and sign from the owner wallet. The API binds the attempt to the saved graph and verifies signer, calldata, funding, canonical receipt, runtime fingerprint and the Sync subscription.
+2. Open the deployment in Active. Register the Lasna RSC, configure its policy from the saved revision, and grant authorization in separate Base Sepolia transactions. Active reads principal and fee balances and records the verified receipts.
+3. Await Base finality for each execution. Logs match the source log and execution ID to the Lasna request and the Base callback, then verify the Vault outcome and payout. Live payout and skip acceptance remain open.
 
 ### Bước tiếp theo: bảo mật và quyền policy
 
@@ -242,7 +248,7 @@ Thực hiện theo thứ tự dưới đây trước khi mở Deploy Phase 2:
 - Chạy lại verifier chỉ đọc qua RPC thật cho BP-01 payout, BP-01 skip và BP-11 cooldown. Cả ba kết quả khớp hồ sơ Phase 1. Dữ liệu kiểm tra lại nằm trong thư mục tạm, hồ sơ gốc được giữ nguyên.
 - Preflight mặc định báo ngân sách từng mode từ địa chỉ lịch sử. Có thể truyền `--graph <đường-dẫn>` cho từng graph đã xuất để ước lượng constructor với fixture thực và xác minh Vault Base theo fingerprint, owner, proxy, pair và token/reserves của pool. `--origin-signer <địa-chỉ>` tách signer Unichain. Chạy từ `backend` bằng `node --import tsx ../scripts/phase2-preflight.ts [địa-chỉ-Lasna]`. Phép đọc không gửi giao dịch. Cần receipt `Sync` thật để xác nhận emitter Hedge hoạt động.
 - **BLOCKED · Funding testnet.** RPC trả 0,792963 lREACT cho ví cấu hình, so với 1,1338594 lREACT ước lượng cho Take-Profit và 6,7727036 lREACT cho sáu RSC. Ví kiểm tra có 0 ETH trên Unichain Sepolia. Ước lượng lấy địa chỉ lịch sử, chưa gồm gas tạo Vault, vốn giao dịch hay quỹ callback. Điều kiện mở lại là ví/fixture Phase 2 có đủ quỹ theo quote mới và Hedge có pool cùng signer Unichain đã xác minh. Dùng bộ địa chỉ và quỹ riêng để bảo toàn suite Phase 1.
-- **OPEN · Tích hợp Studio.** Deployment, onboarding policy, Active và indexer còn dùng đường xử lý Phase 1. Take-Profit cần hoàn thành đường Studio → Lasna → Base → Active trước, rồi nghiệm thu từng mode. `OrderSkipped` của Vault chưa chứa execution ID, cần đối soát từ bản ghi callback Lasna, calldata proxy và receipt Base. Chưa thêm hash Phase 2 vào `FULL_LOOP_EVIDENCE.json`.
+- **OPEN: Take-Profit testnet acceptance.** Studio, owner-signed Lasna deploy, Base Vault onboarding, and receipt indexing are implemented. Live payout and price-revalidation skip still need canonical receipts in `FULL_LOOP_EVIDENCE.json`.
 
 ### Độ phủ 12 ca Blueprint
 

@@ -104,6 +104,7 @@ pipelineRouter.get('/deployments', async (_req, res, next) => {
 
 pipelineRouter.get('/deployments/:id', async (req, res, next) => {
   try {
+    await deployerService.refreshOwnerDeployment(res.locals.workspaceOwner, req.params.id);
     const deployment = deployerService.getDeployment(res.locals.workspaceOwner, req.params.id);
     if (!deployment) return res.status(404).json({ error: 'Deployment not found.' });
     const runtime = await readDeploymentRuntime(deployment, res.locals.workspaceOwner);
@@ -175,5 +176,35 @@ pipelineRouter.post('/compile-and-deploy', async (req: Request, res: Response) =
       error: isClientError ? 'DAG Validation Error' : 'Failed to deploy reactive pipeline',
       message: isClientError || signerUnavailable ? message : 'Unable to confirm the deployment on Lasna.',
     });
+  }
+});
+
+
+const ownerTakeProfitRequest = z.object({
+  graph: PipelineGraphSchema,
+  draftId: z.string().uuid(),
+  key: z.string().uuid(),
+  hash: z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform(value => value.toLowerCase() as Hash).optional(),
+});
+
+pipelineRouter.post('/take-profit/deploy', async (req, res) => {
+  const input = ownerTakeProfitRequest.safeParse(req.body);
+  if (!input.success) return res.status(400).json({ error: 'Invalid Take-Profit deployment request.' });
+  const owner = res.locals.workspaceOwner;
+  const { graph, draftId, key, hash } = input.data;
+  if (graph.metadata.ownerAddress.toLowerCase() !== owner.toLowerCase()) {
+    return res.status(403).json({ error: 'The graph owner must match the signed-in wallet.' });
+  }
+  try {
+    return res.json(await deployerService.ownerTakeProfit(graph, draftId, key, hash));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (error instanceof DeploymentConflict || error instanceof DeploymentLimit) {
+      return res.status(error instanceof DeploymentLimit ? 429 : 409).json({ error: message });
+    }
+    if (message.startsWith('DAG Validation Failed:') || message.includes('insufficient lREACT')) {
+      return res.status(400).json({ error: message.replace(/^DAG Validation Failed: /, '') });
+    }
+    return res.status(502).json({ error: 'Unable to verify the Take-Profit deployment. Retry the same attempt.' });
   }
 });

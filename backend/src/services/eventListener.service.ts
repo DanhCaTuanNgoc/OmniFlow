@@ -1,12 +1,13 @@
 import {
-  decodeAbiParameters, decodeFunctionData, encodeAbiParameters, encodeFunctionData, isAddressEqual, numberToHex,
+  decodeAbiParameters, decodeFunctionData, encodeAbiParameters, encodeFunctionData, isAddressEqual, keccak256, numberToHex, zeroAddress,
   parseAbi, parseAbiItem, parseEventLogs, type Hash, type Hex,
 } from 'viem';
-import { ACTION_VAULT_ABI, STOP_LOSS_TEMPLATE, resolveStopLoss } from '@omniflow/shared';
+import { ACTION_VAULT_ABI, PRICE_ORDER_VAULT_ABI, STOP_LOSS_TEMPLATE, resolveStopLoss } from '@omniflow/shared';
 import type { ActivityLogEntry, PendingExecution } from '../data/activityLog.js';
 import { deploymentStore, type DeploymentIntent } from '../data/deployments.js';
 import type { WebSocketGateway } from '../websocket/gateway.js';
 import { chainService } from './chain.service.js';
+import { resolveTakeProfit, takeProfitTemplate } from './deployer.service.js';
 import { callbackConfiguration as configAbi, findStopLossDelivery } from './callbackEvidence.js';
 
 const omniCallback = parseAbiItem('event OmniCallbackRequested(uint256 indexed chain_id, address indexed _contract, uint64 indexed gas_limit, bytes payload)');
@@ -74,7 +75,10 @@ class EventListenerService {
     const store = deploymentStore();
     const start = store.cursor(deployment.id) ?? (await lasna.getTransactionReceipt({ hash: deployment.txHash })).blockNumber;
     const graph = JSON.parse(deployment.graphJson);
-    const params = resolveStopLoss(graph);
+    const profit = deployment.template === takeProfitTemplate ? resolveTakeProfit(graph).config : undefined;
+    const params = profit ? { actionVaultAddress: profit.vault, pairAddress: profit.originPool,
+      percentToSwap: BigInt(profit.percent), priceThresholdWei: profit.threshold, cooldownSeconds: BigInt(profit.cooldown) }
+      : resolveStopLoss(graph);
     if (start <= head) {
       const end = start + 199n < head ? start + 199n : head;
       const logs = await lasna.getLogs({ address: rsc, event: omniCallback, fromBlock: start, toBlock: end, strict: true });
@@ -110,10 +114,12 @@ class EventListenerService {
   }
 
   private async readExecution(
-    deployment: DeploymentIntent, entry: PendingExecution, params: ReturnType<typeof resolveStopLoss>, name: string, finalized: bigint,
+    deployment: DeploymentIntent, entry: PendingExecution, params: Pick<ReturnType<typeof resolveStopLoss>, 'actionVaultAddress' | 'pairAddress' | 'percentToSwap' | 'priceThresholdWei' | 'cooldownSeconds'>, name: string, finalized: bigint,
   ): Promise<ActivityLogEntry> {
     const rsc = deployment.rscAddress!;
     const vault = params.actionVaultAddress;
+    const profit = deployment.template === takeProfitTemplate;
+    const vaultAbi = profit ? PRICE_ORDER_VAULT_ABI : ACTION_VAULT_ABI;
     const [origin, reaction, records] = await Promise.all([
       base.getTransactionReceipt({ hash: entry.originTxHash }),
       lasna.getTransactionReceipt({ hash: entry.reactiveTxHash }),
@@ -129,7 +135,7 @@ class EventListenerService {
       originChainId: 84532, originTxHash: entry.originTxHash, originBlock: Number(origin.blockNumber),
       originLogIndex: entry.originLogIndex, originBlockHash: origin.blockHash, originEvent: 'Sync',
       reactiveChainId: 5318007, reactiveTxHash: entry.reactiveTxHash, reactiveBlockHash: reaction.blockHash,
-      destinationChainId: 84532, destinationAction: 'Stop-loss', status: 'PENDING', details: {},
+      destinationChainId: 84532, destinationAction: profit ? 'Take-Profit' : 'Stop-loss', status: 'PENDING', details: {},
     };
     const result = (status: ActivityLogEntry['status'], reason?: string): ActivityLogEntry =>
       ({ ...report, status, details: { ...report.details, ...(reason ? { reason } : {}) } });
@@ -152,12 +158,32 @@ class EventListenerService {
     }).filter(log => log.args.chain_id === 84532n && isAddressEqual(log.args._contract, vault));
     if (callbacks.length !== 1) return result('UNVERIFIED', 'Expected one callback request for this deployment.');
     const callback = callbacks[0].args;
-    const requested = decodeFunctionData({ abi, data: callback.payload });
-    if (requested.functionName !== 'executeStopLoss' || !isAddressEqual(requested.args[1], rsc) ||
-        requested.args[2] !== params.percentToSwap || requested.args[3] !== params.priceThresholdWei) {
-      return result('UNVERIFIED', 'Callback does not match the revision parameters.');
+    let payload: Hex;
+    let executionId: Hex | undefined;
+    if (profit) {
+      const requested = decodeFunctionData({ abi: PRICE_ORDER_VAULT_ABI, data: callback.payload });
+      const expectedId = keccak256(encodeAbiParameters([
+        { type: 'uint256' }, { type: 'address' }, { type: 'uint256' }, { type: 'uint256' },
+      ], [84532n, params.pairAddress, BigInt(entry.originTxHash), BigInt(entry.originLogIndex)]));
+      if (requested.functionName !== 'executePriceOrder' || !isAddressEqual(requested.args[0], zeroAddress)) {
+        return result('UNVERIFIED', 'Unexpected Take-Profit callback.');
+      }
+      const order = requested.args[1];
+      if (order.executionId !== expectedId || order.mode !== 1 || order.percent !== params.percentToSwap ||
+          order.threshold !== params.priceThresholdWei || BigInt(report.details.triggerPrice) < order.threshold) {
+        return result('UNVERIFIED', 'Take-Profit callback does not match the revision and source log.');
+      }
+      executionId = expectedId;
+      report.details.executionId = expectedId;
+      payload = encodeFunctionData({ abi: PRICE_ORDER_VAULT_ABI, functionName: 'executePriceOrder', args: [rsc, order] });
+    } else {
+      const requested = decodeFunctionData({ abi, data: callback.payload });
+      if (requested.functionName !== 'executeStopLoss' || !isAddressEqual(requested.args[1], rsc) ||
+          requested.args[2] !== params.percentToSwap || requested.args[3] !== params.priceThresholdWei) {
+        return result('UNVERIFIED', 'Callback does not match the revision parameters.');
+      }
+      payload = encodeFunctionData({ abi, functionName: 'executeStopLoss', args: [rsc, rsc, requested.args[2], requested.args[3]] });
     }
-    const payload = encodeFunctionData({ abi, functionName: 'executeStopLoss', args: [rsc, rsc, requested.args[2], requested.args[3]] });
     const requests = parseEventLogs({
       abi, eventName: 'CallbackRequest', logs: reaction.logs.filter(log => isAddressEqual(log.address, system)),
     }).filter(({ args }) => args.version === 0 && args.chainId === 84532n &&
@@ -179,7 +205,7 @@ class EventListenerService {
     } else {
       const fallback = await findStopLossDelivery(base, {
         vault, proxy, payload, gasLimit: callback.gas_limit, cooldown: params.cooldownSeconds,
-        originBlock: origin.blockNumber, reactionTimestamp: reactionBlock.timestamp, finalizedBlock: finalized,
+        executionId, originBlock: origin.blockNumber, reactionTimestamp: reactionBlock.timestamp, finalizedBlock: finalized,
       });
       if (fallback.status === 'pending') return report;
       if (fallback.status !== 'found') return result('UNVERIFIED', 'No unique callback can be matched to this reaction.');
@@ -215,23 +241,32 @@ class EventListenerService {
       return result('FAILED', 'The verified Vault callback failed.');
     }
     const logs = destination.logs.filter(log => isAddressEqual(log.address, vault));
-    const skipped = parseEventLogs({ abi: ACTION_VAULT_ABI, eventName: 'OrderSkipped', logs });
+    const skipped = parseEventLogs({ abi: vaultAbi, eventName: 'OrderSkipped', logs });
     const executed = parseEventLogs({ abi: ACTION_VAULT_ABI, eventName: 'StopLossExecuted', logs });
-    if (skipped.length + executed.length !== 1) return result('UNVERIFIED', 'Vault outcome is ambiguous.');
+    const settled = profit ? parseEventLogs({ abi: PRICE_ORDER_VAULT_ABI, eventName: 'OrderSettled', logs }) : [];
+    if (skipped.length + (profit ? settled.length : executed.length) !== 1) {
+      return result('UNVERIFIED', 'Vault outcome is ambiguous.');
+    }
     const token = await base.readContract({
-      address: vault, abi: ACTION_VAULT_ABI, functionName: 'usdcToken', blockNumber: destination.blockNumber,
+      address: vault, abi: vaultAbi, functionName: 'usdcToken', blockNumber: destination.blockNumber,
     });
     const transfers = parseEventLogs({ abi, eventName: 'Transfer', logs: destination.logs.filter(log => isAddressEqual(log.address, token)) });
     if (skipped.length === 1 && executed.length === 0) {
       const { reason, currentPrice } = skipped[0].args;
-      if (reason !== 'Price bounced back above stop threshold' || currentPrice <= params.priceThresholdWei ||
+      const validPriceSkip = profit ? reason === 'Price fell below take-profit threshold' && currentPrice < params.priceThresholdWei :
+        reason === 'Price bounced back above stop threshold' && currentPrice > params.priceThresholdWei;
+      if ((!validPriceSkip && !(profit && currentPrice === 0n && ['Order already settled', 'Callback expired'].includes(reason))) ||
           transfers.some(log => isAddressEqual(log.args.to, deployment.owner) || isAddressEqual(log.args.from, vault))) {
-        return result('UNVERIFIED', 'The receipt does not prove a price-rebound skip without payout.');
+        return result('UNVERIFIED', 'The receipt does not prove the recorded skip without payout.');
       }
       report.details.executedPrice = currentPrice.toString();
       return result('SKIPPED', reason);
     }
-    const { ethAmountIn, minUsdcOut } = executed[0].args;
+    if (profit && (!isAddressEqual(settled[0].args.rsc, rsc) || settled[0].args.executionId !== executionId)) {
+      return result('UNVERIFIED', 'The settled execution ID or RSC does not match.');
+    }
+    const ethAmountIn = profit ? settled[0].args.ethAmountIn : executed[0].args.ethAmountIn;
+    const minUsdcOut = profit ? settled[0].args.minAmountOut : executed[0].args.minUsdcOut;
     const payouts = transfers.filter(log => isAddressEqual(log.args.to, deployment.owner) && log.args.value >= minUsdcOut);
     if (ethAmountIn === 0n || minUsdcOut === 0n || payouts.length !== 1) {
       return result('UNVERIFIED', 'Owner payout and minimum output could not be proven.');
