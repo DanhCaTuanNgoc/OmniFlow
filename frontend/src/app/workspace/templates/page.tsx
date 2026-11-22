@@ -11,23 +11,16 @@ import { useAccount } from 'wagmi';
 import { 
   Library, 
   ArrowRight, 
-  ShieldAlert, 
   TrendingDown, 
   RefreshCw, 
   Flame, 
   Wallet,
   Globe,
   Zap,
-  Layers,
   Search,
-  CheckCircle2,
-  Cpu,
-  Clock,
+  ShieldAlert,
   ShieldCheck,
-  Code2,
-  X,
-  ExternalLink,
-  ChevronRight
+  X
 } from 'lucide-react';
 
 interface Recipe {
@@ -60,16 +53,16 @@ const RECIPES: Recipe[] = [
   {
     id: 'stop-loss',
     category: 'defi',
-    categoryLabel: 'DeFi Risk & Stop-Loss',
+    categoryLabel: 'DeFi Risk',
     title: 'Flash Crash Stop-Loss',
-    description: 'Listens to Uniswap V2 pair Sync events on Base Sepolia. When ETH spot reserve breaches <= $1,800, ReactVM detects the drop and triggers an emergency swap to USDC via ActionVault.',
+    description: 'Monitors DEX pool reserves and automatically executes an emergency swap to USDC when spot price breaches threshold.',
     icon: TrendingDown,
     tagColor: 'text-cyan-300 border-cyan-500/30 bg-cyan-500/10',
     tags: ['DeFi Risk', 'Uniswap V2', 'Base Sepolia'],
     nodesCount: 4,
     flow: {
       trigger: 'Sync(reserve0, reserve1)',
-      condition: 'Spot Price <= $1,800 USD',
+      condition: 'Price <= $1,800',
       action: 'ActionVault.executeStopLoss(50%)'
     },
     metrics: {
@@ -96,16 +89,16 @@ function react(LogRecord calldata record) external vmOnly {
   {
     id: 'take-profit',
     category: 'defi',
-    categoryLabel: 'DeFi Risk & Stop-Loss',
+    categoryLabel: 'DeFi Risk',
     title: 'Take-Profit Scalper',
-    description: 'Monitors AMM liquidity pools for rapid upside surges. When ETH spot crosses >= $2,500, autonomously locks in 25% of the position into stablecoins with on-chain slippage re-validation.',
+    description: 'Monitors AMM liquidity for upside surges and autonomously locks in positions into stablecoins with slippage protection.',
     icon: RefreshCw,
     tagColor: 'text-amber-300 border-amber-500/30 bg-amber-500/10',
     tags: ['Profit Taking', 'AMM Sync', 'Rate-Limited'],
     nodesCount: 4,
     flow: {
       trigger: 'Sync(reserve0, reserve1)',
-      condition: 'Spot Price >= $2,500 USD',
+      condition: 'Price >= $2,500',
       action: 'ActionVault.executeTakeProfit(25%)'
     },
     metrics: {
@@ -127,16 +120,16 @@ if (price >= TARGET_PROFIT && block.timestamp - lastTriggered >= 600) {
   {
     id: 'anti-drainer',
     category: 'security',
-    categoryLabel: 'Security & Cold Safe',
+    categoryLabel: 'Security',
     title: 'Anti-Drainer Cold SafeSweep',
-    description: 'Active honeypot and unauthorized egress detector. If high-value ERC-20 transfers originate without wallet owner pre-authorization, sweeps all collateral into Gnosis Safe cold storage.',
+    description: 'Detects unauthorized high-value transfers or drain attempts and immediately sweeps vault collateral to cold storage.',
     icon: Flame,
     tagColor: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10',
     tags: ['Anti-Phishing', '1-Tx Evacuation', 'Cold Safe'],
     nodesCount: 3,
     flow: {
       trigger: 'Transfer(from == Owner)',
-      condition: 'Value > 1.0 ETH or Blacklisted Target',
+      condition: 'Value > 1.0 ETH',
       action: 'ActionVault.executeSafeSweep(coldSafe)'
     },
     metrics: {
@@ -157,15 +150,15 @@ if (isUnauthorizedEgress(record)) {
     id: 'cron-rebalance',
     category: 'cron',
     categoryLabel: 'Autonomous Cron',
-    title: 'Daily Autonomous Rebalancer',
-    description: 'Uses ReactVM block interval consensus to trigger zero-server periodic portfolio rebalancing every 24 hours, guaranteeing on-chain protocol health without external bots.',
+    title: 'Daily Portfolio Rebalancer',
+    description: 'Zero-server automated portfolio rebalancer triggered every 24 hours directly via ReactVM block interval consensus.',
     icon: ShieldAlert,
     tagColor: 'text-violet-300 border-violet-500/30 bg-violet-500/10',
     tags: ['Cron Tick', 'Zero Server', 'Reactive Core'],
     nodesCount: 3,
     flow: {
-      trigger: 'ReactVM Block Epoch Tick',
-      condition: 'Timestamp Delta >= 86,400s',
+      trigger: 'ReactVM Block Epoch',
+      condition: 'Delta >= 86,400s',
       action: 'ActionVault.rebalancePortfolio()'
     },
     metrics: {
@@ -186,16 +179,16 @@ if (block.timestamp - lastRebalance >= 1 days) {
   {
     id: 'payday-splitter',
     category: 'crosschain',
-    categoryLabel: 'Cross-Chain & Liquidity',
-    title: 'Payday Auto-Splitter (Income DCA)',
-    description: 'Upon incoming salary or payment transfer (> 1,000 USDC), autonomously splits the inflow: DCA 20% into ETH, route 30% to high-yield Cold Vault, and keep 50% liquid for operational spending.',
+    categoryLabel: 'Cross-Chain',
+    title: 'Payday Auto-Splitter',
+    description: 'Autonomously splits incoming payment deposits: routes portions to ETH DCA, yield cold vault, and liquid spending.',
     icon: Wallet,
     tagColor: 'text-cyan-300 border-cyan-500/30 bg-cyan-500/10',
     tags: ['Salary Split', 'Multi-Signal', 'Non-Custodial'],
     nodesCount: 5,
     flow: {
       trigger: 'ERC20.Transfer(to == Vault)',
-      condition: 'Inflow Value >= 1,000 USDC',
+      condition: 'Value >= 1,000 USDC',
       action: 'ActionVault.splitInflow(20%, 30%, 50%)'
     },
     metrics: {
@@ -215,17 +208,17 @@ if (record.topic2 == bytes32(uint256(uint160(vaultAddress))) && amount >= 1000e6
   {
     id: 'cross-chain-hedge',
     category: 'crosschain',
-    categoryLabel: 'Cross-Chain & Liquidity',
-    title: 'Unichain-to-Base Cross-Chain Hedge',
-    description: 'Monitors sudden liquidity fluctuations and price velocity on Unichain Sepolia. If price drops faster than 5% in 10 seconds, initiates a defensive hedge swap on Base Sepolia.',
+    categoryLabel: 'Cross-Chain',
+    title: 'Unichain-to-Base Cross Hedge',
+    description: 'Monitors rapid liquidity fluctuations on Unichain Sepolia and triggers an automated defensive hedge swap on Base Sepolia.',
     icon: Globe,
     tagColor: 'text-purple-300 border-purple-500/30 bg-purple-500/10',
     tags: ['Cross-Chain', 'Velocity Guard', 'Unichain <-> Base'],
     nodesCount: 4,
     flow: {
-      trigger: 'Unichain Sepolia Sync Event',
-      condition: 'Velocity Drop > 5% in 10s',
-      action: 'Base Sepolia Vault Hedge Swap'
+      trigger: 'Unichain Sync Event',
+      condition: 'Drop > 5% in 10s',
+      action: 'Base Vault Hedge Swap'
     },
     metrics: {
       cooldown: '600s Cooldown',
@@ -249,6 +242,7 @@ export default function TemplateLibraryPage() {
   const scope = useRef<AbortController>();
   const pending = useRef(false);
   const [creationError, setCreationError] = useState<string>();
+
   useLayoutEffect(() => {
     const controller = new AbortController();
     scope.current = controller;
@@ -256,6 +250,7 @@ export default function TemplateLibraryPage() {
     setCreationError(undefined);
     return () => controller.abort();
   }, [owner]);
+
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [inspectingRecipe, setInspectingRecipe] = useState<Recipe | null>(null);
@@ -287,11 +282,11 @@ export default function TemplateLibraryPage() {
   };
 
   const categories = [
-    { id: 'all', label: 'All Recipes', count: RECIPES.length },
-    { id: 'defi', label: 'DeFi Risk & Stop-Loss', count: RECIPES.filter(r => r.category === 'defi').length },
-    { id: 'security', label: 'Security & Cold Safe', count: RECIPES.filter(r => r.category === 'security').length },
-    { id: 'cron', label: 'Autonomous Cron', count: RECIPES.filter(r => r.category === 'cron').length },
-    { id: 'crosschain', label: 'Cross-Chain & Liquidity', count: RECIPES.filter(r => r.category === 'crosschain').length },
+    { id: 'all', label: 'All', count: RECIPES.length },
+    { id: 'defi', label: 'DeFi Risk', count: RECIPES.filter(r => r.category === 'defi').length },
+    { id: 'security', label: 'Security', count: RECIPES.filter(r => r.category === 'security').length },
+    { id: 'cron', label: 'Cron', count: RECIPES.filter(r => r.category === 'cron').length },
+    { id: 'crosschain', label: 'Cross-Chain', count: RECIPES.filter(r => r.category === 'crosschain').length },
   ];
 
   const filteredRecipes = useMemo(() => {
@@ -311,9 +306,10 @@ export default function TemplateLibraryPage() {
   return (
     <div className="ws-page space-y-5">
       {creationError && <p role="alert" className="text-sm text-rose-300">{creationError}</p>}
+      
       <WorkspacePageHeader
         title="Template Library"
-        description="Browse battle-tested cross-chain automation blueprints and hydrate them into Pipeline Studio."
+        description="Battle-tested cross-chain automation blueprints ready to deploy into Pipeline Studio."
         icon={<Library className="size-4" />}
         actions={
           <Link href="/workspace/studio" className="ws-button ws-button-primary inline-flex items-center gap-1.5">
@@ -324,7 +320,7 @@ export default function TemplateLibraryPage() {
       />
 
       {/* Filter Chips & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-2.5">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-2 sm:p-2.5">
         {/* Category Pills */}
         <div className="flex items-center gap-1.5 flex-wrap">
           {categories.map((cat) => (
@@ -357,7 +353,7 @@ export default function TemplateLibraryPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search recipes, tags..."
+            placeholder="Search templates..."
             className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] pl-9 pr-7 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-[var(--ws-accent)] focus:outline-none"
           />
           {searchQuery && (
@@ -371,101 +367,69 @@ export default function TemplateLibraryPage() {
         </div>
       </div>
 
-      {/* Recipes Grid */}
+      {/* Streamlined Templates Grid */}
       {filteredRecipes.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredRecipes.map((recipe) => {
             const Icon = recipe.icon;
             return (
               <div
                 key={recipe.id}
-                className="rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-4 sm:p-5 space-y-4 flex flex-col justify-between transition-colors duration-200 hover:border-purple-400/60 hover:shadow-md hover:shadow-purple-500/10 group"
+                className="group flex flex-col justify-between rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-4 transition-all duration-150 hover:border-[var(--ws-accent)]/50 hover:bg-[#1a1d26]"
               >
-                <div className="space-y-3.5">
-                  {/* Header: Icon, Title, Tags, Nodes Count */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2.5 rounded-xl border ${recipe.tagColor} shadow-sm shrink-0`}>
+                <div className="space-y-3">
+                  {/* Card Header: Icon, Title, Category & Node Count */}
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`p-2 rounded-lg border ${recipe.tagColor} shrink-0`}>
                         <Icon className="size-4" />
                       </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-white tracking-tight group-hover:text-[var(--ws-accent)] transition-colors">
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-semibold text-white tracking-tight truncate group-hover:text-[var(--ws-accent)] transition-colors">
                           {recipe.title}
                         </h3>
-                        <div className="flex flex-wrap gap-1.5 mt-1">
-                          {recipe.tags.map((t) => (
-                            <span
-                              key={t}
-                              className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-[#14151a] text-zinc-300 border border-white/10"
-                            >
-                              {t}
-                            </span>
-                          ))}
-                        </div>
+                        <p className="text-[11px] text-[var(--ws-muted)] flex items-center gap-1.5 mt-0.5">
+                          <span>{recipe.categoryLabel}</span>
+                          <span>·</span>
+                          <span className="font-mono tabular-nums">{recipe.nodesCount} nodes</span>
+                        </p>
                       </div>
                     </div>
-
-                    <span className="text-[11px] font-mono text-zinc-400 tabular-nums font-semibold px-2 py-1 rounded-md bg-[#14151a] border border-white/5 shrink-0">
-                      {recipe.nodesCount} Nodes
-                    </span>
                   </div>
 
-                  {/* Description */}
-                  <p className="text-xs text-[var(--ws-muted)] leading-relaxed">
+                  {/* Concise Description */}
+                  <p className="text-xs text-[var(--ws-muted)] leading-relaxed line-clamp-2 min-h-[2.5rem]">
                     {recipe.description}
                   </p>
 
-                  {/* Architectural Flow Strip */}
-                  <div className="p-2.5 rounded-xl bg-[#12141c] border border-white/[0.06] text-[11px] font-mono space-y-1">
-                    <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-semibold">
-                      Template Logic Flow
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-wrap text-zinc-300">
-                      <span className="text-cyan-300 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20 truncate max-w-[140px]" title={recipe.flow.trigger}>
-                        {recipe.flow.trigger}
-                      </span>
-                      <span className="text-zinc-600">&rarr;</span>
-                      <span className="text-violet-300 bg-violet-500/10 px-1.5 py-0.5 rounded border border-violet-500/20 truncate max-w-[140px]" title={recipe.flow.condition}>
-                        {recipe.flow.condition}
-                      </span>
-                      <span className="text-zinc-600">&rarr;</span>
-                      <span className="text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 truncate max-w-[140px]" title={recipe.flow.action}>
-                        {recipe.flow.action}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Template defaults & Cooldown */}
-                  <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 pt-1">
-                    <div className="flex items-center gap-1">
-                      <ShieldAlert className="size-3 text-amber-500" />
-                      <span className="truncate">{recipe.metrics.cooldown}</span>
-                    </div>
-                    <span className="text-[10px] text-zinc-500">
-                      {recipe.id === 'stop-loss' ? 'Production Ready' : 'Template Blueprint'}
+                  {/* Minimal Core Logic Flow */}
+                  <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 py-1.5 px-2.5 rounded-lg bg-[#12141c] border border-white/[0.04]">
+                    <span className="text-cyan-300 truncate max-w-[120px]" title={recipe.flow.trigger}>
+                      {recipe.flow.trigger}
+                    </span>
+                    <ArrowRight className="size-2.5 text-zinc-600 shrink-0" />
+                    <span className="text-emerald-300 truncate max-w-[130px]" title={recipe.flow.action}>
+                      {recipe.flow.action}
                     </span>
                   </div>
                 </div>
 
-                {/* Bottom Action Bar */}
-                <div className="pt-3 border-t border-[var(--ws-border)] flex items-center gap-2">
+                {/* Card Actions: Primary Use Template + Secondary Preview */}
+                <div className="pt-3 mt-3 border-t border-[var(--ws-border)] flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setInspectingRecipe(recipe)}
-                    className="ws-button inline-flex items-center gap-1.5 text-xs"
+                    className="ws-button text-xs px-2.5 py-1.5 text-[var(--ws-muted)] hover:text-white"
                   >
-                    <Code2 className="size-3.5 text-cyan-400" />
-                    <span>Inspect Specs</span>
+                    Specs
                   </button>
-
                   <button
                     type="button"
                     onClick={() => handleHydrateRecipe(recipe)}
-                    className="ws-button ws-button-primary flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-semibold"
+                    className="ws-button ws-button-primary flex-1 text-xs py-1.5 font-semibold inline-flex items-center justify-center gap-1.5"
                   >
                     <Zap className="size-3.5" />
-                    <span>Hydrate onto Pipeline</span>
-                    <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    <span>Use Template</span>
                   </button>
                 </div>
               </div>
@@ -582,7 +546,7 @@ export default function TemplateLibraryPage() {
                 className="ws-button ws-button-primary flex items-center gap-2 px-5 py-2 text-xs font-semibold"
               >
                 <Zap className="size-3.5" />
-                <span>Hydrate onto Pipeline</span>
+                <span>Use Template</span>
                 <ArrowRight className="size-3.5" />
               </button>
             </div>
