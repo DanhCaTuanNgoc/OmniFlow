@@ -36,21 +36,37 @@ const HONESTY_CLAIMS = [
     claim: "Full-loop stop-loss execution",
     status: fullLoopVerified ? "Confirmed on testnet" : "Callback pending",
     evidence: "The demo uses an on-chain test pool and test tokens.",
+    verified: fullLoopVerified,
+  },
+  {
+    claim: "Take-Profit",
+    status: "Full-loop verification pending",
+    evidence: "Testnet deployment is in place. Live payout and price-reversal skip still need matched receipts.",
+    verified: false,
+  },
+  {
+    claim: "Additional pipeline scenarios",
+    status: "Not deployed",
+    evidence: "The 16 other scenarios are outside the hackathon demo scope and have no dedicated testnet deployments. The Stop-Loss evidence already covers cooldown behavior.",
+    verified: false,
   },
   {
     claim: "Contract test coverage",
     status: "Foundry test suite",
     evidence: "The repository includes ActionVault and StopLoss_Pipeline tests.",
+    verified: true,
   },
   {
     claim: "Timestamp cooldown",
     status: "Covered by tests",
     evidence: "The RSC enforces its cooldown using block timestamps.",
+    verified: true,
   },
   {
     claim: "Non-custodial vault recovery",
     status: "Covered by tests",
     evidence: "The owner can call emergencyWithdraw to recover the vault's ETH.",
+    verified: true,
   },
 ];
 
@@ -138,7 +154,7 @@ export default function OnChainProofLedger() {
             onClick={() => setActiveTab("honesty")}
           >
             <i className="fa-solid fa-shield-halved" />
-            <span>Contract Verification</span>
+            <span>Honesty Table</span>
           </button>
         </div>
 
@@ -234,8 +250,8 @@ export default function OnChainProofLedger() {
                   <span className="claim-text">{item.claim}</span>
                 </div>
                 <div className="honesty-status-col">
-                  <span className="status-pill verified">
-                    <i className="fa-solid fa-check" />
+                  <span className={item.verified ? "status-pill verified" : "status-pill pending"}>
+                    {item.verified && <i className="fa-solid fa-check" aria-hidden="true" />}
                     <span>{item.status}</span>
                   </span>
                 </div>

@@ -2,6 +2,8 @@
 
 ## 1. Hiện trạng và phạm vi
 
+**Phạm vi demo hackathon:** Stop-Loss là flow chính, với bằng chứng full-loop trên testnet. Take-Profit là flow thứ hai, đã deploy và còn chờ nghiệm thu payout và skip qua receipt. 16 kịch bản còn lại chưa có deployment testnet riêng và được ghi là **Not deployed** trong Honesty Table. BP-11 đã có bằng chứng cooldown trên deployment Stop-Loss. Ma trận bên dưới là backlog nghiệm thu sau hackathon cho các ca ngoài phạm vi demo. Việc hợp nhất Universal Deploy và redeploy toàn bộ ở §14 cũng được hoãn sau hackathon.
+
 Rà soát tại ngày 20/11/2026. Phạm vi gồm **12 node hiện có, sáu preset hiện hữu, flow Pause Pipeline theo dõi nâng cấp và 12 kịch bản Blueprint**. Các đề xuất stop-loss một lần và chuyển một phần khoản nhận trong FRS được đưa vào ma trận. Kịch bản dùng chung runtime vẫn có tiêu chí nghiệm thu riêng. Graph mới hoặc node được thêm sau phải cập nhật ma trận trước khi bật Deploy. Copilot, Telegram Sentinel và các tính năng ứng dụng độc lập chỉ vào điều kiện phát hành nếu chúng trở thành một phần của flow phát hành. [Catalog và kịch bản Blueprint](../PROJECT_BLUEPRINT.md) · [FRS](REACTIVEFLOW_DETAILED_FRS.md)
 
 Repo hiện có `StopLoss_Pipeline`, `ActionVault` và một đường deploy từ bytecode stop-loss. Deployer chọn node đầu tiên khớp loại hoặc trường dữ liệu, nên cổng hợp lệ và DAG hợp lệ chưa đủ để bảo đảm graph có runtime tương đương. Studio gửi Base mặc định, recipe Cross-Chain ghi `chainId`, còn backend đọc `data.originChainId`. Active đọc cặp Vault/RSC cấu hình sẵn. Activity Logs chưa có nguồn đọc lịch sử theo ví. [Deployer](../backend/src/services/deployer.service.ts) · [Deploy Modal](../frontend/src/components/canvas/DeployModal.tsx) · [Active](../frontend/src/app/workspace/active/page.tsx) · [Activity Logs](../frontend/src/app/workspace/logs/page.tsx)
@@ -255,7 +257,8 @@ Thực hiện theo thứ tự dưới đây trước khi mở Deploy Phase 2:
 | Ca | Trạng thái hiện tại | Điều kiện đạt còn mở |
 |---|---|---|
 | BP-01, BP-11 | PASS theo hồ sơ Phase 1 ở §11 | Chạy hồi quy qua Studio/Active khi nối template Phase 2. |
-| BP-02, BP-03 | PASS local, live BLOCKED | Hoàn tất tích hợp Studio/Active, fixture và receipt Phase 2 cho ladder và Take-Profit. |
+| BP-02 | PASS local, chưa deploy | Nghiệm thu Ladder trên testnet sau hackathon. |
+| BP-03 | Đã deploy testnet, chưa nghiệm thu full-loop | Đối soát receipt payout và skip khi giá đảo chiều. |
 | BP-04 | OPEN | Runtime đọc vốn Vault và đối soát cả hai điều kiện. Gate hai pool của Phase 2 không bao phủ Dust Guard. |
 | BP-05 | OPEN | Emitter và rule SafeSweep do owner duyệt, receipt đích và các ca không sweep. |
 | BP-06, BP-07 | OPEN | Bộ lọc transfer, receipt cảnh báo và xác minh webhook theo sự kiện. |
@@ -319,9 +322,11 @@ stateDiagram-v2
 
 ## 14. Chiến lược Hợp nhất Kiến trúc Triển khai (Universal Pipeline Engine)
 
+**Trạng thái:** Đề xuất sau hackathon. Các giai đoạn bên dưới chỉ áp dụng khi mở lại Universal Deploy.
+
 ### 14.1 Bối cảnh và Vấn đề phân mảnh (Deployment Fragmentation)
 
-Sau khi hoàn thành hai luồng **Stop-Loss (Phase 1)** và **Take-Profit (Phase 2)**, hệ thống phát sinh phân mảnh lớn về mặt kiến trúc triển khai:
+Hai luồng **Stop-Loss (Phase 1)** và **Take-Profit (Phase 2)** hiện có quy trình triển khai riêng:
 * **Stop-Loss:** Dùng `DeployModal.tsx`, gọi thẳng backend relayer/ví triển khai `StopLoss_Pipeline` trên Lasna; trên Base Sepolia chỉ yêu cầu một bước ủy quyền đơn giản vào `ActionVault`.
 * **Take-Profit:** Dùng `TakeProfitDeployModal.tsx`, ví người dùng ký deploy `PriceOrderPipeline` trên Lasna; trên Base Sepolia yêu cầu quy trình Onboarding 3 giao dịch rời rạc (`registerRSC` $\rightarrow$ `configurePriceOrder` $\rightarrow$ `setAuthorizedRSC`) vào `PriceOrderVault`.
 
