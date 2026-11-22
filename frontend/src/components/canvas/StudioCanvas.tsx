@@ -16,6 +16,7 @@ import {
   EdgeTypes,
   ReactFlowInstance,
   ReactFlowProvider,
+  useNodesInitialized,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAccount } from 'wagmi';
@@ -125,6 +126,8 @@ function StudioCanvasInner() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [draftNetworks, setDraftNetworks] = useState<StopLossGraph['networks']>();
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const nodesInitialized = useNodesInitialized();
+  const initialFit = useRef(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -202,6 +205,12 @@ function StudioCanvasInner() {
   const recipeParam = ['deployment', 'pipeline', 'local'].some(key => searchParams.has(key))
     ? null : searchParams.get('recipe');
   const isSnapshot = Boolean(deploymentParam);
+  const opensExistingGraph = Boolean(deploymentParam || pipelineParam || localParam || recipeParam);
+  useEffect(() => {
+    if (!opensExistingGraph || !reactFlowInstance || !nodesInitialized || initialFit.current) return;
+    initialFit.current = true;
+    void reactFlowInstance.fitView({ padding: 0.2 });
+  }, [opensExistingGraph, reactFlowInstance, nodesInitialized]);
   const draftName = pipelineName.trim() || RECIPE_PRESETS[activeRecipeId]?.title || 'Custom pipeline';
   const activeNodeIds = walkthrough?.nodeIds;
   const activeEdgeIds = walkthrough?.edgeIds;
@@ -1088,8 +1097,6 @@ function StudioCanvasInner() {
               elementsSelectable={!isSnapshot}
               deleteKeyCode={isSnapshot || isDeployOpen || isSolidityOpen || showExitModal ? null : deleteSelectionKeys}
               isValidConnection={isValidConnection}
-              fitView
-              fitViewOptions={{ padding: 0.2 }}
               minZoom={0.3}
               maxZoom={1.5}
               defaultEdgeOptions={{ type: 'custom' }}
@@ -1225,7 +1232,7 @@ export function StudioCanvas() {
     setIdentity({ owner, version: identity.version + 1 });
   }
   return (
-    <ReactFlowProvider>
+    <ReactFlowProvider key={identity.version}>
       <Suspense fallback={<div className="w-full h-full bg-[#07080d]" />}>
         <StudioCanvasInner key={`${owner ?? 'guest'}:${identity.version}`} />
       </Suspense>
