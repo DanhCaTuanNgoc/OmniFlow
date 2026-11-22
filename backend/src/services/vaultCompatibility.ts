@@ -12,15 +12,15 @@ const marketAbi = parseAbi([
 ]);
 
 export function verifyStopLossVault(address: Address, expectedOwner: Address, expectedPair: Address) {
-  return verifyVault(address, expectedOwner, expectedPair, ACTION_VAULT_ABI, VAULT_RUNTIME);
+  return verifyVault(address, expectedOwner, expectedPair, ACTION_VAULT_ABI, VAULT_RUNTIME, 'Action Vault');
 }
 
 export function verifyPriceOrderVault(address: Address, expectedOwner: Address, expectedPair: Address) {
-  return verifyVault(address, expectedOwner, expectedPair, PRICE_ORDER_VAULT_ABI, PRICE_ORDER_VAULT_RUNTIME);
+  return verifyVault(address, expectedOwner, expectedPair, PRICE_ORDER_VAULT_ABI, PRICE_ORDER_VAULT_RUNTIME, 'Price Order Vault');
 }
 
 async function verifyVault(address: Address, expectedOwner: Address, expectedPair: Address,
-  abi: typeof ACTION_VAULT_ABI | typeof PRICE_ORDER_VAULT_ABI, runtime: typeof VAULT_RUNTIME) {
+  abi: typeof ACTION_VAULT_ABI | typeof PRICE_ORDER_VAULT_ABI, runtime: typeof VAULT_RUNTIME, vaultLabel: string) {
   const base = chainService.basePublicClient;
   const vault = { address, abi } as const;
   const [chain, vaultCode, proxyCode] = await Promise.all([
@@ -30,8 +30,14 @@ async function verifyVault(address: Address, expectedOwner: Address, expectedPai
   if (chain !== STOP_LOSS_TEMPLATE.networks.destinationChainId) {
     throw new Error('Vault RPC must point to Base Sepolia.');
   }
-  if (!matchesRuntime(vaultCode, runtime) || !proxyCode || proxyCode === '0x') {
-    throw new Error('DAG Validation Failed: the Vault or callback proxy is incompatible with this template.');
+  if (!proxyCode || proxyCode === '0x') {
+    throw new Error('The configured Base Sepolia callback proxy has no deployed contract.');
+  }
+  if (!vaultCode || vaultCode === '0x') {
+    throw new Error('DAG Validation Failed: no Vault contract is deployed at this address on Base Sepolia.');
+  }
+  if (!matchesRuntime(vaultCode, runtime)) {
+    throw new Error(`DAG Validation Failed: this address is not a supported ${vaultLabel}. Select or create a ${vaultLabel} on Base Sepolia.`);
   }
   const [owner, pair, router, quote, slippage] = await Promise.all([
     base.readContract({ ...vault, functionName: 'owner' }),

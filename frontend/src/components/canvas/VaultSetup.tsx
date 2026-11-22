@@ -98,17 +98,19 @@ export function VaultSetup({ owner, pair, currentVault, onLinked, kind = 'stop-l
           <select className={fieldClass} value={mode} disabled={pending}
             onChange={event => setMode(event.target.value === 'create' ? 'create' : 'link')}>
             <option value="link">Link existing Vault</option>
-            <option value="create">Create on Base Sepolia</option>
+            <option value="create">{kind === 'price-order' ? 'Create Price Order Vault' : 'Create on Base Sepolia'}</option>
           </select>
         </label>
         {mode === 'link' ? (
           <>
-            <button type="button" className="ws-button" disabled={pending}
-              onClick={() => void submit(getVaultManagerAddress(owner))}>
-              Use Vault Manager selection
-            </button>
+            {kind === 'stop-loss' && (
+              <button type="button" className="ws-button" disabled={pending}
+                onClick={() => void submit(getVaultManagerAddress(owner))}>
+                Use Vault Manager selection
+              </button>
+            )}
             <label className="block space-y-1">
-              <span>Vault address</span>
+              <span>{kind === 'price-order' ? 'Price Order Vault address' : 'Vault address'}</span>
               <input className={fieldClass} value={candidate} disabled={pending}
                 onChange={event => { setCandidate(event.target.value.trim()); setLinked(undefined); }} required />
             </label>

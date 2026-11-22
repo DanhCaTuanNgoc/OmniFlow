@@ -110,7 +110,7 @@ function VerifiedPipelineVaults({ owner }: { owner: Address }) {
     <section className="ws-page space-y-3" aria-label="Linked pipeline Vaults">
       <h2 className="text-sm font-semibold text-slate-100">Linked pipeline Vaults</h2>
       {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}
-      {!error && !vaults && <p role="status" className="text-sm text-slate-300">Loading linked Vaults?</p>}
+      {!error && !vaults && <p role="status" className="text-sm text-slate-300">Loading linked Vaults...</p>}
       {vaults?.length === 0 && <p className="text-sm text-slate-300">Link a Vault from a swap node to see it here.</p>}
       {Boolean(vaults?.length) && (
         <ul className="space-y-2">

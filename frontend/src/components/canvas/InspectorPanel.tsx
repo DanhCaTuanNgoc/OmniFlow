@@ -642,8 +642,13 @@ export function InspectorPanel({
                 onChange={e => handleChange('destinationPoolAddress', e.target.value.trim())}
                 className="w-full rounded-xl border border-white/[0.08] bg-[#07080D] p-2.5 font-mono text-slate-100" />
             </label>}
-            {phaseTwo && checkingVaults && <p role="status" className="text-slate-300">Checking compatible Vaults?</p>}
+            {phaseTwo && checkingVaults && <p role="status" className="text-slate-300">Checking compatible Vaults...</p>}
             {phaseTwo && vaultLookup?.error && <p role="alert" className="text-rose-300">{vaultLookup.error}</p>}
+            {phaseTwo && vaultLookup?.vaults?.length === 0 && (
+              <p className="text-slate-300">
+                No compatible Price Order Vault was found for this wallet and pool. Link a Price Order Vault or create one on Base Sepolia.
+              </p>
+            )}
             {phaseTwo && Boolean(vaultLookup?.vaults?.length) && (
               <label className="block space-y-1">
                 <span>Verified Vaults for this pool</span>
@@ -653,7 +658,7 @@ export function InspectorPanel({
                   onChange={event => { if (event.target.value) handleChange('actionVaultAddress', event.target.value); }}>
                   <option value="" disabled>Select Vault</option>
                   {vaultLookup?.vaults?.map(vault => (
-                    <option key={vault} value={vault} title={vault}>{vault.slice(0, 8)}?{vault.slice(-6)}</option>
+                    <option key={vault} value={vault} title={vault}>{vault.slice(0, 8)}...{vault.slice(-6)}</option>
                   ))}
                 </select>
               </label>
