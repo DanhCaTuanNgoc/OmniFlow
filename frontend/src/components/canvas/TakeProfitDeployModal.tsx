@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { formatEther, isAddressEqual, type Address, type Hash, type Hex } from 'viem';
+import { BaseError, formatEther, isAddressEqual, type Address, type EIP1193Provider, type Hash, type Hex } from 'viem';
 import { getAccount, sendTransaction, switchChain, waitForTransactionReceipt } from 'wagmi/actions';
 import type { StopLossGraph } from '@omniflow/shared';
 import type { DeploymentSummary } from '@/lib/deployments';
@@ -11,6 +11,23 @@ import { workspaceRequest } from '@/lib/workspaceSession';
 
 type Quote = { data: Hex; gas: string; gasPrice: string; value: string };
 type DeployResponse = { transaction?: Quote; deployment?: DeploymentSummary };
+
+class WalletPermissionRequired extends Error {}
+
+function hasWalletError(error: unknown, code: number) {
+  const matches = (cause: unknown) => typeof cause === 'object' && cause !== null && 'code' in cause && cause.code === code;
+  return matches(error instanceof BaseError ? error.walk(matches) : error);
+}
+
+async function lasnaWallet(owner: Address) {
+  const account = getAccount(wagmiConfig);
+  if (!account.address || !isAddressEqual(account.address, owner) || account.chainId !== 5318007 || !account.connector) {
+    throw new Error('Connect the Vault owner on Reactive Lasna.');
+  }
+  const provider = await account.connector.getProvider() as EIP1193Provider | undefined;
+  if (!provider) throw new Error('Open the connected wallet and unlock it.');
+  return provider;
+}
 
 export function TakeProfitDeployModal({ owner, graph, draft, onClose }: {
   owner: Address;
@@ -22,6 +39,7 @@ export function TakeProfitDeployModal({ owner, graph, draft, onClose }: {
   const [deployment, setDeployment] = useState<DeploymentSummary>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [needsPermission, setNeedsPermission] = useState(false);
   const locked = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -60,11 +78,12 @@ export function TakeProfitDeployModal({ owner, graph, draft, onClose }: {
         setQuote(prepared.transaction);
         return;
       }
-      await switchChain(wagmiConfig, { chainId: 5318007 });
-      const account = getAccount(wagmiConfig);
-      if (!account.address || !isAddressEqual(account.address, owner) || account.chainId !== 5318007) {
-        throw new Error('Connect the Vault owner on Lasna to sign.');
+      if (getAccount(wagmiConfig).chainId !== 5318007) {
+        await switchChain(wagmiConfig, { chainId: 5318007 });
       }
+      const provider = await lasnaWallet(owner);
+      const accounts = await provider.request({ method: 'eth_accounts' });
+      if (!accounts.some(address => isAddressEqual(address, owner))) throw new WalletPermissionRequired();
       const hash = await sendTransaction(wagmiConfig, {
         account: owner, chainId: 5318007, data: quote.data, type: 'legacy',
         gas: BigInt(quote.gas), gasPrice: BigInt(quote.gasPrice), value: BigInt(quote.value),
@@ -77,10 +96,39 @@ export function TakeProfitDeployModal({ owner, graph, draft, onClose }: {
         setDeployment((await request(hash)).deployment);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to deploy Take-Profit.');
+      if (err instanceof WalletPermissionRequired || hasWalletError(err, 4100)) {
+        setNeedsPermission(true);
+        setError('MetaMask did not authorize this request. Unlock the wallet and reconnect the Vault owner on Lasna.');
+      } else if (hasWalletError(err, 4001)) {
+        setError('The wallet request was declined. You can try again.');
+      } else {
+        setError(err instanceof BaseError ? err.shortMessage : err instanceof Error ? err.message : 'Unable to deploy Take-Profit.');
+      }
     } finally {
       setBusy(false);
       locked.current = false;
+    }
+  }
+
+  async function reconnectWallet() {
+    if (locked.current) return;
+    locked.current = true;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const provider = await lasnaWallet(owner);
+      await provider.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
+      const accounts = await provider.request({ method: 'eth_accounts' });
+      if (!accounts.some(address => isAddressEqual(address, owner))) {
+        throw new Error('Select the Vault owner account when MetaMask asks which accounts to connect.');
+      }
+      setNeedsPermission(false);
+    } catch (err) {
+      setError(hasWalletError(err, 4001) ? 'Wallet access was declined.' :
+        'Open MetaMask and connect the Vault owner to this site, then try signing again.');
+    } finally {
+      locked.current = false;
+      setBusy(false);
     }
   }
 
@@ -99,6 +147,11 @@ export function TakeProfitDeployModal({ owner, graph, draft, onClose }: {
         {deployment && <a className="ws-address block" href={`https://lasna.reactscan.net/tx/${deployment.contracts.rscTxHash}`}>View Lasna transaction</a>}
         <div className="flex flex-wrap gap-2">
           <button className="ws-button" type="button" disabled={busy} onClick={onClose}>Close</button>
+          {needsPermission && (
+            <button className="ws-button" type="button" disabled={busy} onClick={() => void reconnectWallet()}>
+              Reconnect MetaMask
+            </button>
+          )}
           {deployment?.status === 'deployed'
             ? <Link className="ws-button ws-button-primary" href={`/workspace/active/${deployment.pipelineId}`}>Set up Vault in Active</Link>
             : deployment?.status === 'reverted'
