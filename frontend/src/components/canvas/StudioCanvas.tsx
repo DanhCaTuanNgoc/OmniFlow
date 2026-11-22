@@ -4,7 +4,6 @@ import React, { useState, useCallback, useRef, useEffect, useLayoutEffect, useMe
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ReactFlow,
-  Controls,
   Background,
   BackgroundVariant,
   useNodesState,
@@ -46,6 +45,7 @@ import {
   PriceVelocityGuardNode,
 } from './nodes';
 import { CustomEdge } from './CustomEdge';
+import { CanvasActionDock } from './CanvasActionDock';
 import { SnapshotExecutionPulse, type SnapshotStreamStatus } from './SnapshotExecutionPulse';
 import { SnapshotRuntimeStatus, getSnapshotRuntimeState } from './SnapshotRuntimeStatus';
 import { NodePalette, PALETTE_ITEMS } from './NodePalette';
@@ -59,9 +59,6 @@ import {
   Code2,
   ShieldCheck,
   Plus,
-  PanelLeftOpen,
-  PanelLeftClose,
-  RotateCcw,
   Download,
   Upload,
   FlaskConical,
@@ -92,6 +89,7 @@ const nodeTypes: NodeTypes = {
 const edgeTypes: EdgeTypes = {
   custom: CustomEdge,
 };
+const deleteSelectionKeys = ['Delete', 'Backspace'];
 const draftNodeTypes = new Map(PALETTE_ITEMS.map(item => [item.type, item.category]));
 
 const walkthroughLabels = {
@@ -130,7 +128,6 @@ function StudioCanvasInner() {
   const router = useRouter();
   const [isPaletteOpen, setPaletteOpen] = useState(true);
   const [activeRecipeId, setActiveRecipeId] = useState<string>('');
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isDeployOpen, setIsDeployOpen] = useState(false);
   const [isSolidityOpen, setIsSolidityOpen] = useState(false);
   const [walkthrough, setWalkthrough] = useState<Walkthrough>();
@@ -267,7 +264,6 @@ function StudioCanvasInner() {
       setNodes(RECIPE_PRESETS[rId].nodes);
       setEdges(RECIPE_PRESETS[rId].edges);
       setDraftNetworks(undefined);
-      setSelectedNodeId(null);
       setIsDirty(false);
     }
   }, [recipeParam, setNodes, setEdges]);
@@ -428,7 +424,10 @@ function StudioCanvasInner() {
     }
   };
 
-  const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
+  const selectedNodes = useMemo(() => nodes.filter(node => node.selected), [nodes]);
+  const selectedNodeIds = useMemo(() => selectedNodes.map(node => node.id), [selectedNodes]);
+  const selectedEdgeIds = useMemo(() => edges.filter(edge => edge.selected).map(edge => edge.id), [edges]);
+  const selectedNode = selectedNodes.length === 1 && !selectedEdgeIds.length ? selectedNodes[0] : undefined;
   const phaseTwo = isPhaseTwoGraph({ nodes, edges });
   const crossChain = nodes.some(node => node.type === 'priceVelocityGuard');
   const priceGate = nodes.find(node => node.type === 'logicGate');
@@ -515,13 +514,12 @@ function StudioCanvasInner() {
     [isValidConnection, setEdges, nodes, isSnapshot, markDirty]
   );
 
-  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    setSelectedNodeId(node.id);
-  }, []);
-
-  const onPaneClick = useCallback(() => {
-    setSelectedNodeId(null);
-  }, []);
+  const selectNode = useCallback((id: string | null) => {
+    if (isSnapshot) return;
+    setNodes(current => current.map(node => Boolean(node.selected) === (node.id === id)
+      ? node : { ...node, selected: node.id === id }));
+    setEdges(current => current.map(edge => edge.selected ? { ...edge, selected: false } : edge));
+  }, [isSnapshot, setEdges, setNodes]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -553,10 +551,10 @@ function StudioCanvasInner() {
       };
 
       setNodes((nds) => nds.concat(newNode));
-      setSelectedNodeId(newNode.id);
+      selectNode(newNode.id);
       if (!isSnapshot) markDirty();
     },
-    [nodes, reactFlowInstance, setNodes, isSnapshot, markDirty]
+    [nodes, reactFlowInstance, setNodes, selectNode, isSnapshot, markDirty]
   );
 
   const handleAddNodeFromPalette = (type: string, defaultData: Record<string, any>) => {
@@ -571,7 +569,7 @@ function StudioCanvasInner() {
       data: defaultData,
     };
     setNodes((nds) => nds.concat(newNode));
-    setSelectedNodeId(newNode.id);
+    selectNode(newNode.id);
     if (!isSnapshot) markDirty();
   };
 
@@ -596,10 +594,7 @@ function StudioCanvasInner() {
   };
 
   const handleDeleteNode = (id: string) => {
-    setNodes((nds) => nds.filter((n) => n.id !== id));
-    setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
-    if (selectedNodeId === id) setSelectedNodeId(null);
-    if (!isSnapshot) markDirty();
+    if (!isSnapshot) void reactFlowInstance?.deleteElements({ nodes: [{ id }] });
   };
 
   useEffect(() => {
@@ -614,7 +609,6 @@ function StudioCanvasInner() {
       setNodes([]);
       setEdges([]);
       setDraftNetworks(undefined);
-      setSelectedNodeId(null);
       setActiveRecipeId('');
       setDraftMessage('Pipeline cleared.');
     }
@@ -658,7 +652,6 @@ function StudioCanvasInner() {
         setNodes(draft.nodes);
         setEdges(draft.edges);
         setDraftNetworks(draft.networks);
-        setSelectedNodeId(null);
         setActiveRecipeId('');
         setValidationWarning(null);
         setDraftMessage('Pipeline imported successfully.');
@@ -828,32 +821,9 @@ function StudioCanvasInner() {
               <span>Back</span>
             </button>
 
-            {!isPaletteOpen && !isSnapshot && (
-              <button
-                type="button"
-                className="ws-button inline-flex items-center gap-1.5 cursor-pointer text-xs"
-                onClick={() => setPaletteOpen(true)}
-                title="Open Node Catalog"
-              >
-                <PanelLeftOpen className="size-3.5 text-[var(--ws-accent)]" />
-                <span>Node Catalog</span>
-              </button>
-            )}
           </div>
 
           <div className="ws-actions flex flex-wrap items-center gap-1.5 sm:gap-2">
-            {/* Clear Board */}
-            <button
-              type="button"
-              className="ws-button inline-flex items-center gap-1.5 cursor-pointer text-xs"
-              onClick={handleResetGraph}
-              disabled={!nodes.length || isSnapshot}
-              title="Clear all nodes and connections from pipeline"
-            >
-              <RotateCcw className="size-3.5 text-zinc-400" />
-              <span>Clear</span>
-            </button>
-
             {/* Import JSON */}
             <label
               className={`ws-button inline-flex items-center gap-1.5 text-xs ${
@@ -998,7 +968,7 @@ function StudioCanvasInner() {
                   key={issue.id}
                   onClick={() => {
                     if (issue.nodeId) {
-                      setSelectedNodeId(issue.nodeId);
+                      selectNode(issue.nodeId);
                       const targetNode = nodes.find(n => n.id === issue.nodeId);
                       if (targetNode && reactFlowInstance) {
                         reactFlowInstance.setCenter(targetNode.position.x + 140, targetNode.position.y + 70, { duration: 500, zoom: 1 });
@@ -1050,7 +1020,7 @@ function StudioCanvasInner() {
         )}
 
         <div className="relative min-h-0 flex-1 flex overflow-hidden bg-[var(--ws-bg)]">
-          <div className="relative min-h-0 flex-1 h-full" ref={reactFlowWrapper}
+          <div className="studio-canvas-pane relative h-full min-h-0 min-w-0 flex-1" ref={reactFlowWrapper}
             data-flow-walkthrough={walkthrough ? '' : undefined} data-flow-monitoring={isMonitoring ? '' : undefined}>
             {deploymentParam && address && signedIn && (
               <SnapshotExecutionPulse owner={address} deploymentId={deploymentParam}
@@ -1080,15 +1050,13 @@ function StudioCanvasInner() {
               onNodesChange={handleNodesChange}
               onEdgesChange={handleEdgesChange}
               onConnect={onConnect}
-              onNodeClick={onNodeClick}
-              onPaneClick={onPaneClick}
               onInit={setReactFlowInstance}
               onDrop={isSnapshot ? undefined : onDrop}
               onDragOver={onDragOver}
               nodesDraggable={!isSnapshot}
               nodesConnectable={!isSnapshot}
               elementsSelectable={!isSnapshot}
-              deleteKeyCode={isSnapshot ? null : undefined}
+              deleteKeyCode={isSnapshot || isDeployOpen || isSolidityOpen || showExitModal ? null : deleteSelectionKeys}
               isValidConnection={isValidConnection}
               fitView
               fitViewOptions={{ padding: 0.2 }}
@@ -1103,7 +1071,15 @@ function StudioCanvasInner() {
                 size={1.8}
                 color="rgba(194, 205, 230, 0.40)"
               />
-              <Controls className="!bg-[#0f111a]/90 !border-white/[0.08] !rounded-xl !shadow-2xl" />
+              <CanvasActionDock
+                isSnapshot={isSnapshot}
+                isPaletteOpen={isPaletteOpen}
+                hasNodes={nodes.length > 0}
+                selectedNodeIds={selectedNodeIds}
+                selectedEdgeIds={selectedEdgeIds}
+                onTogglePalette={() => setPaletteOpen(open => !open)}
+                onClear={handleResetGraph}
+              />
             </ReactFlow>
           </div>
 
@@ -1119,7 +1095,7 @@ function StudioCanvasInner() {
                 originPool={originPool}
                 onUpdateNodeData={handleUpdateNodeData}
                 onDeleteNode={handleDeleteNode}
-                onClose={() => setSelectedNodeId(null)}
+                onClose={() => selectNode(null)}
                 nodeIssues={selectedNode ? lintResult.nodeIssues.get(selectedNode.id) : undefined}
               />
             </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { type EdgeProps, getBezierPath, EdgeLabelRenderer } from '@xyflow/react';
+import { BaseEdge, type EdgeProps, getBezierPath, EdgeLabelRenderer } from '@xyflow/react';
 import { Globe2 } from 'lucide-react';
 
 export const CustomEdge = memo(function CustomEdge({
@@ -12,6 +12,8 @@ export const CustomEdge = memo(function CustomEdge({
   targetY,
   sourcePosition,
   targetPosition,
+  selected,
+  interactionWidth = 20,
   style = {},
   data,
 }: EdgeProps) {
@@ -33,15 +35,16 @@ export const CustomEdge = memo(function CustomEdge({
         data-simulation-pulse={data?.isBurst ? '' : undefined}
         data-flow-traversed={data?.isTraversed ? '' : undefined}
         data-monitoring-edge={data?.monitoring ? '' : undefined}>
-        <path
+        {selected && <path aria-hidden="true" d={edgePath} fill="none"
+          stroke="var(--ws-accent)" strokeWidth={8} strokeOpacity={0.24} strokeLinecap="round"
+          className="pointer-events-none" />}
+        <BaseEdge
           id={id}
-          d={edgePath}
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth={2}
+          path={edgePath}
+          interactionWidth={interactionWidth}
           className="studio-flow-edge-wire"
           strokeLinecap="round"
-          style={style}
+          style={{ stroke: selected ? 'var(--ws-accent)' : strokeColor, strokeWidth: selected ? 2.5 : 2, ...style }}
         />
 
         <path

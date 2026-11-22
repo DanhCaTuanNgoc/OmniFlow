@@ -236,6 +236,23 @@ code, kbd, samp, pre, .font-mono {
   transition: stroke-opacity 200ms ease;
 }
 
+.react-flow__edge.selected .studio-flow-edge-wire,
+.react-flow__edge:focus-visible .studio-flow-edge-wire {
+  stroke-opacity: 1;
+}
+
+.studio-canvas-pane {
+  container: studio-pane / inline-size;
+}
+
+.studio-dock-label {
+  display: none;
+}
+
+@container studio-pane (min-width: 27rem) {
+  .studio-dock-label { display: inline; }
+}
+
 .studio-flow-edge-stream {
   opacity: 0.12;
   transition: opacity 160ms ease;
