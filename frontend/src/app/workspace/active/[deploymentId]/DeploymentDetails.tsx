@@ -310,6 +310,30 @@ function DeploymentPanel({
     }
   }
 
+  async function handleArchiveChange() {
+    const archived = !deployment.archivedAt;
+    setBusy('archive');
+    try {
+      if (archived && isAuthorized) await setVaultRscAuthorization(owner, deployment, false);
+      await workspaceRequest(owner, `/pipeline/deployments/${encodeURIComponent(deployment.pipelineId)}/archive`, {
+        method: 'PUT',
+        body: JSON.stringify({ archived }),
+        sessionOnly: true,
+      });
+    } catch (error) {
+      if (!(error instanceof WorkspaceWalletPromptCancelled)) {
+        pushToast({
+          type: 'error',
+          title: 'Archive status update failed',
+          message: error instanceof Error ? error.message : 'Unable to update the archive status.',
+        });
+      }
+    } finally {
+      await reload();
+      setBusy(undefined);
+    }
+  }
+
   const configuration = stopLossConfiguration(deployment);
   const statusDescription = isPaused
     ? 'Vault permission was revoked. The RSC can still process events on Lasna and incur fees.'
@@ -325,6 +349,7 @@ function DeploymentPanel({
               {label}
             </p>
             {statusDescription && <p className="max-w-prose text-sm text-[var(--ws-muted)]">{statusDescription}</p>}
+            {deployment.archivedAt && <p className="text-sm text-[var(--ws-muted)]">Archived in Workspace</p>}
             {runtime && (
               <p className="text-xs tabular-nums text-[var(--ws-muted)]">
                 Last checked <time dateTime={runtime.readAt}>{new Date(runtime.readAt).toLocaleString()}</time>
@@ -332,6 +357,13 @@ function DeploymentPanel({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {deployment.status === 'deployed' && (
+              <button type="button" className="ws-button"
+                disabled={Boolean(busy) || (!deployment.archivedAt && !isBaseRpcAvailable)}
+                onClick={() => void handleArchiveChange()}>
+                {busy === 'archive' ? 'Updating archive…' : deployment.archivedAt ? 'Unarchive' : isAuthorized ? 'Pause & Archive' : 'Archive'}
+              </button>
+            )}
             <Link className="ws-button ws-button-primary" href={`/workspace/studio?deployment=${deployment.pipelineId}`}>
               <Code2 aria-hidden="true" className="size-4 shrink-0" />
               Open in Studio
@@ -440,7 +472,7 @@ function DeploymentPanel({
 
               <div className="flex flex-wrap items-center gap-2">
                 {/* Pause / Resume Automation Lifecycle Button (Section 2 & 7.1) */}
-                {hasAuthorizedBefore && (
+                {(hasAuthorizedBefore || isAuthorized) && (!deployment.archivedAt || isAuthorized) && (
                   <button
                     type="button"
                     onClick={() => void handleTogglePauseResume()}
@@ -472,7 +504,7 @@ function DeploymentPanel({
                     Boolean(localStorage.getItem(deploymentStepKey(owner, deployment.pipelineId, kind)));
                   if ((kind === 'register-rsc' || kind === 'price-policy') && (!profit || (onboarding !== kind && !savedReceipt))) return null;
                   if (kind === 'authorization' && profit && onboarding && !savedReceipt) return null;
-                  if (kind === 'authorization' && hasAuthorizedBefore) return null; // Managed by Pause/Resume toggle
+                  if (kind === 'authorization' && (hasAuthorizedBefore || deployment.archivedAt)) return null;
                   const Icon = kind === 'authorization' ? ShieldCheck : CirclePlus;
                   return (
                     <button

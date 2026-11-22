@@ -155,7 +155,7 @@ function WalletDeployments({ owner }: { owner: Address }) {
 
   // Filter & Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'PAUSED' | 'SETUP' | 'PENDING'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'PAUSED' | 'SETUP' | 'PENDING' | 'ARCHIVED'>('ALL');
 
   async function load() {
     setPending(true);
@@ -178,24 +178,31 @@ function WalletDeployments({ owner }: { owner: Address }) {
   }, [owner, isCorrectChain]);
 
   const counts = useMemo(() => {
-    if (!list) return { all: 0, active: 0, paused: 0, setup: 0, pending: 0 };
+    let all = 0;
+    let archived = 0;
     let active = 0;
     let paused = 0;
     let setup = 0;
     let pending = 0;
-    for (const item of list) {
+    for (const item of list ?? []) {
+      if (item.archivedAt) {
+        archived++;
+        continue;
+      }
+      all++;
       const status = getCardStatus(item);
       if (status.type === 'active') active++;
       else if (status.type === 'paused') paused++;
       else if (status.type === 'setup') setup++;
       else if (status.type === 'pending') pending++;
     }
-    return { all: list.length, active, paused, setup, pending };
+    return { all, archived, active, paused, setup, pending };
   }, [list]);
 
   const filteredList = useMemo(() => {
     if (!list) return [];
     return list.filter((item) => {
+      if (Boolean(item.archivedAt) !== (statusFilter === 'ARCHIVED')) return false;
       // Search filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -246,6 +253,7 @@ function WalletDeployments({ owner }: { owner: Address }) {
               { key: 'PAUSED', label: `Paused (${counts.paused})` },
               { key: 'SETUP', label: `Setup Required (${counts.setup})` },
               { key: 'PENDING', label: `Pending (${counts.pending})` },
+              { key: 'ARCHIVED', label: `Archived (${counts.archived})` },
             ] as const
           ).map((tab) => (
             <button
@@ -348,6 +356,7 @@ function WalletDeployments({ owner }: { owner: Address }) {
                         {cardStatus.icon}
                         <span>{cardStatus.label}</span>
                       </span>
+                      {dep.archivedAt && <span className="text-[10px] text-[var(--ws-muted)]">Archived</span>}
                     </div>
                     <span className="font-mono text-[10px] text-zinc-500">
                       Base Sepolia

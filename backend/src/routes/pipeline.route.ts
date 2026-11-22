@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { PipelineDraftSchema, PipelineGraphSchema } from '../schemas/pipeline.schema.js';
-import { deployerService } from '../services/deployer.service.js';
+import { deployerService, takeProfitTemplate } from '../services/deployer.service.js';
+import { ACTION_VAULT_ABI, PRICE_ORDER_VAULT_ABI } from '@omniflow/shared';
+import { chainService } from '../services/chain.service.js';
 import { bearerToken, workspaceSessions } from '../services/workspaceSession.service.js';
 import { DeploymentConflict, DeploymentLimit, deploymentStore, graphSnapshot } from '../data/deployments.js';
 import { vaultRouter } from './vault.route.js';
@@ -113,6 +115,41 @@ pipelineRouter.get('/deployments/:id', async (req, res, next) => {
       runtime,
       latestExecution: deploymentStore().history(res.locals.workspaceOwner, req.params.id)[0] ?? null,
     });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+pipelineRouter.put('/deployments/:id/archive', async (req, res, next) => {
+  const input = z.object({ archived: z.boolean() }).safeParse(req.body);
+  if (!input.success) return res.status(400).json({ error: 'A valid archive state is required.' });
+  const owner = res.locals.workspaceOwner;
+  try {
+    const deployment = deployerService.getDeployment(owner, req.params.id);
+    if (!deployment) return res.status(404).json({ error: 'Deployment not found.' });
+    const { rscAddress, vaultAddress } = deployment.contracts;
+    if (deployment.status !== 'deployed' || !rscAddress) {
+      return res.status(409).json({ error: 'Wait for the deployment receipt before archiving.' });
+    }
+    if (input.data.archived) {
+      let authorized;
+      try {
+        if (await chainService.basePublicClient.getChainId() !== 84532) throw new Error('Unexpected Base chain.');
+        authorized = await chainService.basePublicClient.readContract({
+          address: vaultAddress,
+          abi: deployment.template === takeProfitTemplate ? PRICE_ORDER_VAULT_ABI : ACTION_VAULT_ABI,
+          functionName: 'authorizedRSCs',
+          args: [rscAddress],
+        });
+      } catch {
+        return res.status(502).json({ error: 'Unable to verify Vault permission on Base Sepolia.' });
+      }
+      if (authorized !== false) return res.status(409).json({ error: 'Pause the automation before archiving it.' });
+    }
+    if (!deploymentStore().setArchived(owner, req.params.id, input.data.archived)) {
+      return res.status(409).json({ error: 'The deployment is no longer available for this action.' });
+    }
+    return res.json({ archived: input.data.archived });
   } catch (error) {
     return next(error);
   }

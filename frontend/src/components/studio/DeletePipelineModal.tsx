@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import Link from 'next/link';
 import { X, AlertTriangle, Trash2 } from 'lucide-react';
 
 export interface DeletePipelineModalProps {
   isOpen: boolean;
   pipelineName: string;
+  deploymentId?: string;
   onClose: () => void;
   onConfirm: () => void;
 }
@@ -13,6 +15,7 @@ export interface DeletePipelineModalProps {
 export function DeletePipelineModal({
   isOpen,
   pipelineName,
+  deploymentId,
   onClose,
   onConfirm,
 }: DeletePipelineModalProps) {
@@ -47,7 +50,7 @@ export function DeletePipelineModal({
             </div>
             <div>
               <h2 id="delete-pipeline-title" className="text-sm font-semibold tracking-tight text-white">
-                Delete Draft
+                Delete saved draft
               </h2>
               <p className="text-xs text-[var(--ws-muted)]">
                 Permanent draft removal
@@ -71,7 +74,17 @@ export function DeletePipelineModal({
           </p>
           <div className="rounded-md border border-rose-900/40 bg-rose-950/20 p-2.5 text-[11px] text-rose-300">
             Deleting this draft removes its saved graph and node configuration from your workspace.
+            {deploymentId && (
+              <p className="mt-2">
+                The deployed automation keeps its current Vault permissions and can still execute.
+              </p>
+            )}
           </div>
+          {deploymentId && (
+            <Link href={`/workspace/active/${encodeURIComponent(deploymentId)}`} className="ws-button">
+              Manage Automation
+            </Link>
+          )}
         </div>
 
         {/* Actions */}
@@ -92,7 +105,7 @@ export function DeletePipelineModal({
             className="ws-button border-rose-600 bg-rose-600 text-white hover:bg-rose-600 hover:border-rose-600 hover:text-white cursor-pointer"
           >
             <Trash2 className="size-3.5" />
-            <span>Delete Draft</span>
+            <span>Delete saved draft</span>
           </button>
         </div>
       </div>

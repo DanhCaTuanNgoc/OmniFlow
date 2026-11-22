@@ -14,6 +14,7 @@ export type DeploymentSummary = {
   template: string;
   name: string;
   createdAt: number;
+  archivedAt?: number | null;
   status: 'signed' | 'deployed' | 'reverted';
   contracts: {
     rscAddress: Address | null;
@@ -64,6 +65,7 @@ export function deploymentStepKey(owner: Address, pipelineId: string, kind: Depl
 }
 
 export async function runDeploymentAction(owner: Address, deployment: DeploymentSummary, kind: DeploymentStep, value?: bigint, graph?: unknown) {
+  if (kind === 'authorization' && deployment.archivedAt) throw new Error('Unarchive the automation before authorizing execution.');
   const { rscAddress, vaultAddress } = deployment.contracts;
   if (!rscAddress) throw new Error('Wait for the Lasna deployment receipt.');
   await signInToWorkspace(owner);
@@ -130,6 +132,7 @@ export async function runDeploymentAction(owner: Address, deployment: Deployment
 }
 
 export async function setVaultRscAuthorization(owner: Address, deployment: DeploymentSummary, authorized: boolean) {
+  if (authorized && deployment.archivedAt) throw new Error('Unarchive the automation before resuming.');
   const { rscAddress, vaultAddress } = deployment.contracts;
   if (!rscAddress) throw new Error('Wait for the Lasna deployment receipt.');
   await signInToWorkspace(owner);

@@ -408,6 +408,7 @@ export class DeployerService {
       broadcastLimitReached: intent.status === 'signed' && intent.broadcastCount >= 5,
       name: graph.metadata.name,
       createdAt: intent.createdAt,
+      archivedAt: intent.archivedAt,
       contracts: {
         rscAddress: intent.rscAddress,
         rscChainId: 5318007,

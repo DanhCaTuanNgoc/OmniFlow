@@ -39,10 +39,11 @@ export type DeploymentIntent = {
   rscAddress: Address | null;
   broadcastCount: number;
   lastBroadcastAt: number;
+  archivedAt: number | null;
 };
 
 export type NewDeploymentIntent = Omit<DeploymentIntent, 'id' | 'revisionId' | 'workspacePipelineId' |
-  'graphHash' | 'createdAt' | 'status' | 'rscAddress' | 'broadcastCount' | 'lastBroadcastAt'> & { workspacePipelineId?: string };
+  'graphHash' | 'createdAt' | 'status' | 'rscAddress' | 'broadcastCount' | 'lastBroadcastAt' | 'archivedAt'> & { workspacePipelineId?: string };
 
 export type Draft = { id: string; owner: Address; name: string; graphJson: string; updatedAt: number };
 
@@ -103,6 +104,9 @@ export class DeploymentStore {
       this.db.exec('ALTER TABLE vault_links ADD COLUMN kind TEXT');
     }
     const columns = this.db.pragma('table_info(deployments)') as { name: string }[];
+    if (!columns.some(column => column.name === 'archivedAt')) {
+      this.db.exec('ALTER TABLE deployments ADD COLUMN archivedAt INTEGER');
+    }
     if (!columns.some(column => column.name === 'workspacePipelineId')) {
       this.db.exec('ALTER TABLE deployments ADD COLUMN workspacePipelineId TEXT');
     }
@@ -124,6 +128,13 @@ export class DeploymentStore {
   list(owner: Address, environment: string) {
     return this.db.prepare('SELECT * FROM deployments WHERE owner = ? AND environment = ? ORDER BY createdAt DESC')
       .all(owner, environment) as DeploymentIntent[];
+  }
+
+  setArchived(owner: Address, id: string, archived: boolean) {
+    return this.db.prepare(`
+      UPDATE deployments SET archivedAt = CASE WHEN ? THEN COALESCE(archivedAt, ?) ELSE NULL END
+      WHERE owner = ? AND id = ? AND environment = ? AND status = 'deployed'
+    `).run(Number(archived), Date.now(), owner.toLowerCase(), id, deploymentEnvironment).changes === 1;
   }
 
   deployed() {
@@ -357,6 +368,7 @@ export class DeploymentStore {
         rscAddress: null,
         broadcastCount: 0,
         lastBroadcastAt: 0,
+        archivedAt: null,
       };
       this.db.prepare(`
         INSERT INTO deployments (id, revisionId, owner, key, graphHash, graphJson, template, environment, createdAt,

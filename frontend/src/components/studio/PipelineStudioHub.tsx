@@ -729,6 +729,7 @@ export function PipelineStudioHub() {
         <DeletePipelineModal
           isOpen={!!deletingPipeline}
           pipelineName={deletingPipeline.name}
+          deploymentId={deletingPipeline.deployment?.pipelineId}
           onClose={() => setDeletingPipeline(null)}
           onConfirm={handleDeleteConfirm}
         />

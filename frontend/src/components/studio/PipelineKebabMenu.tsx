@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { MoreVertical, Edit3, Copy, Download, Trash2, Archive, ArchiveRestore, FileText } from 'lucide-react';
 
 export interface PipelineKebabMenuProps {
   onOpenDraft?: () => void;
+  automationHref?: string;
   onRename?: () => void;
   renameLabel?: string;
   onDuplicate?: () => void;
@@ -17,6 +19,7 @@ export interface PipelineKebabMenuProps {
 
 export function PipelineKebabMenu({
   onOpenDraft,
+  automationHref,
   onRename,
   renameLabel = 'Rename & Notes',
   onDuplicate,
@@ -80,6 +83,13 @@ export function PipelineKebabMenu({
           className="absolute right-0 top-full z-50 mt-1 w-44 origin-top-right rounded-lg border border-[var(--ws-border)] bg-[#191c24] py-1 shadow-2xl backdrop-blur-md focus:outline-none animate-in fade-in zoom-in-95 duration-100"
           onClick={(e) => e.stopPropagation()}
         >
+          {automationHref && (
+            <Link href={automationHref} role="menuitem"
+              onClick={event => { event.stopPropagation(); setIsOpen(false); }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-200 transition-colors hover:bg-white/5 hover:text-white">
+              Manage Automation
+            </Link>
+          )}
           {onOpenDraft && (
             <button
               type="button"
@@ -159,7 +169,7 @@ export function PipelineKebabMenu({
                 className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-rose-400 transition-colors hover:bg-rose-950/40 hover:text-rose-300"
               >
                 <Trash2 className="size-3.5" />
-              <span>Delete draft</span>
+              <span>Delete saved draft</span>
               </button>
             </>
           )}

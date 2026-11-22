@@ -195,6 +195,7 @@ test('the deployment store keeps the same transaction and revision after restart
     assert.equal(store.owns(other, original.id), false);
     assert.deepEqual(store.list(other, deploymentEnvironment), []);
     assert.equal(store.owns(owner, original.id), true);
+    assert.equal(store.setArchived(owner, original.id, true), false);
     const draft = store.getDraft(owner, original.workspacePipelineId)!;
     assert.equal(store.getDraft(other, draft.id), undefined);
     const updatedDraft = store.saveDraft(owner, draft.graphJson, 'New name', draft)!;
@@ -212,12 +213,21 @@ test('the deployment store keeps the same transaction and revision after restart
     assert.equal(store.get(owner, deploymentEnvironment, input.key)?.graphJson, input.graphJson);
     assert.equal(store.settle(original, 'deployed', owner).rscAddress, owner);
     assert.equal(store.get(owner, deploymentEnvironment, input.key)?.status, 'deployed');
+    assert.equal(store.setArchived(other, original.id, true), false);
+    assert.equal(store.setArchived(owner, original.id, true), true);
+    const archivedAt = store.get(owner, deploymentEnvironment, input.key)?.archivedAt;
+    assert.ok(archivedAt);
+    assert.equal(store.setArchived(owner, original.id, true), true);
+    assert.equal(store.get(owner, deploymentEnvironment, input.key)?.archivedAt, archivedAt);
     const txHash = keccak256(signedTransaction);
     const entry = { deploymentId: original.id, reactiveTxHash: txHash, originTxHash: txHash, originLogIndex: 2 };
     store.ingestExecutionLogs(original.id, 101n, [entry, entry]);
     store.close();
     store = new DeploymentStore(path);
     assert.equal(store.cursor(original.id), 101n);
+    assert.equal(store.get(owner, deploymentEnvironment, input.key)?.archivedAt, archivedAt);
+    assert.equal(store.setArchived(owner, original.id, false), true);
+    assert.equal(store.get(owner, deploymentEnvironment, input.key)?.archivedAt, null);
     assert.deepEqual(store.pendingExecutions(original.id, 5), [entry]);
     assert.equal(store.history(other, original.id).length, 0);
   } finally {

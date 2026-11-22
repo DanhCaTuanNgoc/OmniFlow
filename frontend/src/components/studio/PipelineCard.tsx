@@ -131,6 +131,7 @@ export function PipelineCard({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           {getSourceBadge()}
+          {pipeline.deployment?.archivedAt && <span className="text-[10px] text-[var(--ws-muted)]">Archived</span>}
           {triggerLabel && (
             <span className="inline-flex items-center gap-1 rounded bg-white/5 border border-white/10 px-1.5 py-0.5 text-[10px] text-zinc-300 font-mono">
               <Activity className="size-2.5 text-[var(--ws-accent)]" />
@@ -142,6 +143,7 @@ export function PipelineCard({
         {/* 3-dots kebab menu */}
         <PipelineKebabMenu
           onOpenDraft={onOpenDraft}
+          automationHref={pipeline.deployment ? `/workspace/active/${encodeURIComponent(pipeline.deployment.pipelineId)}` : undefined}
           onRename={onRename ? () => onRename(pipeline) : undefined}
           renameLabel={isWallet ? 'Rename draft' : undefined}
           onDuplicate={() => onDuplicate(pipeline)}
