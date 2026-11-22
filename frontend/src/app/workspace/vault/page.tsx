@@ -6,22 +6,17 @@ import { WorkspacePageHeader, WorkspaceState } from '@/components/common/Workspa
 import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
 import { getSavedVault, setSavedVault } from '@/lib/vaultSelection';
 import { 
-  Vault, 
-  AlertOctagon, 
+  Lock, 
+  ExternalLink, 
+  RefreshCw, 
+  CheckCircle2, 
+  AlertTriangle, 
+  Loader2, 
+  ShieldAlert, 
   ShieldCheck, 
-  ArrowUpRight, 
+  Coins, 
   ArrowDownLeft, 
-  Lock,
-  ExternalLink,
-  Flame,
-  CheckCircle2,
-  RefreshCw,
-  Wallet,
-  AlertTriangle,
-  Loader2,
-  ShieldAlert,
-  Coins,
-  Zap
+  Zap 
 } from 'lucide-react';
 import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract, useSwitchChain } from 'wagmi';
 import { parseEther, formatEther, isAddress, isAddressEqual, type Address } from 'viem';
@@ -32,7 +27,11 @@ import { workspaceRequest } from '@/lib/workspaceSession';
 import type { DeploymentDetail, DeploymentSummary } from '@/lib/deployments';
 
 export default function VaultManagerPage() {
-  return <Suspense fallback={<WorkspaceState title="Loading Vault Manager…" />}><VaultRoute /></Suspense>;
+  return (
+    <Suspense fallback={<WorkspaceState title="Loading Vault Manager…" />}>
+      <VaultRoute />
+    </Suspense>
+  );
 }
 
 function VaultRoute() {
@@ -60,10 +59,12 @@ function VaultRoute() {
   };
 
   if (!signedIn) {
-    return <div className="ws-page ws-page--sign-in">
-      <WorkspacePageHeader title="Vault Manager" icon={<Lock className="size-4" />} />
-      <WorkspaceSignIn />
-    </div>;
+    return (
+      <div className="ws-page ws-page--sign-in">
+        <WorkspacePageHeader title="Vault Manager" icon={<Lock className="size-4" />} />
+        <WorkspaceSignIn />
+      </div>
+    );
   }
 
   return id ? (
@@ -85,6 +86,7 @@ function VaultSelection({ owner, id }: { owner?: Address; id: string }) {
   const [deployment, setDeployment] = useState<DeploymentDetail>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
+
   async function open() {
     if (!owner) return;
     setPending(true);
@@ -97,14 +99,22 @@ function VaultSelection({ owner, id }: { owner?: Address; id: string }) {
       setPending(false);
     }
   }
+
   if (deployment?.contracts.rscAddress) {
-    return <VaultForWallet userAddress={owner} vaultAddress={deployment.contracts.vaultAddress} rscAddress={deployment.contracts.rscAddress} />;
+    return (
+      <VaultForWallet 
+        userAddress={owner} 
+        vaultAddress={deployment.contracts.vaultAddress} 
+        rscAddress={deployment.contracts.rscAddress} 
+      />
+    );
   }
+
   return (
     <div className="ws-page space-y-5">
       <WorkspacePageHeader
         title="Vault Manager"
-        description="Open the Base Sepolia Vault for this deployment."
+        description="Manage ActionVault collateral and permissions on Base Sepolia."
         icon={<Lock className="size-4" />}
       />
       {!owner ? (
@@ -116,16 +126,21 @@ function VaultSelection({ owner, id }: { owner?: Address; id: string }) {
         />
       ) : (
         <>
-          <button type="button" className="ws-button self-start inline-flex items-center gap-1.5" disabled={pending} onClick={() => void open()}>
+          <button 
+            type="button" 
+            className="ws-button self-start inline-flex items-center gap-1.5" 
+            disabled={pending} 
+            onClick={() => void open()}
+          >
             <RefreshCw size={13} className={pending ? 'animate-spin' : ''} />
             <span>{pending ? 'Checking deployment…' : 'Open deployment Vault'}</span>
           </button>
           {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}
           {deployment && (
             <WorkspaceState
-              title="The Lasna deployment receipt is pending."
+              title="Deployment receipt pending."
               description="Awaiting on-chain confirmation on Lasna Testnet."
-              icon={<Loader2 className="size-6 animate-spin text-sky-400" />}
+              icon={<Loader2 className="size-6 animate-spin text-[var(--ws-accent)]" />}
             />
           )}
         </>
@@ -184,7 +199,7 @@ function VaultForWallet({
   const vaultConfigured = isAddress(vaultAddress);
   const isCorrectChain = chainId === 84532;
 
-  // 4. Read Vault Owner
+  // Read Vault Owner
   const { data: vaultOwner, isError: ownerError, isPending: ownerPending } = useReadContract({
     address: vaultAddress,
     abi: ACTION_VAULT_ABI,
@@ -203,7 +218,7 @@ function VaultForWallet({
     }
   }, [isOwner, isCustomVaultLinked, vaultAddress, onConfirmVerifiedLink]);
 
-  // 1. Read Live On-Chain Vault Balance (Base Sepolia: 84532)
+  // Read Live On-Chain Vault Balance (Base Sepolia: 84532)
   const { 
     data: vaultBalance,
     isError: vaultBalanceError,
@@ -215,10 +230,9 @@ function VaultForWallet({
     query: { enabled: isOwner },
   });
 
-  // 2. Read User Wallet Balance (Base Sepolia: 84532)
+  // Read User Wallet Balance (Base Sepolia: 84532)
   const { 
     data: userBalance, 
-    isLoading: isUserBalanceLoading,
     refetch: refetchUserBalance 
   } = useBalance({
     address: userAddress,
@@ -226,7 +240,7 @@ function VaultForWallet({
     query: { enabled: isOwner },
   });
 
-  // 3. Read Backup Safe Address from ActionVault contract
+  // Read Backup Safe Address from ActionVault contract
   const { data: backupSafeAddress } = useReadContract({
     address: vaultAddress,
     abi: ACTION_VAULT_ABI,
@@ -235,7 +249,7 @@ function VaultForWallet({
     query: { enabled: isOwner },
   });
 
-  // 5. Read Authorized RSC Status for target RSC
+  // Read Authorized RSC Status for target RSC
   const { data: isRscAuthorized, isError: authorizationError, refetch: refetchAuthorization } = useReadContract({
     address: vaultAddress,
     abi: ACTION_VAULT_ABI,
@@ -245,7 +259,7 @@ function VaultForWallet({
     query: { enabled: isOwner && isAddress(targetRsc) },
   });
 
-  // Deposit Transaction (Direct Native ETH transfer into ActionVault)
+  // Deposit Transaction
   const { 
     sendTransaction, 
     data: depositTxHash, 
@@ -258,7 +272,7 @@ function VaultForWallet({
     chainId: 84532,
   });
 
-  // Contract Write Actions (emergencyWithdraw & executeSafeSweep)
+  // Contract Write Actions (emergencyWithdraw & setAuthorizedRSC)
   const { 
     writeContract, 
     data: writeTxHash, 
@@ -282,7 +296,7 @@ function VaultForWallet({
       });
       setTimeout(() => setActionSuccessMsg(null), 8000);
     }
-  }, [depositReceipt, depositTxHash, depositAmount, refetchVaultBalance, refetchUserBalance]);
+  }, [depositReceipt, depositTxHash, refetchVaultBalance, refetchUserBalance]);
 
   useEffect(() => {
     if (writeReceipt?.status === 'success' && writeTxHash) {
@@ -291,7 +305,7 @@ function VaultForWallet({
       refetchAuthorization();
       setIsPanicConfirmOpen(false);
       setActionSuccessMsg({
-        title: 'Vault transaction confirmed on Base Sepolia.',
+        title: 'Transaction confirmed on Base Sepolia.',
         txHash: writeTxHash,
       });
       setTimeout(() => setActionSuccessMsg(null), 8000);
@@ -335,6 +349,7 @@ function VaultForWallet({
 
   const formattedVaultEth = vaultBalance && !vaultBalanceError ? formatEther(vaultBalance.value) : undefined;
 
+  // Unverified or non-owner state
   if (!isOwner) {
     return (
       <div className="ws-page space-y-5">
@@ -343,19 +358,20 @@ function VaultForWallet({
           description="Manage collateral and Reactive contract permissions on Base Sepolia."
           icon={<Lock className="size-4" />}
         />
+
         {isConnected && !isCorrectChain && (
-          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <AlertTriangle className="size-4 text-rose-400 shrink-0" />
+              <AlertTriangle className="size-4 text-amber-400 shrink-0" />
               <span>
-                Your wallet is currently on Chain ID {chainId}. Please switch to Base Sepolia (84532) to interact with ActionVault.
+                Your wallet is on Chain ID {chainId}. Switch to Base Sepolia (84532) to manage your ActionVault.
               </span>
             </div>
             <button
               type="button"
               onClick={() => switchChain?.({ chainId: 84532 })}
               disabled={isSwitchingChain}
-              className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs px-3 py-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+              className="ws-button ws-button-primary text-xs shrink-0"
             >
               {isSwitchingChain ? (
                 <>
@@ -371,51 +387,57 @@ function VaultForWallet({
             </button>
           </div>
         )}
+
         {isCustomVaultLinked && onUnlinkVault && (
           <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <span>
-              Your connected wallet ({userAddress ? truncateAddress(userAddress) : ''}) is not the owner of this custom ActionVault ({truncateAddress(vaultAddress)}).
+              Connected wallet ({userAddress ? truncateAddress(userAddress) : ''}) is not the owner of vault ({truncateAddress(vaultAddress)}).
             </span>
             <button
               type="button"
               onClick={onUnlinkVault}
-              className="ws-button text-xs text-rose-300 border-rose-500/30 shrink-0 self-start sm:self-auto"
+              className="ws-button text-xs text-rose-300 border-rose-500/30 shrink-0"
             >
               Reset to Default Vault
             </button>
           </div>
         )}
+
         <WorkspaceState
           title={
             !isConnected
-              ? 'Connect your wallet to inspect Vault assets.'
+              ? 'Connect wallet to inspect Vault assets.'
               : !vaultConfigured
               ? 'The configured Vault address is invalid.'
               : ownerError
               ? 'Unable to verify Vault ownership.'
               : ownerPending
               ? 'Checking Vault ownership...'
-              : 'No verified ActionVault is linked to this wallet.'
+              : 'No verified ActionVault linked to this wallet.'
           }
-          description={ownerError ? 'Check the configured contract address and Base Sepolia RPC connection.' : 'Connect MetaMask with the owner address to deposit collateral and authorize RSC execution.'}
+          description={
+            ownerError 
+              ? 'Check the contract address and Base Sepolia network connection.' 
+              : 'Connect the owner wallet to deposit collateral and authorize RSC executions.'
+          }
           icon={<Lock className="size-6" />}
           action={!isConnected ? undefined : { label: 'Go to Pipeline Studio', href: '/workspace/studio' }}
         />
 
-        {/* Section 1 & 6.2: Link existing ActionVault */}
+        {/* Link existing ActionVault */}
         {isConnected && onLinkVault && (
           <div className="mx-auto w-full max-w-lg rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-5 space-y-4">
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-white">Link Your ActionVault Contract</h3>
+              <h3 className="text-sm font-semibold text-white">Link ActionVault Contract</h3>
               <p className="text-xs text-[var(--ws-muted)] leading-relaxed">
-                Enter the contract address of your ActionVault deployed on Base Sepolia (Chain ID: 84532) to manage collateral, panic withdraw, and configure authorized RSCs.
+                Enter your deployed ActionVault contract address on Base Sepolia (84532) to manage balances and configure permissions.
               </p>
             </div>
 
             <div className="space-y-3">
               <div>
                 <label className="text-xs text-zinc-300 font-medium block mb-1">
-                  ActionVault Address
+                  Contract Address
                 </label>
                 <input
                   type="text"
@@ -437,12 +459,12 @@ function VaultForWallet({
                 type="button"
                 onClick={() => {
                   if (!isAddress(inputVault)) {
-                    setLinkError('Please enter a valid Ethereum hex address (0x...).');
+                    setLinkError('Enter a valid Ethereum contract address (0x...).');
                     return;
                   }
                   onLinkVault(inputVault as Address);
                 }}
-                className="ws-button ws-button-primary inline-flex items-center gap-1.5 text-xs w-full justify-center"
+                className="ws-button ws-button-primary text-xs w-full justify-center"
               >
                 <span>Link & Verify Vault</span>
               </button>
@@ -457,7 +479,7 @@ function VaultForWallet({
     <div className="ws-page space-y-5">
       <WorkspacePageHeader
         title="Vault Manager"
-        description={`Base Sepolia (Chain ID: 84532) / ${truncateAddress(vaultAddress, 8)}`}
+        description={`Base Sepolia (84532) · ${truncateAddress(vaultAddress, 8)}`}
         icon={<Lock className="size-4" />}
         actions={
           <div className="flex items-center gap-2">
@@ -466,14 +488,14 @@ function VaultForWallet({
                 type="button"
                 className="ws-button text-xs text-rose-300 hover:text-rose-200 border-rose-500/30"
                 onClick={onUnlinkVault}
-                title="Unlink custom ActionVault and reset to default"
+                title="Unlink custom ActionVault"
               >
                 Unlink Vault
               </button>
             )}
             <button
               type="button"
-              className="ws-button inline-flex items-center gap-1.5"
+              className="ws-button inline-flex items-center gap-1.5 text-xs"
               onClick={() => {
                 refetchVaultBalance();
                 refetchUserBalance();
@@ -484,7 +506,7 @@ function VaultForWallet({
               <span>Refresh</span>
             </button>
             <a
-              className="ws-button inline-flex items-center gap-1.5"
+              className="ws-button inline-flex items-center gap-1.5 text-xs"
               href={`https://sepolia.basescan.org/address/${vaultAddress}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -496,52 +518,47 @@ function VaultForWallet({
         }
       />
 
-      {/* Network Warning Banner if disconnected or wrong chain */}
+      {/* Network Warning Banner */}
       {!isConnected ? (
-        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 flex items-center justify-between">
+        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="size-4 text-amber-400 shrink-0" />
-            <span>Connect your MetaMask wallet to execute live on-chain deposits and non-custodial emergency withdrawals.</span>
+            <span>Connect wallet to deposit collateral or execute withdrawals.</span>
           </div>
-          <span className="font-mono text-[10px] text-amber-400 font-semibold uppercase">Wallet Disconnected</span>
+          <span className="text-[11px] text-amber-400 font-medium">Disconnected</span>
         </div>
       ) : !isCorrectChain ? (
-        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <AlertTriangle className="size-4 text-rose-400 shrink-0" />
+            <AlertTriangle className="size-4 text-amber-400 shrink-0" />
             <span>
-              Please switch your wallet to Base Sepolia (Chain ID: 84532) to interact with ActionVault. (Current: {chainId ?? 'Unknown'})
+              Switch wallet to Base Sepolia (84532) to interact with ActionVault. (Current: {chainId ?? 'Unknown'})
             </span>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="font-mono text-[10px] text-rose-400 font-semibold uppercase">
-              Wrong Network
-            </span>
-            <button
-              type="button"
-              onClick={() => switchChain?.({ chainId: 84532 })}
-              disabled={isSwitchingChain}
-              className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs px-3 py-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {isSwitchingChain ? (
-                <>
-                  <Loader2 className="size-3.5 animate-spin" />
-                  <span>Switching...</span>
-                </>
-              ) : (
-                <>
-                  <Zap className="size-3.5" />
-                  <span>Switch to Base Sepolia</span>
-                </>
-              )}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => switchChain?.({ chainId: 84532 })}
+            disabled={isSwitchingChain}
+            className="ws-button ws-button-primary text-xs shrink-0"
+          >
+            {isSwitchingChain ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" />
+                <span>Switching...</span>
+              </>
+            ) : (
+              <>
+                <Zap className="size-3.5" />
+                <span>Switch to Base Sepolia</span>
+              </>
+            )}
+          </button>
         </div>
       ) : null}
 
-      {/* Action Success Toast Banner */}
+      {/* Action Success Notification */}
       {actionSuccessMsg && (
-        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 flex items-center justify-between shadow-xl">
+        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
             <span className="font-medium">{actionSuccessMsg.title}</span>
@@ -560,269 +577,277 @@ function VaultForWallet({
         </div>
       )}
 
-      {vaultBalanceError && <p role="status" className="text-xs text-amber-300">Unable to read the Vault balance.</p>}
-      {backupSafeAddress && <p className="text-xs text-zinc-400 font-mono">Backup safe address: {backupSafeAddress}</p>}
+      {vaultBalanceError && <p role="status" className="text-xs text-amber-300">Unable to load Vault balance.</p>}
 
       {/* Main Operations Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left: Collateral Management */}
-        <div className="rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-5 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-[var(--ws-border)]">
-            <div className="flex items-center gap-2.5">
-              <div className="size-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                <Coins className="size-4" />
+        <div className="rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-5 space-y-4 flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--ws-border)]">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-zinc-300 shrink-0">
+                  <Coins className="size-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white tracking-tight">
+                    Collateral Balance
+                  </h3>
+                  <span className="text-[11px] text-[var(--ws-muted)]">Available for automated DEX execution</span>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-white tracking-tight">
-                  Collateral Reserves
-                </h3>
-                <span className="text-[11px] text-[var(--ws-muted)]">Automated execution balance on Base Sepolia</span>
-              </div>
-            </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-zinc-300 border border-white/10">
-              #84532 Denim
-            </span>
-          </div>
-
-          {/* Asset Display */}
-          <div className="p-3.5 rounded-lg bg-[#111318] border border-[var(--ws-border)] flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="size-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white font-mono font-bold text-xs">
-                ETH
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-white">Native Ethereum</div>
-                <div className="text-[10px] text-[var(--ws-muted)] font-mono">Execution asset for DEX stop-loss</div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm font-bold text-white font-mono tabular-nums">
-                {formattedVaultEth !== undefined ? `${formattedVaultEth} ETH` : '0.00 ETH'}
-              </div>
-            </div>
-          </div>
-
-          {/* Deposit Input */}
-          <div className="space-y-2.5 pt-1">
-            <div className="flex justify-between items-center text-xs">
-              <label className="text-zinc-300 font-medium">Deposit Collateral (ETH)</label>
-              {userBalance && (
-                <span className="text-[var(--ws-muted)] font-mono text-[11px] tabular-nums">
-                  Wallet: {parseFloat(formatEther(userBalance.value)).toFixed(4)} ETH
-                </span>
-              )}
+              <span className="text-[11px] text-zinc-400 font-mono">
+                Base Sepolia
+              </span>
             </div>
 
-            {/* Quick Select Buttons */}
-            <div className="grid grid-cols-4 gap-1.5">
-              {['0.001', '0.005', '0.01', '0.05'].map((amt) => (
-                <button
-                  key={amt}
-                  type="button"
-                  onClick={() => setDepositAmount(amt)}
-                  className={`py-1 rounded border text-[11px] font-mono transition-colors ${
-                    depositAmount === amt
-                      ? 'border-[var(--ws-accent)] bg-[var(--ws-accent-bg)] text-[var(--ws-accent)] font-semibold'
-                      : 'border-[var(--ws-border)] bg-[#111318] text-zinc-300 hover:bg-white/5'
-                  }`}
-                >
-                  {amt} ETH
-                </button>
-              ))}
+            {/* Asset Row */}
+            <div className="p-3 rounded-lg bg-[#111318] border border-[var(--ws-border)] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="size-7 rounded-full bg-white/10 flex items-center justify-center text-white font-mono text-xs font-semibold">
+                  ETH
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-white">Native Ethereum</div>
+                  <div className="text-[11px] text-[var(--ws-muted)]">Vault collateral</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm font-semibold text-white font-mono tabular-nums">
+                  {formattedVaultEth !== undefined ? `${formattedVaultEth} ETH` : '0.00 ETH'}
+                </div>
+              </div>
             </div>
 
-            <div className="flex gap-2">
-              <input
-                type="number"
-                step="0.001"
-                min="0.0001"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-                className="min-w-0 flex-1 bg-[#111318] border border-[var(--ws-border)] rounded-md px-3 py-1.5 text-xs text-white font-mono focus:border-[var(--ws-accent)] focus:outline-none tabular-nums"
-                placeholder="0.001"
-              />
-              <button
-                type="button"
-                onClick={handleDeposit}
-                disabled={isDepositPending || isDepositConfirming || !canWrite}
-                className="ws-button ws-button-primary inline-flex items-center gap-1.5 text-xs font-semibold shrink-0 disabled:opacity-50"
-              >
-                {isDepositPending || isDepositConfirming ? (
-                  <>
-                    <Loader2 className="size-3.5 animate-spin" />
-                    <span>Depositing...</span>
-                  </>
-                ) : (
-                  <>
-                    <ArrowDownLeft className="size-3.5" />
-                    <span>Deposit</span>
-                  </>
+            {/* Deposit Controls */}
+            <div className="space-y-2.5 pt-1">
+              <div className="flex justify-between items-center text-xs">
+                <label className="text-zinc-300 font-medium">Deposit Amount (ETH)</label>
+                {userBalance && (
+                  <span className="text-[var(--ws-muted)] text-[11px]">
+                    Wallet: <span className="font-mono tabular-nums text-zinc-200">{parseFloat(formatEther(userBalance.value)).toFixed(4)} ETH</span>
+                  </span>
                 )}
-              </button>
-            </div>
-
-            {depositReceipt?.status === 'reverted' && <p role="alert" className="text-xs text-rose-300">Vault deposit reverted.</p>}
-            {depositError && (
-              <div className="text-[11px] text-rose-400 mt-1 font-mono">
-                {depositError.message.slice(0, 100)}...
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Right: Access Control List (ACL) Delegated RSCs */}
-        <div className="rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-5 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-[var(--ws-border)]">
-            <div className="flex items-center gap-2.5">
-              <div className="size-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
-                <ShieldCheck className="size-4" />
+              {/* Quick Select Presets */}
+              <div className="grid grid-cols-4 gap-1.5">
+                {['0.001', '0.005', '0.01', '0.05'].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setDepositAmount(amt)}
+                    className={`py-1 text-xs rounded-md border transition-colors ${
+                      depositAmount === amt
+                        ? 'border-[var(--ws-accent)] bg-[var(--ws-accent-bg)] text-[var(--ws-accent)] font-semibold'
+                        : 'border-[var(--ws-border)] bg-[#111318] text-zinc-300 hover:bg-white/5'
+                    }`}
+                  >
+                    {amt} ETH
+                  </button>
+                ))}
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-white tracking-tight">
-                  RSC Permissions
-                </h3>
-                <span className="text-[11px] text-[var(--ws-muted)]">Verified execution rights for Reactive Smart Contracts</span>
-              </div>
-            </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-zinc-300 border border-white/10">
-              ACL Guard
-            </span>
-          </div>
 
-          {/* Target RSC Selector / Input */}
-          <div className="space-y-2">
-            {deployments.length > 0 && (
-              <div className="space-y-1">
-                <label className="text-[11px] text-zinc-300 font-medium block">
-                  Select Pipeline Automation RSC
-                </label>
-                <select
-                  value={showCustomRscInput ? 'custom' : targetRsc}
-                  onChange={(e) => {
-                    if (e.target.value === 'custom') {
-                      setShowCustomRscInput(true);
-                    } else {
-                      setShowCustomRscInput(false);
-                      setTargetRsc(e.target.value as Address);
-                    }
-                  }}
-                  className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-2.5 py-1.5 text-xs text-white focus:border-[var(--ws-accent)] focus:outline-none"
-                >
-                  {deployments.map(({ pipelineId, name, contracts: { rscAddress } }) =>
-                    rscAddress && (
-                      <option key={pipelineId} value={rscAddress}>
-                        {name} ({truncateAddress(rscAddress, 6)})
-                      </option>
-                    )
-                  )}
-                  <option value={CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS}>
-                    Default StopLoss RSC ({truncateAddress(CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS, 6)})
-                  </option>
-                  <option value="custom">-- Custom RSC Address --</option>
-                </select>
-              </div>
-            )}
-
-            {showCustomRscInput && (
-              <div className="flex gap-2 pt-1">
+              <div className="flex gap-2">
                 <input
-                  type="text"
-                  placeholder="0x... (Reactive Lasna RSC Address)"
-                  value={customRscInput}
-                  onChange={(e) => setCustomRscInput(e.target.value.trim())}
-                  className="min-w-0 flex-1 bg-[#111318] border border-[var(--ws-border)] rounded-md px-3 py-1.5 text-xs text-white font-mono focus:border-[var(--ws-accent)] focus:outline-none"
+                  type="number"
+                  step="0.001"
+                  min="0.0001"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  className="min-w-0 flex-1 bg-[#111318] border border-[var(--ws-border)] rounded-md px-3 py-1.5 text-xs text-white font-mono focus:border-[var(--ws-accent)] focus:outline-none tabular-nums"
+                  placeholder="0.001"
                 />
                 <button
                   type="button"
-                  onClick={() => {
-                    if (isAddress(customRscInput)) {
-                      setTargetRsc(customRscInput as Address);
-                    }
-                  }}
-                  disabled={!isAddress(customRscInput)}
-                  className="ws-button text-xs disabled:opacity-50"
+                  onClick={handleDeposit}
+                  disabled={isDepositPending || isDepositConfirming || !canWrite}
+                  className="ws-button ws-button-primary text-xs font-semibold shrink-0 disabled:opacity-50"
                 >
-                  Apply
+                  {isDepositPending || isDepositConfirming ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" />
+                      <span>Depositing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDownLeft className="size-3.5" />
+                      <span>Deposit</span>
+                    </>
+                  )}
                 </button>
               </div>
-            )}
-          </div>
 
-          {/* Delegation Row */}
-          <div className="p-3.5 rounded-lg bg-[#111318] border border-[var(--ws-border)] space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs font-semibold text-white flex items-center gap-2">
-                  <span>
-                    {deployments.find(({ contracts: { rscAddress } }) =>
-                      rscAddress && isAddressEqual(rscAddress, targetRsc)
-                    )?.name ?? 'Reactive RSC'}
-                  </span>
-                  <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full border ${
-                    isRscAuthorized === true
-                      ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
-                      : 'text-zinc-400 border-white/10 bg-white/5'
-                  }`}>
-                    {authorizationError ? 'READ FAILED' : isRscAuthorized === undefined ? '?' : isRscAuthorized ? 'AUTHORIZED' : 'NOT AUTHORIZED'}
-                  </span>
+              {depositReceipt?.status === 'reverted' && <p role="alert" className="text-xs text-rose-300">Vault deposit reverted.</p>}
+              {depositError && (
+                <div className="text-[11px] text-rose-400 mt-1 font-mono">
+                  {depositError.message.slice(0, 100)}...
                 </div>
-                <div className="text-[11px] font-mono text-[var(--ws-muted)] mt-0.5">
-                  RSC: {truncateAddress(targetRsc, 8)} (Lasna #5318007)
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Delegated RSC Permissions */}
+        <div className="rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-5 space-y-4 flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--ws-border)]">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-zinc-300 shrink-0">
+                  <ShieldCheck className="size-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white tracking-tight">
+                    RSC Permissions
+                  </h3>
+                  <span className="text-[11px] text-[var(--ws-muted)]">Callback authorization for Reactive Smart Contracts</span>
                 </div>
               </div>
-
-              <a
-                href={`https://lasna.reactscan.net/address/${targetRsc}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-1 rounded text-zinc-400 hover:text-white transition-colors"
-                title="View on ReactScan"
-              >
-                <ExternalLink className="size-3.5" />
-              </a>
+              <span className="text-[11px] text-zinc-400 font-mono">
+                Access Control
+              </span>
             </div>
 
-            <button
-              type="button"
-              onClick={handleToggleAuthorizeRsc}
-              disabled={isWritePending || isWriteConfirming || !canWrite || authorizationError || isRscAuthorized === undefined}
-              className={`w-full py-1.5 px-3 text-xs font-semibold rounded-md border transition-colors cursor-pointer disabled:opacity-50 ${
-                isRscAuthorized === true
-                  ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border-rose-500/30'
-                  : 'ws-button ws-button-primary'
-              }`}
-            >
-              {isRscAuthorized === true ? 'Revoke Contract Authorization' : 'Grant Contract Authorization'}
-            </button>
+            {/* Target RSC Selector */}
+            <div className="space-y-2">
+              {deployments.length > 0 && (
+                <div className="space-y-1">
+                  <label className="text-xs text-zinc-300 font-medium block">
+                    Pipeline Automation Contract
+                  </label>
+                  <select
+                    value={showCustomRscInput ? 'custom' : targetRsc}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        setShowCustomRscInput(true);
+                      } else {
+                        setShowCustomRscInput(false);
+                        setTargetRsc(e.target.value as Address);
+                      }
+                    }}
+                    className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-2.5 py-1.5 text-xs text-white focus:border-[var(--ws-accent)] focus:outline-none"
+                  >
+                    {deployments.map(({ pipelineId, name, contracts: { rscAddress } }) =>
+                      rscAddress && (
+                        <option key={pipelineId} value={rscAddress}>
+                          {name} ({truncateAddress(rscAddress, 6)})
+                        </option>
+                      )
+                    )}
+                    <option value={CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS}>
+                      Default StopLoss RSC ({truncateAddress(CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS, 6)})
+                    </option>
+                    <option value="custom">-- Custom RSC Address --</option>
+                  </select>
+                </div>
+              )}
+
+              {showCustomRscInput && (
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    placeholder="0x... (Reactive Lasna RSC Address)"
+                    value={customRscInput}
+                    onChange={(e) => setCustomRscInput(e.target.value.trim())}
+                    className="min-w-0 flex-1 bg-[#111318] border border-[var(--ws-border)] rounded-md px-3 py-1.5 text-xs text-white font-mono focus:border-[var(--ws-accent)] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isAddress(customRscInput)) {
+                        setTargetRsc(customRscInput as Address);
+                      }
+                    }}
+                    disabled={!isAddress(customRscInput)}
+                    className="ws-button text-xs disabled:opacity-50"
+                  >
+                    Apply
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Delegation Row */}
+            <div className="p-3 rounded-lg bg-[#111318] border border-[var(--ws-border)] space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-medium text-white flex items-center gap-2">
+                    <span>
+                      {deployments.find(({ contracts: { rscAddress } }) =>
+                        rscAddress && isAddressEqual(rscAddress, targetRsc)
+                      )?.name ?? 'Reactive RSC'}
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium border ${
+                      isRscAuthorized === true
+                        ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+                        : 'text-zinc-400 border-white/10 bg-white/5'
+                    }`}>
+                      {authorizationError ? 'Read Failed' : isRscAuthorized === undefined ? 'Checking' : isRscAuthorized ? 'Authorized' : 'Unauthorized'}
+                    </span>
+                  </div>
+                  <div className="text-[11px] font-mono text-[var(--ws-muted)] mt-0.5">
+                    {truncateAddress(targetRsc, 8)} · Lasna #5318007
+                  </div>
+                </div>
+
+                <a
+                  href={`https://lasna.reactscan.net/address/${targetRsc}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1 rounded text-zinc-400 hover:text-white transition-colors"
+                  title="View on ReactScan"
+                >
+                  <ExternalLink className="size-3.5" />
+                </a>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleToggleAuthorizeRsc}
+                disabled={isWritePending || isWriteConfirming || !canWrite || authorizationError || isRscAuthorized === undefined}
+                className={`w-full py-1.5 px-3 text-xs font-semibold rounded-md border transition-colors cursor-pointer disabled:opacity-50 ${
+                  isRscAuthorized === true
+                    ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border-rose-500/30'
+                    : 'ws-button ws-button-primary'
+                }`}
+              >
+                {isRscAuthorized === true ? 'Revoke Permission' : 'Grant Permission'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Institutional Security & Danger Zone (Panic Button) */}
-      <div className="rounded-xl border border-rose-500/30 bg-rose-950/10 p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-rose-500/20">
+      {/* Emergency Withdrawal Panel */}
+      <div className="rounded-xl border border-[var(--ws-border)] bg-[var(--ws-panel)] p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--ws-border)]">
           <div className="flex items-center gap-2.5">
-            <div className="size-8 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
+            <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 shrink-0">
               <ShieldAlert className="size-4" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-rose-200 tracking-tight">
-                Emergency Non-Custodial Sweep (Panic Button)
+              <h3 className="text-sm font-semibold text-white tracking-tight">
+                Emergency Withdrawal
               </h3>
-              <p className="text-[11px] text-rose-300/70">
-                Direct on-chain execution &bull; Completely independent of Reactive network or relayer state
+              <p className="text-[11px] text-[var(--ws-muted)]">
+                Direct on-chain recovery independent of Reactive network or relayer state
               </p>
             </div>
           </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-            OWNER PRIVILEGE
+          <span className="text-[11px] font-mono text-zinc-400">
+            Owner Only
           </span>
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <p className="text-xs text-rose-200/80 leading-relaxed max-w-2xl">
-            Withdraw all native ETH from this Vault to its owner on Base Sepolia. Wait for the transaction receipt.
-            Existing RSC permissions stay in effect for future deposits.
+          <p className="text-xs text-zinc-400 leading-relaxed max-w-2xl">
+            Withdraws all native ETH from ActionVault directly back to your owner wallet on Base Sepolia. 
+            Existing contract authorizations remain intact for future deposits.
+            {backupSafeAddress && (
+              <span className="block mt-1 text-[11px] font-mono text-zinc-500">
+                Backup Safe: {backupSafeAddress}
+              </span>
+            )}
           </p>
 
           <div className="shrink-0">
@@ -831,7 +856,7 @@ function VaultForWallet({
                 type="button"
                 onClick={() => setIsPanicConfirmOpen(true)}
                 disabled={isWritePending || isWriteConfirming || !canWrite}
-                className="px-4 py-2 text-xs font-semibold rounded-md bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                className="ws-button text-xs text-rose-300 hover:text-white hover:bg-rose-600/30 border-rose-500/30 transition-colors disabled:opacity-50"
               >
                 Emergency Withdraw All
               </button>
@@ -841,7 +866,7 @@ function VaultForWallet({
                   type="button"
                   onClick={handlePanicWithdraw}
                   disabled={isWritePending || isWriteConfirming || !canWrite}
-                  className="px-4 py-2 text-xs font-semibold rounded-md bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs font-semibold rounded-md bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {isWritePending || isWriteConfirming ? (
                     <>
@@ -849,7 +874,7 @@ function VaultForWallet({
                       <span>Confirming...</span>
                     </>
                   ) : (
-                    <span>Confirm ETH withdrawal</span>
+                    <span>Confirm Withdraw</span>
                   )}
                 </button>
                 <button
