@@ -43,7 +43,7 @@ export function CanvasActionDock({
             onClick={() => void deleteElements({
               nodes: selectedNodeIds.map(id => ({ id })), edges: selectedEdgeIds.map(id => ({ id })),
             })}
-            className={button + (selectedCount ? ' !border-rose-500/30 bg-rose-500/10 !text-rose-300 hover:bg-rose-500/20' : '')}>
+            className={button + ' ml-2' + (selectedCount ? ' !border-rose-500/30 bg-rose-500/10 !text-rose-300 hover:bg-rose-500/20' : '')}>
             <Trash2 aria-hidden="true" className="size-4" />
           </button>
         </>
