@@ -263,3 +263,55 @@ Thực hiện theo thứ tự dưới đây trước khi mở Deploy Phase 2:
 | BP-09, BP-10, BP-12 | OPEN | Runtime theo kỳ, tick thật và bằng chứng riêng cho rebalance, rút lãi và cảnh báo thiếu vốn. |
 
 EXT-01 (Hedge), EXT-02 (one-shot) và CAP-01 (OR) cũng cần receipt thật và đối soát Active. Cổng Phase 2 và kiểm tra toàn bộ catalog tiếp tục mở đến khi đủ bằng chứng ở §8.
+
+---
+
+## 13. Vận hành và Quản lý Vòng đời Deployed Pipelines trên Active Automations
+
+### 13.1 Vấn đề thực tế từ việc nhân bản Flow và dùng chung Vault
+
+1. **Hiện tượng "Ăn chung flow" giữa các card:** Khi người dùng nhân bản một pipeline (ví dụ: *Take-Profit Scalper bản chính*, *Bản Copy*, *Bản Copy Copy*), Studio sao chép toàn bộ cấu trúc node và tái sử dụng địa chỉ Két chung (`actionVaultAddress` trên Base Sepolia). Dù mỗi card sở hữu một hợp đồng RSC độc lập trên Reactive Lasna (`0xA408...`, `0x42fE...`, `0x0E9f...`), nhưng khi Két chung được nạp vốn (`principal`) và phí callback, cả 3 con bot đều thấy đủ điều kiện và đồng loạt bật trạng thái `READY / ACTIVE`.
+2. **Thiếu công cụ quản lý vòng đời trên Active Automations:** Màn hình Active Automations hiện tại chỉ hiển thị danh sách dạng thẻ tĩnh (`Inspect Details`), chưa có chức năng lưu trữ (Archive), tạm dừng nhanh (Pause), hoặc thanh lý (Decommission/Delete). Các deployment thử nghiệm hoặc bản copy bị kẹt vĩnh viễn trên giao diện, không thể dọn dẹp không gian làm việc.
+
+### 13.2 Nguyên tắc an toàn Web3: Tách biệt "Xoá trên UI" và "Quyền On-Chain"
+
+* **Bất biến bảo mật (Security Invariant):** Không được phép chỉ xoá bản ghi deployment trong cơ sở dữ liệu (`deployments` table) trong khi hợp đồng RSC vẫn đang nắm giữ quyền ủy quyền (`authorizedRSCs[rsc] == true`) trên Vault ở Base Sepolia.
+* **Hậu quả nếu xoá chay trên UI:** Dù card biến mất khỏi màn hình, RSC trên Reactive Lasna vẫn tiếp tục lắng nghe sự kiện DEX giá. Khi giá thị trường chạm ngưỡng kích hoạt, giao dịch callback xuyên chuỗi vẫn tự động diễn ra và Vault trên Base Sepolia vẫn bị trừ tiền.
+* **Quy chuẩn bắt buộc:** Mọi thao tác loại bỏ vĩnh viễn một deployed pipeline khỏi Active Automations phải đi kèm giao dịch **Thu hồi quyền (Revoke Authorization)** trên Vault trước khi gỡ bỏ khỏi giao diện người dùng.
+
+### 13.3 Đặc tả Vòng đời (Lifecycle) của Deployed Pipeline
+
+```mermaid
+stateDiagram-v2
+    [*] --> SetupRequired: Deploy RSC on Lasna
+    SetupRequired --> Active: Onboard Policy + Fund + Authorize
+    Active --> Paused: Owner Revokes Permission
+    Paused --> Active: Owner Re-authorizes RSC
+    Active --> Archived: Archive (Auto-Pause prompt)
+    Paused --> Archived: Archive to clean Workspace
+    Archived --> Paused: Unarchive
+    Paused --> Decommissioned: Decommission & Remove from UI
+    Decommissioned --> [*]
+```
+
+1. **`SETUP_REQUIRED` (Cần cấu hình):** RSC đã deploy trên Lasna, nhưng chưa hoàn tất đăng ký, cấu hình policy, nạp vốn hoặc nạp quỹ callback.
+2. **`ACTIVE / READY` (Đang hoạt động):** Đầy đủ vốn, phí callback và quyền ủy quyền. Bot đang túc trực 24/7 để giám sát sự kiện on-chain.
+3. **`PAUSED` (Tạm dừng):** Người dùng đã thu hồi quyền swap của RSC (`setAuthorizedRSC(rsc, false)`). Tiền trong Vault và RSC trên Lasna vẫn bảo toàn nguyên vẹn.
+4. **`ARCHIVED` (Lưu trữ / Ẩn):** Flow đã hoàn thành hoặc là bản thử nghiệm cũ, được cất vào tab *Archived* để dọn sạch màn hình chính. Người dùng có thể `Unarchive` bất kỳ lúc nào.
+5. **`DECOMMISSIONED` (Đã thanh lý & Xoá):** Quyền trên Vault đã được thu hồi triệt để; bản ghi deployment được gỡ khỏi danh sách Active Automations. Toàn bộ lịch sử giao dịch cũ vẫn được lưu trữ tại tab **Logs** phục vụ kiểm chứng và đối soát.
+
+### 13.4 Kế hoạch triển khai trên giao diện Active Automations (`/workspace/active`)
+
+1. **Kebab Action Menu (3 chấm) trên từng Card:**
+   * **`Pause / Resume Automation`:** Bật/tắt nhanh quyền swap của bot trên Vault bằng một giao dịch ví xác nhận `setAuthorizedRSC` trên Base Sepolia ngay tại card, không cần đi sâu vào trang chi tiết.
+   * **`Archive Automation`:** Chuyển card sang tab Lưu trữ. Nếu bot đang ở trạng thái `ACTIVE`, hệ thống hiển thị cảnh báo nhắc người dùng tạm dừng trước khi cất đi.
+   * **`Decommission & Remove` (Quy trình an toàn 2 bước):**
+     * *Bước 1 (On-Chain Check):* Kiểm tra quyền RSC trên Vault. Nếu còn hiệu lực, yêu cầu người dùng ký giao dịch `Revoke` để khóa quyền.
+     * *Bước 2 (Workspace Clean-up):* Gọi API `DELETE /pipeline/deployments/:id` (hoặc đánh dấu `isDeleted = true`) để gỡ card khỏi Active Automations vĩnh viễn.
+2. **Tab lọc "Archived" trên thanh công cụ Active Automations:**
+   * Mở rộng thanh tab hiện tại thành: `All` | `Active` | `Paused` | `Setup Required` | `Pending` | **`Archived`**.
+   * Tab `Archived` cho phép xem lại toàn bộ các bot đã ngừng chạy hoặc cất đi, kèm nút `Unarchive` để đưa trở lại dashboard chính.
+3. **Nhãn nhận diện Két dùng chung (Shared Vault Identifier):**
+   * Đối với các pipeline cùng trỏ về một Vault, gắn nhãn thông tin: `Vault: 0x202f...630f (N bots sharing)`.
+   * Khi thanh lý (Decommission) các bản Copy, hệ thống chỉ thu hồi quyền của RSC tương ứng, hoàn toàn không ảnh hưởng đến số dư tiền và trạng thái hoạt động của bản chính.
+
