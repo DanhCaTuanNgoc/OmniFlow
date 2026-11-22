@@ -8,6 +8,7 @@ export type VisualNodeState =
   | 'CONDITION_MET'
   | 'FIRING_CALLBACK'
   | 'SUCCESS'
+  | 'SKIPPED'
   | 'COOLDOWN'
   | 'REVERTED';
 

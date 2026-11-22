@@ -110,6 +110,11 @@ const STATE_CONFIG: Record<VisualNodeState, { label: string; dot: string; text: 
     dot: 'bg-emerald-400',
     text: 'text-emerald-300 font-medium',
   },
+  SKIPPED: {
+    label: 'Skipped',
+    dot: 'bg-amber-400',
+    text: 'text-amber-300 font-medium',
+  },
   COOLDOWN: {
     label: 'Cooldown',
     dot: 'bg-amber-400',
@@ -148,6 +153,8 @@ export function NodeCard({
           ? isOrphan
             ? 'border-amber-500/50 shadow-amber-500/10'
             : 'border-rose-500/50 shadow-rose-500/10'
+          : state === 'SKIPPED'
+          ? 'border-amber-500/60'
           : selected || state === 'CHECKING'
           ? 'ring-2 ring-[var(--ws-accent)] border-transparent'
           : 'border-[var(--ws-border)] hover:border-white/20'

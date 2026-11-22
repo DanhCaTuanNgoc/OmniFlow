@@ -29,14 +29,17 @@ export const CustomEdge = memo(function CustomEdge({
 
   return (
     <>
-      <g className="react-flow__edge-custom studio-flow-edge" data-simulation-pulse={data?.isBurst ? '' : undefined}>
+      <g className="react-flow__edge-custom studio-flow-edge"
+        data-simulation-pulse={data?.isBurst ? '' : undefined}
+        data-flow-traversed={data?.isTraversed ? '' : undefined}
+        data-monitoring-edge={data?.monitoring ? '' : undefined}>
         <path
           id={id}
           d={edgePath}
           fill="none"
           stroke={strokeColor}
           strokeWidth={2}
-          strokeOpacity={0.42}
+          className="studio-flow-edge-wire"
           strokeLinecap="round"
           style={style}
         />

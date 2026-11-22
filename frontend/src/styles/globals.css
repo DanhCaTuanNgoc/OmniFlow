@@ -225,10 +225,39 @@ code, kbd, samp, pre, .font-mono {
   to { stroke-dashoffset: -100; }
 }
 
+@keyframes studio-trigger-heartbeat {
+  0%, 14%, 100% { opacity: 0; scale: 1; }
+  4% { opacity: 0.8; }
+  13% { opacity: 0; scale: 1.9; }
+}
+
+.studio-flow-edge-wire {
+  stroke-opacity: 0.42;
+  transition: stroke-opacity 200ms ease;
+}
+
 .studio-flow-edge-stream {
-  opacity: 0.46;
-  animation: studio-edge-flow 4s linear infinite;
+  opacity: 0.12;
   transition: opacity 160ms ease;
+}
+
+[data-flow-monitoring] .studio-flow-edge[data-monitoring-edge] .studio-flow-edge-stream {
+  opacity: 0.38;
+  animation: studio-edge-flow 6s linear infinite;
+}
+
+.studio-monitor-trigger .react-flow__handle.source::after {
+  position: absolute;
+  inset: -4px;
+  border: 1px solid #38bdf8;
+  border-radius: 50%;
+  content: '';
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-flow-monitoring]:not([data-flow-walkthrough]) .studio-monitor-trigger .react-flow__handle.source::after {
+  animation: studio-trigger-heartbeat 7s ease-out infinite;
 }
 
 .studio-flow-edge-signal {
@@ -240,8 +269,14 @@ code, kbd, samp, pre, .font-mono {
   transition: opacity 160ms ease;
 }
 
-[data-flow-walkthrough] .studio-flow-edge-stream {
+[data-flow-walkthrough] .studio-flow-edge[data-monitoring-edge] .studio-flow-edge-stream,
+[data-page-hidden] .studio-flow-edge[data-monitoring-edge] .studio-flow-edge-stream,
+[data-flow-monitoring][data-page-hidden] .studio-monitor-trigger .react-flow__handle.source::after {
   animation-play-state: paused;
+}
+
+.studio-flow-edge[data-flow-traversed] .studio-flow-edge-wire {
+  stroke-opacity: 0.88;
 }
 
 .studio-flow-edge[data-simulation-pulse] .studio-flow-edge-stream {
@@ -255,15 +290,21 @@ code, kbd, samp, pre, .font-mono {
 
 .studio-flow-edge[data-simulation-pulse] .studio-flow-edge-target {
   opacity: 0.85;
+  transition-delay: 620ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .studio-flow-edge-stream {
+  [data-flow-monitoring] .studio-flow-edge[data-monitoring-edge] .studio-flow-edge-stream,
+  [data-flow-monitoring]:not([data-flow-walkthrough]) .studio-monitor-trigger .react-flow__handle.source::after {
     animation-name: none;
+  }
+
+  .studio-flow-edge-stream,
+  .studio-flow-edge-wire {
     transition: none;
   }
 
-  .studio-flow-edge-target {
+  .studio-flow-edge[data-simulation-pulse] .studio-flow-edge-target {
     transition: none;
   }
 

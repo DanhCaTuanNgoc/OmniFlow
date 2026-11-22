@@ -7,6 +7,13 @@ export type WalkthroughStep = {
   issue?: PipelineIssue;
 };
 
+// Without a recorded per-node trace, only a single complete route is safe to replay.
+export function hasSingleExecutionRoute(nodes: readonly Node[], edges: readonly Edge[], steps: readonly WalkthroughStep[]) {
+  return steps.length === nodes.length && edges.length === steps.length - 1 &&
+    steps.every((step, index) => step.nodes.length === 1 && step.edges.length === (index === 0 ? 0 : 1)) &&
+    steps[0]?.nodes[0]?.data.category === 'trigger' && steps.at(-1)?.nodes[0]?.data.category === 'action';
+}
+
 export function planPipelineWalkthrough(
   nodes: readonly Node[], edges: readonly Edge[], issues: readonly PipelineIssue[],
 ): WalkthroughStep[] {

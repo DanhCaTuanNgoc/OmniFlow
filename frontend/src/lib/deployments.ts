@@ -26,10 +26,18 @@ export type DeploymentSummary = {
   broadcastLimitReached?: boolean;
 };
 
+export type DeploymentExecution = {
+  id?: string;
+  status: string;
+  timestamp: string;
+  destinationTxHash?: Hash;
+  details?: { reason?: string };
+};
+
 export type DeploymentDetail = DeploymentSummary & {
   graph: unknown;
   requestKey: string;
-  latestExecution: { status: string; timestamp: string; destinationTxHash?: Hash } | null;
+  latestExecution: DeploymentExecution | null;
   steps: { kind: DeploymentStep; txHash: Hash; chainId: number; blockNumber: string; blockHash: Hash }[];
   runtime: {
     status: 'unverified' | 'awaiting-authorization' | 'awaiting-principal' | 'awaiting-fees' | 'ready';
