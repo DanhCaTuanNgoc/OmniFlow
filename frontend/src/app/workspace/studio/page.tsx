@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useAccount } from 'wagmi';
@@ -16,6 +16,11 @@ const StudioCanvas = dynamic(
 );
 
 export default function StudioPage() {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+
+  if (!hydrated) return <PipelineOpenState state="studio" />;
+
   return (
     <Suspense fallback={<PipelineOpenState state="studio" />}>
       <StudioRoute />
