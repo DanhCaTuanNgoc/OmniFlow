@@ -190,6 +190,159 @@
           "explorerUrl": "https://sepolia.basescan.org/tx/0x43f5ec81177a1e6a2ccd770c119cdace8857345b57a00377c978043145c7214b"
         }
       }
+    },
+    "0x26046d6ebc0c859d4212dc2d16d6fbae65a9129624fa4a7aee969cd778cb9971": {
+      "project": "OmniFlow",
+      "track": "Set It and Forget It",
+      "template": "take-profit@1",
+      "deploymentId": "a901f4ff-54c7-44c9-83a9-dd28c55595b0",
+      "testExecutionTimestamp": "2026-11-22T09:25:00.000Z",
+      "lastVerifiedAt": "2026-11-22T09:50:04.406Z",
+      "status": "VERIFIED_FULL_LOOP_ON_TESTNET",
+      "outcome": "SKIPPED",
+      "scenario": "Take-Profit skipped after the test pool price fell below the threshold before the callback.",
+      "contracts": {
+        "pair": "0x42A350faeBbAFC67f854436052D1B6153d320577",
+        "vault": "0x65270D5a1a204B4424da3898eaE9fc0811C4f2F2",
+        "rsc": "0x21708832A31D20BBE006507F3113d516BD632D70",
+        "owner": "0xE50dD8e4aE1b1Dd46334eA22C10129Ee4d6736eF",
+        "quote": "0x8c2D098617102a64925CC683d9B444F938A96082",
+        "proxy": "0x476f44b11f5c942c58f4c8e3d0300e5710743585"
+      },
+      "thresholdWei": "2200000000000000000000",
+      "triggerPriceWei": "2300000000000000000000",
+      "executionId": "0x44fc357e30cbf914ad3f0bd53736198d4875d6f27fd17b263e8206285bc30a36",
+      "verifiableTransactions": {
+        "step1_originEvent": {
+          "chainId": 84532,
+          "txHash": "0x26046d6ebc0c859d4212dc2d16d6fbae65a9129624fa4a7aee969cd778cb9971",
+          "blockNumber": "62088160",
+          "blockHash": "0x798be9a52f80e600200626b9a26da8e286948785be61ca9ce66dfa341920a4e8",
+          "transactionIndex": 5,
+          "explorerUrl": "https://sepolia.basescan.org/tx/0x26046d6ebc0c859d4212dc2d16d6fbae65a9129624fa4a7aee969cd778cb9971",
+          "logIndex": 20
+        },
+        "step2_reactiveExecution": {
+          "chainId": 5318007,
+          "txHash": "0x1ac829d081432cd2699ce91f22ae50ac78df413a12098286c0b70815bcd9dd03",
+          "blockNumber": "8963719",
+          "blockHash": "0x57860a3958ba6f46945d0837f40128dc9f223f6b14e8d301f0e995e826c391af",
+          "transactionIndex": 1,
+          "explorerUrl": "https://lasna.reactscan.net/tx/0x1ac829d081432cd2699ce91f22ae50ac78df413a12098286c0b70815bcd9dd03"
+        },
+        "step3_callbackExecution": {
+          "chainId": 84532,
+          "txHash": "0x19477929819164b1a7c7f69f8b06ac8f78cd7030c6223ac2dc07b2eb6a8ccddc",
+          "blockNumber": "62088169",
+          "blockHash": "0x6477faab7bdbdc7d7786e7dde2a274ac7031f832782a652a608e7a1f2edc7871",
+          "transactionIndex": 3,
+          "explorerUrl": "https://sepolia.basescan.org/tx/0x19477929819164b1a7c7f69f8b06ac8f78cd7030c6223ac2dc07b2eb6a8ccddc"
+        }
+      },
+      "reboundTxHash": "0xbaff5fa43080547e24fa6af9153cba8dc5fa716526e86812b8f61ae59c6d3861",
+      "rebound": {
+        "chainId": 84532,
+        "txHash": "0xbaff5fa43080547e24fa6af9153cba8dc5fa716526e86812b8f61ae59c6d3861",
+        "blockNumber": "62088162",
+        "blockHash": "0xe7b1cd4141af702078d025afff8160fb1cdee22987efffd74425f9f76cc5225f",
+        "transactionIndex": 2,
+        "explorerUrl": "https://sepolia.basescan.org/tx/0xbaff5fa43080547e24fa6af9153cba8dc5fa716526e86812b8f61ae59c6d3861"
+      },
+      "vaultOutcome": {
+        "event": "OrderSkipped",
+        "reason": "Price fell below take-profit threshold",
+        "currentPriceWei": "2000000000000000000000",
+        "logIndex": 2
+      },
+      "assetCheck": {
+        "vaultPrincipalBeforeWei": "1000000000000000",
+        "vaultPrincipalAfterWei": "1000000000000000",
+        "ownerQuoteBeforeRaw": "1394409773455864503",
+        "ownerQuoteAfterRaw": "1394409773455864503",
+        "quotePayoutRaw": "0"
+      },
+      "baseFinalizedBlock": "62089240",
+      "activityLogs": {
+        "checkedAt": "2026-11-22T09:50:04.406Z",
+        "status": "SKIPPED",
+        "reason": "Price fell below take-profit threshold",
+        "executionId": "0x44fc357e30cbf914ad3f0bd53736198d4875d6f27fd17b263e8206285bc30a36",
+        "entryId": "a901f4ff-54c7-44c9-83a9-dd28c55595b0:0x1ac829d081432cd2699ce91f22ae50ac78df413a12098286c0b70815bcd9dd03",
+        "destinationTxHash": "0x19477929819164b1a7c7f69f8b06ac8f78cd7030c6223ac2dc07b2eb6a8ccddc"
+      }
+    },
+    "0xed538e7f062a69f2a3a04c1f57b30e0144830ea827a456d9a41643b792df4730": {
+      "project": "OmniFlow",
+      "track": "Set It and Forget It",
+      "template": "take-profit@1",
+      "deploymentId": "a901f4ff-54c7-44c9-83a9-dd28c55595b0",
+      "testExecutionTimestamp": "2026-11-22T09:35:08.000Z",
+      "lastVerifiedAt": "2026-11-22T09:37:03.828Z",
+      "baseFinalityVerifiedAt": "2026-11-26T02:24:36.589Z",
+      "status": "VERIFIED_FULL_LOOP_ON_TESTNET",
+      "outcome": "SUCCESS",
+      "scenario": "Take-Profit executed while the test pool price stayed above the threshold.",
+      "contracts": {
+        "pair": "0x42A350faeBbAFC67f854436052D1B6153d320577",
+        "vault": "0x65270D5a1a204B4424da3898eaE9fc0811C4f2F2",
+        "rsc": "0x21708832A31D20BBE006507F3113d516BD632D70",
+        "owner": "0xE50dD8e4aE1b1Dd46334eA22C10129Ee4d6736eF",
+        "quote": "0x8c2D098617102a64925CC683d9B444F938A96082",
+        "proxy": "0x476f44b11f5c942c58f4c8e3d0300e5710743585"
+      },
+      "thresholdWei": "2200000000000000000000",
+      "triggerPriceWei": "2300000000000000000000",
+      "executionId": "0x696c15bb590d00e7d17e9fdb10e5bb182abe869c6866de2ef8e0deba0d7f8e1d",
+      "verifiableTransactions": {
+        "step1_originEvent": {
+          "chainId": 84532,
+          "txHash": "0xed538e7f062a69f2a3a04c1f57b30e0144830ea827a456d9a41643b792df4730",
+          "blockNumber": "62091200",
+          "blockHash": "0x94001092302d3c1c978d0eae6c5260b4f6e46bbcec1ff01bb81f1b4d84ed82e3",
+          "transactionIndex": 4,
+          "explorerUrl": "https://sepolia.basescan.org/tx/0xed538e7f062a69f2a3a04c1f57b30e0144830ea827a456d9a41643b792df4730",
+          "logIndex": 6
+        },
+        "step2_reactiveExecution": {
+          "chainId": 5318007,
+          "txHash": "0x556769ab75fc1fa4ecb561867dc079d7fe04c2dffb2b993e90a0b916464c509f",
+          "blockNumber": "8964287",
+          "blockHash": "0x3e504b098a65b638d3cd88f0946b0106ef3eb5ca028fa89c927332ad772ef94f",
+          "transactionIndex": 1,
+          "explorerUrl": "https://lasna.reactscan.net/tx/0x556769ab75fc1fa4ecb561867dc079d7fe04c2dffb2b993e90a0b916464c509f"
+        },
+        "step3_callbackExecution": {
+          "chainId": 84532,
+          "txHash": "0x7116e64316d1fcd25ad249824475109dd0983145131e98b70c7b762013754390",
+          "blockNumber": "62091206",
+          "blockHash": "0xa1a667759fa93f21e6bbee99702daa422aecf66f109341af1162bc397649e61f",
+          "transactionIndex": 3,
+          "explorerUrl": "https://sepolia.basescan.org/tx/0x7116e64316d1fcd25ad249824475109dd0983145131e98b70c7b762013754390"
+        }
+      },
+      "vaultOutcome": {
+        "event": "OrderSettled",
+        "logIndex": 8,
+        "rsc": "0x21708832A31D20BBE006507F3113d516BD632D70",
+        "executionId": "0x696c15bb590d00e7d17e9fdb10e5bb182abe869c6866de2ef8e0deba0d7f8e1d",
+        "ethAmountIn": "200000000000000",
+        "minAmountOut": "435602140933097939"
+      },
+      "assetCheck": {
+        "vaultPrincipalBeforeWei": "1000000000000000",
+        "vaultPrincipalAfterWei": "800000000000000",
+        "ownerQuoteBeforeRaw": "1394409773455864503",
+        "ownerQuoteAfterRaw": "1852938342859125492",
+        "quotePayoutRaw": "458528569403260989"
+      },
+      "baseFinalizedBlock": "63685100",
+      "activityLogs": {
+        "checkedAt": "2026-11-22T09:37:03.828Z",
+        "status": "PENDING",
+        "reason": "Waiting for Base Sepolia finality.",
+        "executionId": "0x696c15bb590d00e7d17e9fdb10e5bb182abe869c6866de2ef8e0deba0d7f8e1d",
+        "entryId": "a901f4ff-54c7-44c9-83a9-dd28c55595b0:0x556769ab75fc1fa4ecb561867dc079d7fe04c2dffb2b993e90a0b916464c509f"
+      }
     }
   },
   "cooldowns": {
