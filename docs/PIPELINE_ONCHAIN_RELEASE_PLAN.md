@@ -84,6 +84,8 @@ Mỗi hàng cần một deployment có thể mở lại trong Active, một lư�
 
 ## 6. Gói triển khai và điều kiện bàn giao
 
+**Tiến độ AI · TASK-331.** Studio đã có nút AI cạnh Deploy, modal nhập prompt và bước xem trước trước khi áp dụng template Stop-Loss hoặc Take-Profit lên Canvas. Backend dùng `gemini-3.1-flash-lite` với thinking tối thiểu và giới hạn 256 token đầu ra. Hai lượt kiểm tra qua backend thật đều trả HTTP 200 và đúng tham số: Stop-Loss ở $2,100 trong 3,6 giây, Take-Profit bán 25% ở $3,000 trong 5,0 giây. Còn nghiệm thu thao tác áp dụng, chỉnh sửa, lưu và mở lại draft trên trình duyệt. [Tracking TASK-331](../TASKS.md)
+
 Kế hoạch này đặt **độ bao phủ 100% trên các cấu hình được phép Deploy**. Mỗi node trong catalog cần ít nhất một lượt chạy thực sự sử dụng node đó. Mỗi recipe, kịch bản Blueprint và biến thể nêu tại mục 8 cần đủ bằng chứng theo kỳ vọng riêng. Một lỗi còn mở làm sai kết quả, sai quyền, sai số tiền hoặc lệch deployment sẽ giữ cổng release ở trạng thái chờ. Đồ thị tự ghép đi qua cùng bộ xác thực với preset và chỉ chạy trong phạm vi template có runtime tương ứng.
 
 | Gói | Công việc theo thứ tự | Điều kiện bàn giao |
