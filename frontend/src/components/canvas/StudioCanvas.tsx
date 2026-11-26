@@ -21,7 +21,6 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useAccount } from 'wagmi';
 import type { Address } from 'viem';
-import type { CopilotDraft } from '@omniflow/shared';
 import { getSavedVault } from '@/lib/vaultSelection';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { isPhaseTwoGraph, resolvePhaseTwo, resolveStopLoss, STOP_LOSS_TEMPLATE, StopLossValidationError, type StopLossGraph } from '@omniflow/shared';
@@ -56,7 +55,7 @@ import { NodePalette, PALETTE_ITEMS } from './NodePalette';
 import { InspectorPanel } from './InspectorPanel';
 import { TakeProfitDeployModal } from './TakeProfitDeployModal';
 import { DeployModal } from './DeployModal';
-import { CopilotDialog } from './CopilotDialog';
+import { CopilotDialog, type ConfiguredCopilotDraft } from './CopilotDialog';
 import { StudioToastContainer, type StudioNotification } from './StudioToastContainer';
 import { SolidityPreviewModal } from './SolidityPreviewModal';
 import { 
@@ -237,12 +236,17 @@ function StudioCanvasInner() {
   const phaseTwo = isPhaseTwoGraph({ nodes, edges });
   const lintResult = useMemo(() => lintPipelineGraph(nodes, edges, phaseTwo && !isSnapshot), [nodes, edges, phaseTwo, isSnapshot]);
 
-  function applyCopilotDraft(proposal: CopilotDraft) {
+  function applyCopilotDraft(proposal: ConfiguredCopilotDraft) {
     if (isSnapshot) return;
     const preset = structuredClone(RECIPE_PRESETS[proposal.template]);
     for (const node of preset.nodes) {
+      if (node.type === 'watchDEXPrice') node.data.pairAddress = proposal.poolAddress;
       if (node.type === 'priceThresholdGuard') node.data.thresholdPriceUSD = Number(proposal.thresholdUsd);
-      if (node.type === 'dexSwap' && proposal.sellPercent !== null) node.data.amountPercentage = proposal.sellPercent;
+      if (node.type === 'cooldownGuard') node.data.cooldownSeconds = proposal.cooldownSeconds;
+      if (node.type === 'dexSwap') {
+        node.data.amountPercentage = proposal.sellPercent;
+        node.data.actionVaultAddress = proposal.vaultAddress;
+      }
     }
     markDirty();
     setNodes(preset.nodes);

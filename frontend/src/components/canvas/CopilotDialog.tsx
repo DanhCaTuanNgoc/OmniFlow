@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { AlertCircle, ArrowDownRight, ArrowRight, ArrowUpRight, LoaderCircle, Sparkles, X } from 'lucide-react';
 import type { CopilotDraft } from '@omniflow/shared';
+import { isAddress, zeroAddress } from 'viem';
 import { APP_CONFIG } from '@/lib/constants';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 
@@ -11,9 +12,15 @@ const examples = [
   ['Take-Profit', 'Sell 25% of my Vault ETH at $3,000 or higher'],
 ] as const;
 
+export type ConfiguredCopilotDraft = CopilotDraft & {
+  poolAddress: string;
+  vaultAddress: string;
+  cooldownSeconds: number;
+};
+
 export function CopilotDialog({ replacing, onApply, onClose }: {
   replacing: boolean;
-  onApply: (draft: CopilotDraft) => void;
+  onApply: (draft: ConfiguredCopilotDraft) => void;
   onClose: () => void;
 }) {
   const titleId = useId();
@@ -23,6 +30,10 @@ export function CopilotDialog({ replacing, onApply, onClose }: {
   const request = useRef<AbortController>();
   const [prompt, setPrompt] = useState('');
   const [proposal, setProposal] = useState<CopilotDraft>();
+  const [poolAddress, setPoolAddress] = useState('');
+  const [vaultAddress, setVaultAddress] = useState('');
+  const [cooldown, setCooldown] = useState('');
+  const [sellPercent, setSellPercent] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -42,8 +53,7 @@ export function CopilotDialog({ replacing, onApply, onClose }: {
     setError('');
   }
 
-  async function generate(event: FormEvent) {
-    event.preventDefault();
+  async function generate() {
     if (!prompt.trim() || request.current) return;
     const controller = new AbortController();
     request.current = controller;
@@ -61,7 +71,13 @@ export function CopilotDialog({ replacing, onApply, onClose }: {
         const body = await response.json().catch(() => null);
         throw new Error(body?.error || 'Studio AI is unavailable. Try again.');
       }
-      setProposal(await response.json());
+      const draft: CopilotDraft = await response.json();
+      const nodes = RECIPE_PRESETS[draft.template].nodes;
+      setPoolAddress(String(nodes.find(node => node.type === 'watchDEXPrice')?.data.pairAddress ?? ''));
+      setCooldown(String(nodes.find(node => node.type === 'cooldownGuard')?.data.cooldownSeconds ?? ''));
+      setSellPercent(String(draft.sellPercent ?? nodes.find(node => node.type === 'dexSwap')?.data.amountPercentage ?? ''));
+      setVaultAddress('');
+      setProposal(draft);
     } catch (failure) {
       if (!controller.signal.aborted) {
         setError(failure instanceof Error ? failure.message : 'Could not generate a draft. Try again.');
@@ -72,13 +88,25 @@ export function CopilotDialog({ replacing, onApply, onClose }: {
     }
   }
 
-  const preset = proposal ? RECIPE_PRESETS[proposal.template] : undefined;
-  const defaultPercent = preset?.nodes.find(node => node.type === 'dexSwap')?.data.amountPercentage;
-  const pool = preset?.nodes.find(node => node.type === 'watchDEXPrice')?.data.pairLabel;
   const isStopLoss = proposal?.template === 'stop-loss';
-  const threshold = proposal && new Intl.NumberFormat('en-US', {
-    style: 'currency', currency: 'USD', maximumFractionDigits: 6,
-  }).format(Number(proposal.thresholdUsd));
+  const validAddress = (value: string) => isAddress(value) && value.toLowerCase() !== zeroAddress;
+
+  function confirmDraft() {
+    if (!proposal) return;
+    const thresholdUsd = proposal.thresholdUsd.trim();
+    if (!/^\d{1,8}(?:\.\d{1,6})?$/.test(thresholdUsd) || Number(thresholdUsd) <= 0) {
+      setError('Enter a positive USD threshold with up to six decimal places.');
+    } else if (!/^\d+$/.test(cooldown) || Number(cooldown) > 0xffffffff) {
+      setError('Enter a whole cooldown from 0 to 4,294,967,295 seconds.');
+    } else if (!/^\d+$/.test(sellPercent) || Number(sellPercent) < 1 || Number(sellPercent) > 100) {
+      setError('Enter a whole sell percentage from 1 to 100.');
+    } else if (!validAddress(poolAddress.trim()) || (vaultAddress.trim() && !validAddress(vaultAddress.trim()))) {
+      setError('Enter a valid pool address and, if provided, a valid Vault address.');
+    } else {
+      onApply({ ...proposal, thresholdUsd, poolAddress: poolAddress.trim(), vaultAddress: vaultAddress.trim(),
+        cooldownSeconds: Number(cooldown), sellPercent: Number(sellPercent) });
+    }
+  }
 
   return (
     <dialog ref={dialog} aria-labelledby={titleId}
@@ -96,7 +124,11 @@ export function CopilotDialog({ replacing, onApply, onClose }: {
           <X className="size-4" aria-hidden="true" />
         </button>
       </header>
-      <form onSubmit={generate} aria-busy={busy}>
+      <form onSubmit={event => {
+        event.preventDefault();
+        if (proposal) confirmDraft();
+        else void generate();
+      }} aria-busy={busy}>
         <div className="space-y-4 px-5 py-5 sm:px-7">
           <div className="space-y-2.5">
             <label htmlFor={promptId} className="text-sm font-medium">Describe your automation</label>
@@ -122,35 +154,65 @@ export function CopilotDialog({ replacing, onApply, onClose }: {
               </div>
             </div>
           </div>
-          {error && <p role="alert" className="flex items-start gap-2 rounded-lg bg-rose-500/10 px-3 py-2.5 text-sm text-rose-200"><AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />{error}</p>}
           {busy && <p role="status" className="flex items-center gap-2 text-sm text-zinc-300"><LoaderCircle className="size-4 text-violet-300 motion-safe:animate-spin" aria-hidden="true" />Generating your draft…</p>}
-          {proposal && preset && (
-            <section aria-label="Draft preview" aria-live="polite" className="space-y-3 rounded-xl border border-[var(--ws-border)] bg-white/[.025] p-4">
-              <h3 className="font-semibold">{preset.title}</h3>
-              <dl className="grid gap-3 border-y border-[var(--ws-border)] py-3 text-sm sm:grid-cols-3">
-                <div><dt className="text-zinc-400">Trigger price</dt><dd className="mt-1 font-medium tabular-nums text-violet-200">{isStopLoss ? '≤' : '≥'} {threshold}</dd></div>
-                <div><dt className="text-zinc-400">Sell from Vault</dt><dd className="mt-1 font-medium tabular-nums">{proposal.sellPercent ?? String(defaultPercent)}% ETH {proposal.sellPercent === null && <span className="text-xs font-normal text-zinc-400">(default)</span>}</dd></div>
-                <div><dt className="text-zinc-400">Template pool</dt><dd className="mt-1 font-medium">{String(pool)}</dd></div>
-              </dl>
-              <p className="text-sm text-zinc-300">Review the pool and configure your Vault in Studio.</p>
+          {proposal && (
+            <section aria-label="Generated pipeline nodes" className="space-y-3 rounded-xl border border-[var(--ws-border)] bg-white/[.025] p-4">
+              <h3 className="font-semibold">Review generated nodes</h3>
+              <ol className="divide-y divide-[var(--ws-border)] text-sm">
+                <li className="space-y-2 py-3">
+                  <h4 className="font-medium text-sky-300">Watch DEX Price</h4>
+                  <DraftField label="ETH / USDC pool on Base Sepolia" value={poolAddress} onChange={setPoolAddress} />
+                </li>
+                <li className="space-y-2 py-3">
+                  <h4 className="font-medium text-amber-300">Price Threshold Guard</h4>
+                  <DraftField label={isStopLoss ? 'Trigger at or below (USD)' : 'Trigger at or above (USD)'} value={proposal.thresholdUsd}
+                    inputMode="decimal" onChange={thresholdUsd => setProposal({ ...proposal, thresholdUsd })} />
+                </li>
+                <li className="space-y-2 py-3">
+                  <h4 className="font-medium text-amber-300">Cooldown Rate-Limiter</h4>
+                  <DraftField label="Cooldown (seconds)" value={cooldown} inputMode="numeric" onChange={setCooldown} />
+                </li>
+                <li className="space-y-2 py-3">
+                  <h4 className="font-medium text-emerald-300">DEX Token Swap</h4>
+                  <DraftField label="Vault ETH to sell (%)" value={sellPercent} inputMode="numeric" onChange={setSellPercent} />
+                  <DraftField label="Vault address (optional)" value={vaultAddress} onChange={setVaultAddress} />
+                </li>
+              </ol>
               {replacing && <p className="text-sm text-amber-200">Applying this draft replaces the current nodes and connections.</p>}
             </section>
           )}
+          {error && <p role="alert" className="flex items-start gap-2 rounded-lg bg-rose-500/10 px-3 py-2.5 text-sm text-rose-200"><AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />{error}</p>}
         </div>
         <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--ws-border)] px-5 py-4 sm:px-7">
           <button type="button" className="ws-button mr-auto" onClick={onClose}>Cancel</button>
-          <button type="submit" className={proposal ? 'ws-button' : 'ws-button ws-button-primary inline-flex items-center gap-2'} disabled={busy || !prompt.trim()}>
+          <button type={proposal ? 'button' : 'submit'} onClick={proposal ? generate : undefined}
+            className={proposal ? 'ws-button' : 'ws-button ws-button-primary inline-flex items-center gap-2'} disabled={busy || !prompt.trim()}>
             {!proposal && <Sparkles className="size-4" aria-hidden="true" />}
             {busy ? 'Generating…' : proposal ? 'Regenerate' : 'Generate draft'}
           </button>
           {proposal && (
-            <button type="button" className="ws-button ws-button-primary inline-flex items-center gap-2" onClick={() => onApply(proposal)}>
-              {replacing ? 'Replace canvas' : 'Apply to canvas'}
+            <button type="submit" className="ws-button ws-button-primary inline-flex items-center gap-2">
+              {replacing ? 'Confirm and replace canvas' : 'Confirm and load graph'}
               <ArrowRight className="size-4" aria-hidden="true" />
             </button>
           )}
         </footer>
       </form>
     </dialog>
+  );
+}
+
+function DraftField({ label, value, onChange, inputMode }: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  inputMode?: 'decimal' | 'numeric';
+}) {
+  return (
+    <label className="block space-y-1 text-xs text-zinc-300">
+      <span>{label}</span>
+      <input value={value} inputMode={inputMode} onChange={event => onChange(event.target.value)}
+        className="block w-full rounded-md border border-[var(--ws-border)] bg-black/25 px-3 py-2 text-sm tabular-nums text-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400" />
+    </label>
   );
 }
