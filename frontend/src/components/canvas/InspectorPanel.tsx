@@ -9,9 +9,7 @@ import {
   Info, 
   Radio, 
   Activity, 
-  AlertTriangle, 
   AlertCircle, 
-  CheckCircle2,
   Clock,
   ArrowLeftRight,
   Coins
@@ -20,7 +18,6 @@ import { SUPPORTED_PAIRS } from '@/lib/constants';
 import { isAddress, toEventSelector, type Address } from 'viem';
 import { STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 import { VaultSetup } from './VaultSetup';
-import { PipelineIssue } from '@/lib/pipelineLint';
 
 interface InspectorPanelProps {
   selectedNode: Node | null;
@@ -34,7 +31,6 @@ interface InspectorPanelProps {
   vaultLookup?: { vaults?: Address[]; error?: string };
   checkingVaults: boolean;
   crossChain: boolean;
-  nodeIssues?: PipelineIssue[];
 }
 
 export function InspectorPanel({
@@ -49,7 +45,6 @@ export function InspectorPanel({
   vaultLookup,
   checkingVaults,
   crossChain,
-  nodeIssues,
 }: InspectorPanelProps) {
   if (!selectedNode) return null;
 
@@ -62,9 +57,6 @@ export function InspectorPanel({
       [field]: value,
     });
   };
-
-  // Inline input validation states
-  const hasErrors = nodeIssues && nodeIssues.length > 0;
 
   return (
     <div className="w-full bg-[var(--ws-rail)] flex flex-col h-full text-xs">
@@ -98,26 +90,6 @@ export function InspectorPanel({
             {String(data.label || type)}
           </div>
         </div>
-
-        {/* Node Health / Issues Status Banner */}
-        {hasErrors ? (
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1.5">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
-              <AlertTriangle className="size-3.5 text-amber-400 shrink-0" />
-              <span>Configuration Issues ({nodeIssues.length})</span>
-            </div>
-            <ul className="space-y-1 text-[11px] text-amber-200/90 pl-4 list-disc font-sans">
-              {nodeIssues.map((issue) => (
-                <li key={issue.id}>{issue.message}</li>
-              ))}
-            </ul>
-          </div>
-        ) : (
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-[11px] text-emerald-300">
-            <CheckCircle2 className="size-3.5 text-emerald-400 shrink-0" />
-            <span>Node parameters & ports are valid</span>
-          </div>
-        )}
 
         {/* 1. Watch DEX Price */}
         {type === 'watchDEXPrice' && (

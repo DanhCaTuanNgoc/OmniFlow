@@ -256,24 +256,21 @@ function StudioCanvasInner() {
   const vaultIssue = lintResult.warnings.find(issue => issue.id === `vault-${issue.nodeId}`);
   const annotatedNodes = useMemo(() => {
     return nodes.map((n) => {
-      const issues = lintResult.nodeIssues.get(n.id);
-      const isOrphan = lintResult.isOrphanMap.get(n.id) ?? false;
-      const firstWarning = activeIssue?.nodeId === n.id && activeIssue.severity === 'error' ? activeIssue.message : issues?.[0]?.message ?? null;
       const monitoringTrigger = n.data.category === 'trigger' && monitoredPath?.nodes.has(n.id);
       return {
         ...n,
         className: monitoringTrigger ? [n.className, 'studio-monitor-trigger'].filter(Boolean).join(' ') : n.className,
         data: {
           ...n.data,
-          warning: firstWarning,
-          isOrphan,
+          warning: activeIssue?.nodeId === n.id && activeIssue.severity === 'error' ? activeIssue.message : null,
+          isOrphan: false,
           state: activeIssue?.nodeId === n.id && activeIssue.severity === 'warning' ? 'SKIPPED'
             : activeNodeIds?.has(n.id) && !activeIssue ? 'CHECKING'
             : monitoringTrigger ? 'LISTENING' : n.data.state,
         },
       };
     });
-  }, [nodes, lintResult, activeNodeIds, activeIssue, monitoredPath]);
+  }, [nodes, activeNodeIds, activeIssue, monitoredPath]);
 
   const handleAutoLayout = useCallback(() => {
     if (isSnapshot) return;
@@ -1167,7 +1164,6 @@ function StudioCanvasInner() {
                 onUpdateNodeData={handleUpdateNodeData}
                 onDeleteNode={handleDeleteNode}
                 onClose={() => selectNode(null)}
-                nodeIssues={selectedNode ? lintResult.nodeIssues.get(selectedNode.id) : undefined}
               />
             </div>
           )}
