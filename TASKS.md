@@ -896,11 +896,12 @@ Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **21 mục `TODO`**, *
   * Nút AI cạnh Deploy trong Studio mở modal nhập prompt, tạo và xem trước draft ETH Stop-Loss hoặc Take-Profit trên Base Sepolia.
   * API dùng Gemini Structured Output và kiểm tra tham số trước khi trả đề xuất. Studio áp dụng đề xuất vào template hiện hữu, cho chỉnh node, cấu hình Vault, lưu nháp và dùng luồng Deploy hiện có.
   * Đã kiểm tra API từ chối prompt rỗng/quá dài và báo rõ khi thiếu Gemini API key. Canvas chỉ thay đổi khi người dùng áp dụng đề xuất.
-* **Còn nghiệm thu:** Cấu hình `GEMINI_API_KEY` ở backend và chọn `GEMINI_MODEL` nếu cần. Chạy hai prompt mẫu qua Gemini thật, kiểm tra template, chiều giá, tham số và lưu/mở lại draft trong Studio.
+  * Đã gọi Gemini thật qua backend với `gemini-3.6-flash`. Hai prompt mẫu trả HTTP 200 với đúng template và tham số: Stop-Loss ETH ở $2,100 và Take-Profit bán 25% ETH ở $3,000.
+* **Còn nghiệm thu:** Dùng modal trên trình duyệt để áp dụng cả hai đề xuất lên Canvas, kiểm tra chiều giá, chỉnh node, rồi lưu và mở lại draft trong Studio.
 * **Ngày tạo:** 19/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
-* **Trạng thái:** `IN_PROGRESS` · Đã triển khai mã, chờ nghiệm thu Gemini bằng key thật.
+* **Trạng thái:** `IN_PROGRESS` · Gemini API thật đã đạt hai ca mẫu. Còn kiểm tra thao tác trên Studio.
 
 #### `TASK-332` [TODO] — Triển khai Telegram Sentinel Bot cho thông báo on-chain & điều khiển khẩn cấp
 * **Module:** Backend Telegram Service, EventListener integration, Vault Manager UI.
