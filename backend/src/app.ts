@@ -7,6 +7,7 @@ import { healthRouter } from './routes/health.route.js';
 import { logsRouter } from './routes/logs.route.js';
 import { pipelineRouter } from './routes/pipeline.route.js';
 import { sessionRouter } from './routes/session.route.js';
+import { copilotRouter } from './routes/copilot.route.js';
 import { WebSocketGateway } from './websocket/gateway.js';
 import { eventListenerService } from './services/eventListener.service.js';
 
@@ -38,6 +39,7 @@ export function createApp(): {
   app.use('/api/logs', logsRouter);
   app.use('/api/session', sessionRouter);
   app.use('/api/pipeline', pipelineRouter);
+  app.use('/api/copilot', copilotRouter);
 
   // Root endpoint
   app.get('/', (_req: Request, res: Response) => {

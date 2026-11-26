@@ -21,6 +21,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useAccount } from 'wagmi';
 import type { Address } from 'viem';
+import type { CopilotDraft } from '@omniflow/shared';
 import { getSavedVault } from '@/lib/vaultSelection';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { isPhaseTwoGraph, resolvePhaseTwo, resolveStopLoss, STOP_LOSS_TEMPLATE, StopLossValidationError, type StopLossGraph } from '@omniflow/shared';
@@ -55,6 +56,7 @@ import { NodePalette, PALETTE_ITEMS } from './NodePalette';
 import { InspectorPanel } from './InspectorPanel';
 import { TakeProfitDeployModal } from './TakeProfitDeployModal';
 import { DeployModal } from './DeployModal';
+import { CopilotDialog } from './CopilotDialog';
 import { StudioToastContainer, type StudioNotification } from './StudioToastContainer';
 import { SolidityPreviewModal } from './SolidityPreviewModal';
 import { 
@@ -63,6 +65,7 @@ import {
   AlertTriangle,
   Code2,
   ShieldCheck,
+  Sparkles,
   Plus,
   Download,
   Upload,
@@ -128,6 +131,8 @@ function StudioCanvasInner() {
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const nodesInitialized = useNodesInitialized();
   const initialFit = useRef(false);
+  const [fitCopilotDraft, setFitCopilotDraft] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -207,10 +212,12 @@ function StudioCanvasInner() {
   const isSnapshot = Boolean(deploymentParam);
   const opensExistingGraph = Boolean(deploymentParam || pipelineParam || localParam || recipeParam);
   useEffect(() => {
-    if (!opensExistingGraph || !reactFlowInstance || !nodesInitialized || initialFit.current) return;
+    if (!reactFlowInstance || !nodesInitialized) return;
+    if (!fitCopilotDraft && (!opensExistingGraph || initialFit.current)) return;
     initialFit.current = true;
-    void reactFlowInstance.fitView({ padding: 0.2 });
-  }, [opensExistingGraph, reactFlowInstance, nodesInitialized]);
+    void reactFlowInstance.fitView({ padding: 0.2, duration: fitCopilotDraft ? 250 : 0 });
+    setFitCopilotDraft(false);
+  }, [opensExistingGraph, reactFlowInstance, nodesInitialized, fitCopilotDraft]);
   const draftName = pipelineName.trim() || RECIPE_PRESETS[activeRecipeId]?.title || 'Custom pipeline';
   const activeNodeIds = walkthrough?.nodeIds;
   const activeEdgeIds = walkthrough?.edgeIds;
@@ -229,6 +236,23 @@ function StudioCanvasInner() {
 
   const phaseTwo = isPhaseTwoGraph({ nodes, edges });
   const lintResult = useMemo(() => lintPipelineGraph(nodes, edges, phaseTwo && !isSnapshot), [nodes, edges, phaseTwo, isSnapshot]);
+
+  function applyCopilotDraft(proposal: CopilotDraft) {
+    if (isSnapshot) return;
+    const preset = structuredClone(RECIPE_PRESETS[proposal.template]);
+    for (const node of preset.nodes) {
+      if (node.type === 'priceThresholdGuard') node.data.thresholdPriceUSD = Number(proposal.thresholdUsd);
+      if (node.type === 'dexSwap' && proposal.sellPercent !== null) node.data.amountPercentage = proposal.sellPercent;
+    }
+    markDirty();
+    setNodes(preset.nodes);
+    setEdges(preset.edges);
+    setDraftNetworks(undefined);
+    setActiveRecipeId('');
+    if (!nodes.length && !pipelineName.trim()) setPipelineName(preset.title);
+    setFitCopilotDraft(true);
+    setCopilotOpen(false);
+  }
   const vaultIssue = lintResult.warnings.find(issue => issue.id === `vault-${issue.nodeId}`);
   const annotatedNodes = useMemo(() => {
     return nodes.map((n) => {
@@ -1024,6 +1048,14 @@ function StudioCanvasInner() {
               <span>{walkthrough?.running && walkthrough.mode === 'sandbox' ? 'Simulating…' : 'Simulate Flow'}</span>
             </button>
 
+            {!isSnapshot && (
+              <button type="button" className="ws-button inline-flex items-center gap-1.5 text-xs"
+                onClick={() => setCopilotOpen(true)} disabled={walkthrough?.running} aria-haspopup="dialog"
+                aria-label="Create a pipeline with AI">
+                <Sparkles className="size-3.5 text-violet-300" aria-hidden="true" />
+                <span>AI</span>
+              </button>
+            )}
             {/* Deploy */}
             {!isSnapshot && (
               <button
@@ -1095,7 +1127,7 @@ function StudioCanvasInner() {
               nodesDraggable={!isSnapshot}
               nodesConnectable={!isSnapshot}
               elementsSelectable={!isSnapshot}
-              deleteKeyCode={isSnapshot || isDeployOpen || isSolidityOpen || showExitModal ? null : deleteSelectionKeys}
+              deleteKeyCode={isSnapshot || isDeployOpen || copilotOpen || isSolidityOpen || showExitModal ? null : deleteSelectionKeys}
               isValidConnection={isValidConnection}
               minZoom={0.3}
               maxZoom={1.5}
@@ -1142,6 +1174,9 @@ function StudioCanvasInner() {
         </div>
       </div>
 
+      {copilotOpen && !isSnapshot && (
+        <CopilotDialog replacing={nodes.length > 0} onApply={applyCopilotDraft} onClose={() => setCopilotOpen(false)} />
+      )}
       {/* Deploy Modal */}
       {phaseTwo ? (!isSnapshot && isDeployOpen && address && savedDraft && (
         <TakeProfitDeployModal key={`${address}:${savedDraft.id}:${savedDraft.updatedAt}`} owner={address} draft={savedDraft}

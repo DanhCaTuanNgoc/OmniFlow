@@ -6,3 +6,4 @@ export * from './phaseTwoTemplate.js';
 export * from './abis/PriceOrderPipeline.js';
 export * from './abis/PriceGatePipeline.js';
 export * from './abis/PriceOrderVault.js';
+export type { CopilotDraft } from './copilot.js';

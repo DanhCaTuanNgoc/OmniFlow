@@ -16,13 +16,13 @@
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
 | **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 24 | 23 | 0 | **95.8%** |
-| **Đánh giá cạnh tranh, bằng chứng và tính năng mở rộng** | 18–19/11/2026 | 8 | 5 | 0 | **62.5%** |
-| **Vận hành Workspace & nghiệm thu dự thi** | Ghi nhận 20/11/2026 | 8 | 0 | 0 | **0%** |
+| **Đánh giá cạnh tranh, bằng chứng và tính năng mở rộng** | 18–19/11/2026 | 8 | 5 | 1 | **62.5%** |
+| **Vận hành Workspace & nghiệm thu dự thi** | Ghi nhận 20/11/2026 | 8 | 1 | 0 | **12.5%** |
 | **Khả năng deploy của preset, runtime và nghiệm thu toàn bộ flow** | Ghi nhận 20/11/2026 | 13 | 2 | 0 | **15.4%** |
 | **Future Roadmap: 16 Ca Mở Rộng & Universal Engine** | Lộ trình mở rộng | 18 | 1 | 0 | **5.6%** |
-| **TỔNG CỘNG** | **Đối chiếu 22/11/2026** | **107** | **67** | **0** | **62.6%** |
+| **TỔNG CỘNG** | **Đối chiếu 26/11/2026** | **107** | **68** | **1** | **63.6%** |
 
-Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **23 mục `TODO`** và **17 mục `BACKLOG`**. 
+Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **21 mục `TODO`**, **1 mục `IN_PROGRESS`** và **17 mục `BACKLOG`**.
 
 > [!IMPORTANT]
 > **Yêu cầu Bắt buộc & Định hướng Hoàn thành Nghiệm thu On-chain:**
@@ -889,18 +889,18 @@ Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **23 mục `TODO`** v�
 * **Ngày hoàn thành:** 18/11/2026. Đã bổ sung mục 6.1–6.4 vào FRS.
 * **Trạng thái:** `DONE`.
 
-#### `TASK-331` [TODO] — Triển khai AI Prompt-to-Pipeline Copilot trên Studio Canvas (Magic Pipeline)
+#### `TASK-331` [IN_PROGRESS] — Triển khai AI Prompt-to-Pipeline Copilot trên Studio Canvas (Magic Pipeline)
 * **Module:** Frontend Studio Canvas, Backend Copilot API (`/api/copilot/generate-graph`).
 * **Mục đích:** Hỗ trợ người dùng gõ câu lệnh tự nhiên (natural language) để tự động sinh cấu trúc đồ thị JSON (nodes & edges) hợp lệ trên Canvas, tối đa hóa trải nghiệm "No-Code" cho track *Set It and Forget It* và đáp ứng tiêu chí track *Reactive Meets AI*.
-* **Chi tiết thực thi:**
-  * Xây dựng `copilot.service.ts` tại backend sử dụng Gemini 1.5 Flash / OpenAI với Structured Outputs ép kiểu theo `PipelineGraphSchema`.
-  * Xây dựng UI thanh Copilot Input Bar nổi (floating) trên `StudioCanvas.tsx` kèm 3 chip gợi ý nhanh (ETH Stop-Loss, Whale Copy-Trade, Drainer Shield).
-  * Tự động tính toán vị trí DAG (Dagre layout) cho Trigger -> Condition -> Action.
-  * Cài đặt cơ chế kiểm định Schema an toàn và fallback về template có sẵn nếu model trả về lỗi cấu trúc.
+* **Đã triển khai (26/11/2026):**
+  * Nút AI cạnh Deploy trong Studio mở modal nhập prompt, tạo và xem trước draft ETH Stop-Loss hoặc Take-Profit trên Base Sepolia.
+  * API dùng Gemini Structured Output và kiểm tra tham số trước khi trả đề xuất. Studio áp dụng đề xuất vào template hiện hữu, cho chỉnh node, cấu hình Vault, lưu nháp và dùng luồng Deploy hiện có.
+  * Đã kiểm tra API từ chối prompt rỗng/quá dài và báo rõ khi thiếu Gemini API key. Canvas chỉ thay đổi khi người dùng áp dụng đề xuất.
+* **Còn nghiệm thu:** Cấu hình `GEMINI_API_KEY` ở backend và chọn `GEMINI_MODEL` nếu cần. Chạy hai prompt mẫu qua Gemini thật, kiểm tra template, chiều giá, tham số và lưu/mở lại draft trong Studio.
 * **Ngày tạo:** 19/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
-* **Trạng thái:** `TODO`.
+* **Trạng thái:** `IN_PROGRESS` · Đã triển khai mã, chờ nghiệm thu Gemini bằng key thật.
 
 #### `TASK-332` [TODO] — Triển khai Telegram Sentinel Bot cho thông báo on-chain & điều khiển khẩn cấp
 * **Module:** Backend Telegram Service, EventListener integration, Vault Manager UI.
