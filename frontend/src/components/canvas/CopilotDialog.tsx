@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
-import { Sparkles, X } from 'lucide-react';
+import { AlertCircle, ArrowDownRight, ArrowRight, ArrowUpRight, LoaderCircle, Sparkles, X } from 'lucide-react';
 import type { CopilotDraft } from '@omniflow/shared';
 import { APP_CONFIG } from '@/lib/constants';
 import { RECIPE_PRESETS } from '@/lib/recipes';
@@ -75,58 +75,78 @@ export function CopilotDialog({ replacing, onApply, onClose }: {
   const preset = proposal ? RECIPE_PRESETS[proposal.template] : undefined;
   const defaultPercent = preset?.nodes.find(node => node.type === 'dexSwap')?.data.amountPercentage;
   const pool = preset?.nodes.find(node => node.type === 'watchDEXPrice')?.data.pairLabel;
+  const isStopLoss = proposal?.template === 'stop-loss';
+  const threshold = proposal && new Intl.NumberFormat('en-US', {
+    style: 'currency', currency: 'USD', maximumFractionDigits: 6,
+  }).format(Number(proposal.thresholdUsd));
 
   return (
     <dialog ref={dialog} aria-labelledby={titleId}
       onCancel={event => { event.preventDefault(); onClose(); }}
-      className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-xl border border-[var(--ws-border)] bg-[#111318] p-5 text-zinc-100 backdrop:bg-black/70 sm:p-7">
-      <header className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <h2 id={titleId} className="flex items-center gap-2 text-xl font-semibold tracking-tight">
-            <Sparkles className="size-5 text-violet-300" aria-hidden="true" /> Create a pipeline with AI
-          </h2>
-          <p className="mt-1 text-sm text-zinc-300">Draft an ETH Stop-Loss or Take-Profit on Base Sepolia.</p>
+      className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl border border-[var(--ws-border)] bg-[#111318] p-0 text-zinc-100 backdrop:bg-black/75">
+      <header className="flex items-start gap-3 border-b border-[var(--ws-border)] bg-[linear-gradient(110deg,rgba(139,92,246,.16),transparent_75%)] px-5 py-5 sm:gap-4 sm:px-7">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-500/15 text-violet-200" aria-hidden="true">
+          <Sparkles className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 id={titleId} className="text-lg font-semibold tracking-tight sm:text-xl">Create a pipeline with AI</h2>
+          <p className="mt-1 text-sm leading-relaxed text-zinc-300">Draft an ETH Stop-Loss or Take-Profit on Base Sepolia.</p>
         </div>
-        <button type="button" onClick={onClose} aria-label="Close AI dialog" className="ws-button p-2">
+        <button type="button" onClick={onClose} aria-label="Close AI dialog" className="grid size-9 shrink-0 place-items-center rounded-lg text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400">
           <X className="size-4" aria-hidden="true" />
         </button>
       </header>
-      <form onSubmit={generate} className="space-y-4" aria-busy={busy}>
-        <div className="space-y-2">
-          <label htmlFor={promptId} className="text-sm font-medium">Describe your automation</label>
-          <textarea ref={promptInput} id={promptId} value={prompt} onChange={event => updatePrompt(event.target.value)}
-            disabled={busy} maxLength={1000} rows={4} required
-            placeholder={examples[0][1]}
-            className="block w-full resize-y rounded-lg border border-[var(--ws-border)] bg-[#0a0b0f] p-3 text-sm placeholder:text-zinc-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400" />
-          <div className="flex flex-wrap gap-2">
-            {examples.map(([label, example]) => (
-              <button key={label} type="button" disabled={busy} onClick={() => updatePrompt(example)} className="ws-button text-xs">
-                Try {label}
-              </button>
-            ))}
+      <form onSubmit={generate} aria-busy={busy}>
+        <div className="space-y-4 px-5 py-5 sm:px-7">
+          <div className="space-y-2.5">
+            <label htmlFor={promptId} className="text-sm font-medium">Describe your automation</label>
+            <div className="rounded-xl border border-[var(--ws-border)] bg-black/25 focus-within:border-violet-400">
+              <textarea ref={promptInput} id={promptId} value={prompt} onChange={event => updatePrompt(event.target.value)}
+                disabled={busy} maxLength={1000} rows={4} required
+                placeholder={examples[0][1]}
+                className="block w-full resize-y rounded-t-xl bg-transparent px-4 pt-3 text-sm leading-relaxed caret-violet-300 outline-none placeholder:text-zinc-400" />
+              <div className="flex flex-wrap items-center justify-between gap-2 px-3 pb-3 pt-2">
+                <div className="flex flex-wrap gap-2">
+                  {examples.map(([label, example], index) => {
+                    const Icon = index === 0 ? ArrowDownRight : ArrowUpRight;
+                    return (
+                      <button key={label} type="button" disabled={busy} onClick={() => { updatePrompt(example); promptInput.current?.focus(); }}
+                        className="ws-button inline-flex items-center gap-1.5 text-xs">
+                        <Icon className="size-3.5 text-violet-300" aria-hidden="true" />
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="text-xs tabular-nums text-zinc-400">{prompt.length} / 1,000</span>
+              </div>
+            </div>
           </div>
+          {error && <p role="alert" className="flex items-start gap-2 rounded-lg bg-rose-500/10 px-3 py-2.5 text-sm text-rose-200"><AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />{error}</p>}
+          {busy && <p role="status" className="flex items-center gap-2 text-sm text-zinc-300"><LoaderCircle className="size-4 text-violet-300 motion-safe:animate-spin" aria-hidden="true" />Generating your draft…</p>}
+          {proposal && preset && (
+            <section aria-label="Draft preview" aria-live="polite" className="space-y-3 rounded-xl border border-[var(--ws-border)] bg-white/[.025] p-4">
+              <h3 className="font-semibold">{preset.title}</h3>
+              <dl className="grid gap-3 border-y border-[var(--ws-border)] py-3 text-sm sm:grid-cols-3">
+                <div><dt className="text-zinc-400">Trigger price</dt><dd className="mt-1 font-medium tabular-nums text-violet-200">{isStopLoss ? '≤' : '≥'} {threshold}</dd></div>
+                <div><dt className="text-zinc-400">Sell from Vault</dt><dd className="mt-1 font-medium tabular-nums">{proposal.sellPercent ?? String(defaultPercent)}% ETH {proposal.sellPercent === null && <span className="text-xs font-normal text-zinc-400">(default)</span>}</dd></div>
+                <div><dt className="text-zinc-400">Template pool</dt><dd className="mt-1 font-medium">{String(pool)}</dd></div>
+              </dl>
+              <p className="text-sm text-zinc-300">Review the pool and configure your Vault in Studio.</p>
+              {replacing && <p className="text-sm text-amber-200">Applying this draft replaces the current nodes and connections.</p>}
+            </section>
+          )}
         </div>
-        {error && <p role="alert" className="text-sm text-rose-300">{error}</p>}
-        {busy && <p role="status" className="text-sm text-zinc-300">Generating your draft…</p>}
-        {proposal && preset && (
-          <section aria-label="Draft preview" aria-live="polite" className="space-y-2 border-t border-[var(--ws-border)] pt-4">
-            <h3 className="font-semibold">{preset.title}</h3>
-            <p className="text-sm text-zinc-300 tabular-nums">
-              Sell {proposal.sellPercent ?? String(defaultPercent)}% of Vault ETH
-              {proposal.sellPercent === null ? ' (template default)' : ''} when ETH is
-              {proposal.template === 'stop-loss' ? ' at or below ' : ' at or above '}${proposal.thresholdUsd}.
-            </p>
-            <p className="text-sm text-zinc-300">{String(pool)} template pool · Review pool and configure Vault in Studio.</p>
-            {replacing && <p className="text-sm text-amber-200">Applying this draft replaces the current nodes and connections.</p>}
-          </section>
-        )}
-        <footer className="flex flex-wrap justify-end gap-2">
-          <button type="submit" className={proposal ? 'ws-button' : 'ws-button ws-button-primary'} disabled={busy || !prompt.trim()}>
-            {proposal ? 'Regenerate' : 'Generate draft'}
+        <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--ws-border)] px-5 py-4 sm:px-7">
+          <button type="button" className="ws-button mr-auto" onClick={onClose}>Cancel</button>
+          <button type="submit" className={proposal ? 'ws-button' : 'ws-button ws-button-primary inline-flex items-center gap-2'} disabled={busy || !prompt.trim()}>
+            {!proposal && <Sparkles className="size-4" aria-hidden="true" />}
+            {busy ? 'Generating…' : proposal ? 'Regenerate' : 'Generate draft'}
           </button>
           {proposal && (
-            <button type="button" className="ws-button ws-button-primary" onClick={() => onApply(proposal)}>
+            <button type="button" className="ws-button ws-button-primary inline-flex items-center gap-2" onClick={() => onApply(proposal)}>
               {replacing ? 'Replace canvas' : 'Apply to canvas'}
+              <ArrowRight className="size-4" aria-hidden="true" />
             </button>
           )}
         </footer>
