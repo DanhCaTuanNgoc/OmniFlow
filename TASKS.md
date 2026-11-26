@@ -897,6 +897,7 @@ Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **21 mục `TODO`**, *
   * API dùng Gemini Structured Output và kiểm tra tham số trước khi trả đề xuất. Studio áp dụng đề xuất vào template hiện hữu, cho chỉnh node, cấu hình Vault, lưu nháp và dùng luồng Deploy hiện có.
   * Đã kiểm tra API từ chối prompt rỗng/quá dài và báo rõ khi thiếu Gemini API key. Canvas chỉ thay đổi khi người dùng áp dụng đề xuất.
   * Đã gọi Gemini thật qua backend với `gemini-3.6-flash`. Hai prompt mẫu trả HTTP 200 với đúng template và tham số: Stop-Loss ETH ở $2,100 và Take-Profit bán 25% ETH ở $3,000.
+  * Sau khi gặp timeout và HTTP 503 từ Gemini 3.6, chuyển mặc định sang `gemini-3.1-flash-lite` với thinking tối thiểu. Kiểm tra lại qua backend cổng 8080: Stop-Loss trả HTTP 200 trong 3,6 giây và Take-Profit trong 5,0 giây.
 * **Còn nghiệm thu:** Dùng modal trên trình duyệt để áp dụng cả hai đề xuất lên Canvas, kiểm tra chiều giá, chỉnh node, rồi lưu và mở lại draft trong Studio.
 * **Ngày tạo:** 19/11/2026.
 * **Ngày hoàn thành:** —

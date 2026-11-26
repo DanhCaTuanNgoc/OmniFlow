@@ -9,7 +9,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(8080),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   GEMINI_API_KEY: z.string().trim().min(1).optional(),
-  GEMINI_MODEL: z.string().regex(/^gemini-[a-z0-9.-]+$/).default('gemini-3.6-flash'),
+  GEMINI_MODEL: z.string().regex(/^gemini-[a-z0-9.-]+$/).default('gemini-3.1-flash-lite'),
   CORS_ALLOWED_ORIGINS: z.string().default('*'),
   WORKSPACE_DB_PATH: z.string().min(1).default('.workspace/workspace.sqlite'),
   DATABASE_URL: z.string().url().refine(value => /^postgres(?:ql)?:\/\//.test(value)).optional(),

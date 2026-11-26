@@ -65,7 +65,13 @@ copilotRouter.post('/generate-graph', async (req, res) => {
             'Return the explicitly requested whole percent to sell, or null when omitted. Do not invent values.',
           ].join(' ') }] },
           contents: [{ role: 'user', parts: [{ text: parsed.data.prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', responseJsonSchema },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseJsonSchema,
+            ...(env.GEMINI_MODEL === 'gemini-3.1-flash-lite'
+              ? { thinkingConfig: { thinkingLevel: 'MINIMAL' }, maxOutputTokens: 256 }
+              : {}),
+          },
         }),
       },
     );
