@@ -37,6 +37,7 @@ import { setDeploymentArchived, type DeploymentSummary } from '@/lib/deployments
 import { WorkspaceSignInRequired, WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspaceSession';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { PALETTE_ITEMS } from '@/components/canvas/NodePalette';
+import { WorkspaceState } from '@/components/common/WorkspaceUI';
 
 import { PipelineCard, type PipelineItem } from './PipelineCard';
 import { RenamePipelineModal } from './RenamePipelineModal';
@@ -588,7 +589,6 @@ export function PipelineStudioHub() {
         </div>
       )}
 
-      {walletPending && <p role="status">Loading wallet pipelines...</p>}
       {walletError && <div role="alert">{walletError} <button type="button" className="ws-button" onClick={() => setReload(value => value + 1)}>Retry</button></div>}
       {localError && <p role="alert">Could not read browser drafts.</p>}
 
@@ -656,7 +656,15 @@ export function PipelineStudioHub() {
             />
           ))}
         </div>
-      ) : walletPending || signInRequired || walletError || localError ? null : (
+      ) : walletPending ? (
+        <div role="status">
+          <WorkspaceState
+            title="Loading wallet pipelines…"
+            description="Fetching saved drafts and deployments for your connected wallet."
+            icon={<Activity aria-hidden="true" className="size-6 motion-safe:animate-spin" />}
+          />
+        </div>
+      ) : signInRequired || walletError || localError ? null : (
         /* Empty State */
         <div className="rounded-xl border border-dashed border-[var(--ws-border)] bg-[var(--ws-panel)]/50 p-12 text-center space-y-4">
           <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-[var(--ws-accent-bg)] text-[var(--ws-accent)]">
