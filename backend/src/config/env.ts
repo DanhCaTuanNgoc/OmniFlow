@@ -10,6 +10,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   GEMINI_API_KEY: z.string().trim().min(1).optional(),
   GEMINI_MODEL: z.string().regex(/^gemini-[a-z0-9.-]+$/).default('gemini-3.1-flash-lite'),
+  TELEGRAM_BOT_TOKEN: z.string().trim().regex(/^\d+:[A-Za-z0-9_-]+$/).optional(),
+  TELEGRAM_BOT_USERNAME: z.string().trim().regex(/^[A-Za-z0-9_]{2,29}bot$/i).optional(),
   CORS_ALLOWED_ORIGINS: z.string().default('*'),
   WORKSPACE_DB_PATH: z.string().min(1).default('.workspace/workspace.sqlite'),
   DATABASE_URL: z.string().url().refine(value => /^postgres(?:ql)?:\/\//.test(value)).optional(),
@@ -40,7 +42,11 @@ const envSchema = z.object({
     .string()
     .regex(/^0x[0-9a-fA-F]{64}$/, 'Invalid 32-byte hexadecimal private key')
     .optional(),
-});
+}).refine(
+  ({ TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME }) =>
+    Boolean(TELEGRAM_BOT_TOKEN) === Boolean(TELEGRAM_BOT_USERNAME),
+  { message: 'Set both TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_USERNAME to configure Telegram.' },
+);
 
 const parsed = envSchema.safeParse(process.env);
 
