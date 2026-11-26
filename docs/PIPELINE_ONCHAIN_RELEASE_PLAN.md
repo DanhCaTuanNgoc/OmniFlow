@@ -1,10 +1,10 @@
-# Kế hoạch triển khai và nghiệm thu toàn bộ Pipeline Studio trên testnet
+# Kế hoạch triển khai và nghiệm thu OmniFlow cho hackathon
 
 ## 1. Hiện trạng và phạm vi
 
-**Phạm vi demo hackathon:** Stop-Loss là flow chính, với bằng chứng full-loop trên testnet. Take-Profit là flow thứ hai, đã deploy và còn chờ nghiệm thu payout và skip qua receipt. 16 kịch bản còn lại chưa có deployment testnet riêng và được ghi là **Not deployed** trong Honesty Table. BP-11 đã có bằng chứng cooldown trên deployment Stop-Loss. Ma trận bên dưới là backlog nghiệm thu sau hackathon cho các ca ngoài phạm vi demo. Việc hợp nhất Universal Deploy và redeploy toàn bộ ở §14 cũng được hoãn sau hackathon.
+**Phạm vi demo hackathon.** Hai flow chính là Stop-Loss (BP-01) và Take-Profit (BP-03). Cả hai có bằng chứng full-loop trên public testnet cho nhánh bán và nhánh bỏ qua. Còn đối soát Studio, Active, Vault và Logs cho cấu hình demo. Giữ 16 ca còn lại trong Future Roadmap ở §8 và Universal Deploy ở §14 cho sau hackathon. [Hồ sơ bằng chứng](../FULL_LOOP_EVIDENCE.json)
 
-Rà soát tại ngày 20/11/2026. Phạm vi gồm **12 node hiện có, sáu preset hiện hữu, flow Pause Pipeline theo dõi nâng cấp và 12 kịch bản Blueprint**. Các đề xuất stop-loss một lần và chuyển một phần khoản nhận trong FRS được đưa vào ma trận. Kịch bản dùng chung runtime vẫn có tiêu chí nghiệm thu riêng. Graph mới hoặc node được thêm sau phải cập nhật ma trận trước khi bật Deploy. Copilot, Telegram Sentinel và các tính năng ứng dụng độc lập chỉ vào điều kiện phát hành nếu chúng trở thành một phần của flow phát hành. [Catalog và kịch bản Blueprint](../PROJECT_BLUEPRINT.md) · [FRS](REACTIVEFLOW_DETAILED_FRS.md)
+Catalog và preset hiện hữu tiếp tục được theo dõi trong ma trận kỹ thuật và Future Roadmap. Graph tạo thủ công, từ preset hoặc từ AI đều phải đi qua cùng kiểm tra trước khi bật Deploy. [Catalog và kịch bản Blueprint](../PROJECT_BLUEPRINT.md) · [FRS](REACTIVEFLOW_DETAILED_FRS.md)
 
 Repo hiện có `StopLoss_Pipeline`, `ActionVault` và một đường deploy từ bytecode stop-loss. Deployer chọn node đầu tiên khớp loại hoặc trường dữ liệu, nên cổng hợp lệ và DAG hợp lệ chưa đủ để bảo đảm graph có runtime tương đương. Studio gửi Base mặc định, recipe Cross-Chain ghi `chainId`, còn backend đọc `data.originChainId`. Active đọc cặp Vault/RSC cấu hình sẵn. Activity Logs chưa có nguồn đọc lịch sử theo ví. [Deployer](../backend/src/services/deployer.service.ts) · [Deploy Modal](../frontend/src/components/canvas/DeployModal.tsx) · [Active](../frontend/src/app/workspace/active/page.tsx) · [Activity Logs](../frontend/src/app/workspace/logs/page.tsx)
 
@@ -67,10 +67,10 @@ Mỗi hàng cần một deployment có thể mở lại trong Active, một lư�
 
 1. **Local và fork.** Chạy Foundry, frontend/backend build và backend test. Kiểm tra graph được chấp nhận lẫn bị từ chối, ranh giới số tiền/thời gian, xác thực proxy/RSC, quyền owner, rollback, idempotency và adapter. Test local giúp xác nhận logic. Bằng chứng phát hành đến từ RPC của public testnet.
 2. **Triển khai testnet với web/API chạy local.** Chạy E2E từ ví testnet mới có quỹ qua Studio/API, tạo hoặc liên kết Vault, deploy, cấp quyền, fund và kích hoạt. Kiểm tra bytecode/proxy và source đã cấu hình đúng mạng. Ưu tiên verifier chỉ đọc khi đối soát lại. Với từng kịch bản, lưu deployment, revision, origin log, Lasna reference, callback đích, event nghiệp vụ và hậu điều kiện tài sản/trạng thái. Ưu tiên bản ghi hệ thống của Reactive. Nếu index chưa có, đối soát proxy calldata và log Vault; nhiều ứng viên thì giữ trạng thái chưa xác minh. Giữ hồ sơ stop-loss cũ và tạo manifest nhiều flow. [Mạng và proxy](https://dev.reactive.network/origins-and-destinations#testnet-chains) · [Phí và bản ghi callback](https://dev.reactive.network/economy)
-3. **Đối soát Active trước cloud.** Đóng trình duyệt sau deploy, kích hoạt trên chain rồi mở lại đúng revision bằng cùng ví. Mỗi loại flow phải có đúng dòng, đúng địa chỉ, trạng thái và explorer link. Đổi ví, reload giữa các bước, restart backend, ngắt RPC, thử sai chain, hết gas và gửi lại callback. Kiểm tra 100% hàng ma trận có bằng chứng pass cho cấu hình phát hành. Các trường hợp không thể chạy testnet do RPC/funding được ghi là đang chờ. Khi còn hàng chưa đạt, giữ phát hành Vercel/Railway ở trạng thái chờ.
+3. **Đối soát Active trước cloud.** Đóng trình duyệt sau deploy, kích hoạt trên chain rồi mở lại đúng revision bằng cùng ví. Mỗi loại flow phải có đúng dòng, đúng địa chỉ, trạng thái và explorer link. Đổi ví, reload giữa các bước, restart backend, ngắt RPC, thử sai chain, hết gas và gửi lại callback. Kiểm tra BP-01 và BP-03 có đủ bằng chứng theo §6 cho cấu hình demo. Các trường hợp không thể chạy testnet do RPC/funding được ghi là đang chờ. Nếu BP-01 hoặc BP-03 chưa đạt, giữ bản demo hosted ở trạng thái chờ nghiệm thu.
 4. **Xác minh hosting sau khi vượt cổng pre-cloud.** Dùng đúng commit đã nghiệm thu, trước hết Railway và Vercel ở môi trường kiểm thử. Kiểm tra `/health`, RPC cho các chain trong manifest, REST/CORS, WebSocket, phiên ví, migrations, khôi phục cursor và URL Studio/Active. Chạy smoke từ URL đã host và so với dữ liệu RPC trước khi công bố. Giữ cấu hình/commit có thể rollback và không đổi địa chỉ triển khai đã xác minh trong lúc nghiệm thu. TASK-304/337/353.
 
-**Điểm quyết định tiến độ.** Suite stop-loss đã đạt theo §11. Tiếp tục làm nền chung Vault, quyền và Active song song với runtime B/C/D theo quan hệ phụ thuộc. Phần mở rộng cron, định tuyến hai chiều, nhiều nhánh và chuyển tài sản cần dự trù theo tuần. Chốt lịch sau khi đã khảo sát từng runtime và thử preflight testnet. Lịch cloud phụ thuộc vào kết quả của toàn bộ ma trận.
+**Điểm quyết định tiến độ.** Đối soát hai flow đã có bằng chứng on-chain trên Workspace và chạy smoke test trên URL đã host. Các ca Future Roadmap có cổng nghiệm thu riêng.
 
 ### 5.1 Lưu trữ Workspace trước khi đưa lên cloud
 
@@ -82,11 +82,22 @@ Mỗi hàng cần một deployment có thể mở lại trong Active, một lư�
 
 **Hạng mục trước cloud dùng chung · TASK-333–336/353.** Chuẩn bị migration PostgreSQL và kiểm tra trên DB sạch. Với dữ liệu cần giữ từ SQLite, sao lưu và đối soát liên kết ví, revision, deployment, chữ ký giao dịch đã lưu, nonce, idempotency key, receipt và cursor trước khi chuyển nguồn đọc. Nghiệm thu cách ly hai ví, khôi phục backup, restart giữa lúc broadcast và ghi receipt, đọc bù lịch sử và tiếp tục đúng job. Với nhiều replica, thử hai worker tranh cùng job/cursor và kiểm tra mỗi bước chỉ được một worker nhận. Mục này đang chờ triển khai, có thể làm độc lập với việc cấp quỹ relayer testnet.
 
-## 6. Gói triển khai và điều kiện bàn giao
+## 6. Gói triển khai và điều kiện bàn giao hackathon
 
 **Tiến độ AI · TASK-331.** Studio đã có nút AI cạnh Deploy, modal nhập prompt và bước xem trước trước khi áp dụng template Stop-Loss hoặc Take-Profit lên Canvas. Backend dùng `gemini-3.1-flash-lite` với thinking tối thiểu và giới hạn 256 token đầu ra. Hai lượt kiểm tra qua backend thật đều trả HTTP 200 và đúng tham số: Stop-Loss ở $2,100 trong 3,6 giây, Take-Profit bán 25% ở $3,000 trong 5,0 giây. Còn nghiệm thu thao tác áp dụng, chỉnh sửa, lưu và mở lại draft trên trình duyệt. [Tracking TASK-331](../TASKS.md)
 
-Kế hoạch này đặt **độ bao phủ 100% trên các cấu hình được phép Deploy**. Mỗi node trong catalog cần ít nhất một lượt chạy thực sự sử dụng node đó. Mỗi recipe, kịch bản Blueprint và biến thể nêu tại mục 8 cần đủ bằng chứng theo kỳ vọng riêng. Một lỗi còn mở làm sai kết quả, sai quyền, sai số tiền hoặc lệch deployment sẽ giữ cổng release ở trạng thái chờ. Đồ thị tự ghép đi qua cùng bộ xác thực với preset và chỉ chạy trong phạm vi template có runtime tương ứng.
+| Thứ tự | Công việc | Điều kiện bàn giao |
+|---|---|---|
+| 1 | Take-Profit và hồi quy Stop-Loss | Chạy từ Studio trên public testnet. Mỗi flow có một lượt bán và một lượt Vault bỏ qua vì giá đảo chiều. Ghi receipt origin → Lasna → Base, kết quả Vault và thay đổi tài sản vào `FULL_LOOP_EVIDENCE.json`. Đối soát Active mở đúng revision và trạng thái, Vault Manager hiển thị đúng Vault, owner, quyền, vốn và phí, Logs gắn đúng lượt chạy với receipt. |
+| 2 | AI tạo pipeline | Tạo bản nháp chỉnh sửa được trên Canvas cho cả hai flow. Người dùng thấy pool, toán tử, ngưỡng, tỷ lệ bán và Vault trước khi ký. Graph do AI tạo đi qua cùng bộ xác thực với graph thủ công. Người dùng duyệt và ký giao dịch. |
+| 3 | Telegram | Gửi từ kết quả đã xác nhận trong Logs. Tin nhắn hiển thị đúng flow, kết quả bán hoặc bỏ qua và link receipt. Đối soát tin giao thành công và kiểm tra retry không gửi trùng. |
+| 4 | Honesty Table và demo | Cập nhật trạng thái theo bằng chứng tại thời điểm nộp. Ghi phạm vi testnet, pool/token thử nghiệm, giới hạn runtime của hai flow, vai trò tạo bản nháp của AI và trạng thái giao tin Telegram. Ghi 16 ca ngoài demo là chưa có deployment testnet riêng, kèm liên kết Future Roadmap. |
+
+Điều kiện nộp demo là cả hai flow qua nghiệm thu full-loop. Nếu AI hoặc Telegram chưa đạt, ghi trạng thái thực tế trong Honesty Table. Một lỗi làm sai số tiền, quyền hoặc ánh xạ deployment giữ cổng nghiệm thu của flow ở trạng thái chờ.
+
+### 6.1 Gói triển khai sau hackathon
+
+Bảng dưới đây giữ thứ tự phụ thuộc cho việc mở rộng catalog. Điều kiện bao phủ toàn bộ ma trận áp dụng cho đợt phát hành đầy đủ sau hackathon.
 
 | Gói | Công việc theo thứ tự | Điều kiện bàn giao |
 |---|---|---|
@@ -119,7 +130,9 @@ Kế hoạch này đặt **độ bao phủ 100% trên các cấu hình được 
 - Với webhook, xác nhận log trước enqueue. Dùng outbox có khóa duy nhất, lưu số lần thử và trạng thái giao. Gửi kèm khóa idempotency cố định để điểm nhận có thể loại trùng. Kiểm tra giới hạn endpoint và đích kết nối qua mọi lần chuyển hướng. Giữ signer, khóa webhook, dữ liệu phiên và URL có thông tin xác thực ngoài manifest công khai.
 - Migration theo hướng thêm trường, điền dữ liệu đã đối chiếu rồi mới chuyển nguồn đọc. Giữ dữ liệu cũ đủ để rollback UI/API. Với contract đã deploy, rollback ứng dụng không hoàn tác quyền hay giao dịch. Khi cần dừng, dùng quyền owner được cấp trên đúng Vault/deployment và ghi lại receipt. Thử khôi phục API/worker cùng cursor trên môi trường cô lập trước khi công bố.
 
-## 8. Danh sách ca nghiệm thu bắt buộc
+## 8. Ma trận nghiệm thu và Future Roadmap
+
+BP-01 và BP-03 là hai ca full-loop bắt buộc cho demo. Future Roadmap gồm BP-02, BP-04 đến BP-12, EXT-01 đến EXT-05 và CAP-01. Cả 16 ca chưa có deployment testnet riêng. BP-11 đã có bằng chứng cooldown trong deployment Stop-Loss.
 
 Các mã dưới đây là khóa nghiệm thu trong kế hoạch. Mỗi mã cần ghi cấu hình, commit/bytecode, block/hash, deployment, kết quả kỳ vọng, kết quả thấy được qua RPC và đối chiếu trên Active. Nếu fixture testnet dùng token thử nghiệm hoặc lịch rút ngắn, ghi rõ trong kết quả. Lượt đối chứng chỉ kết thúc ở Lasna khi đã xác nhận quyết định bỏ qua tại RSC và đối soát trong cửa sổ kiểm tra; kết quả bỏ qua tại Vault cần receipt đích.
 
@@ -225,7 +238,7 @@ Khi đủ quỹ và có bộ địa chỉ riêng, đặt `PAIR_ADDRESS`, `VAULT_
 
 1. Save the wallet-owned draft with a compatible Price Order Vault. Review the Lasna quote and sign from the owner wallet. The API binds the attempt to the saved graph and verifies signer, calldata, funding, canonical receipt, runtime fingerprint and the Sync subscription.
 2. Open the deployment in Active. Register the Lasna RSC, configure its policy from the saved revision, and grant authorization in separate Base Sepolia transactions. Active reads principal and fee balances and records the verified receipts.
-3. Await Base finality for each execution. Logs match the source log and execution ID to the Lasna request and the Base callback, then verify the Vault outcome and payout. Live payout and skip acceptance remain open.
+3. Logs match the source log and execution ID to the Lasna request and the Base callback. The payout and price-revalidation skip are now finalized and recorded in the evidence file. Workspace acceptance remains open.
 
 ### Bước tiếp theo: bảo mật và quyền policy
 
@@ -252,7 +265,7 @@ Thực hiện theo thứ tự dưới đây trước khi mở Deploy Phase 2:
 - Chạy lại verifier chỉ đọc qua RPC thật cho BP-01 payout, BP-01 skip và BP-11 cooldown. Cả ba kết quả khớp hồ sơ Phase 1. Dữ liệu kiểm tra lại nằm trong thư mục tạm, hồ sơ gốc được giữ nguyên.
 - Preflight mặc định báo ngân sách từng mode từ địa chỉ lịch sử. Có thể truyền `--graph <đường-dẫn>` cho từng graph đã xuất để ước lượng constructor với fixture thực và xác minh Vault Base theo fingerprint, owner, proxy, pair và token/reserves của pool. `--origin-signer <địa-chỉ>` tách signer Unichain. Chạy từ `backend` bằng `node --import tsx ../scripts/phase2-preflight.ts [địa-chỉ-Lasna]`. Phép đọc không gửi giao dịch. Cần receipt `Sync` thật để xác nhận emitter Hedge hoạt động.
 - **BLOCKED · Funding testnet.** RPC trả 0,792963 lREACT cho ví cấu hình, so với 1,1338594 lREACT ước lượng cho Take-Profit và 6,7727036 lREACT cho sáu RSC. Ví kiểm tra có 0 ETH trên Unichain Sepolia. Ước lượng lấy địa chỉ lịch sử, chưa gồm gas tạo Vault, vốn giao dịch hay quỹ callback. Điều kiện mở lại là ví/fixture Phase 2 có đủ quỹ theo quote mới và Hedge có pool cùng signer Unichain đã xác minh. Dùng bộ địa chỉ và quỹ riêng để bảo toàn suite Phase 1.
-- **OPEN: Take-Profit testnet acceptance.** Studio, owner-signed Lasna deploy, Base Vault onboarding, and receipt indexing are implemented. Live payout and price-revalidation skip still need canonical receipts in `FULL_LOOP_EVIDENCE.json`.
+- **PASS · Take-Profit full-loop on public testnet (26/11/2026).** Cả payout và skip do tái kiểm giá có đủ receipt nguồn, Lasna và callback Base trong `FULL_LOOP_EVIDENCE.json`. Còn đối soát thao tác Workspace theo cấu hình demo.
 
 ### Độ phủ 12 ca Blueprint
 
@@ -260,7 +273,7 @@ Thực hiện theo thứ tự dưới đây trước khi mở Deploy Phase 2:
 |---|---|---|
 | BP-01, BP-11 | PASS theo hồ sơ Phase 1 ở §11 | Chạy hồi quy qua Studio/Active khi nối template Phase 2. |
 | BP-02 | PASS local, chưa deploy | Nghiệm thu Ladder trên testnet sau hackathon. |
-| BP-03 | Đã deploy testnet, chưa nghiệm thu full-loop | Đối soát receipt payout và skip khi giá đảo chiều. |
+| BP-03 | PASS full-loop trên public testnet cho payout và skip | Đối soát deployment và kết quả trên Active, Vault và Logs. |
 | BP-04 | OPEN | Runtime đọc vốn Vault và đối soát cả hai điều kiện. Gate hai pool của Phase 2 không bao phủ Dust Guard. |
 | BP-05 | OPEN | Emitter và rule SafeSweep do owner duyệt, receipt đích và các ca không sweep. |
 | BP-06, BP-07 | OPEN | Bộ lọc transfer, receipt cảnh báo và xác minh webhook theo sự kiện. |
