@@ -382,7 +382,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
 
           <div className="h-4 w-px bg-[var(--ws-border)] mx-1" />
 
-          {status === 'CONNECTED' && Boolean(deploymentId) ? (
+          {/* {status === 'CONNECTED' && Boolean(deploymentId) ? (
             <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 px-2 py-1 text-[11px] text-emerald-300 font-mono">
               <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>Live updates</span>
@@ -392,7 +392,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
               <Clock aria-hidden="true" className="size-3" />
               <span>Refreshing automatically</span>
             </span>
-          )}
+          )} */}
 
           <button
             type="button"
