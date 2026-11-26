@@ -905,18 +905,19 @@ Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **21 mục `TODO`**, *
 * **Người thực hiện:** Chưa phân công.
 * **Trạng thái:** `IN_PROGRESS` · Gemini API thật đã đạt hai ca mẫu. Còn kiểm tra thao tác trên Studio.
 
-#### `TASK-332` [TODO] — Triển khai Telegram Sentinel Bot cho thông báo on-chain & điều khiển khẩn cấp
+#### `TASK-332` [IN_PROGRESS] — Triển khai Telegram Sentinel Bot cho thông báo on-chain & điều khiển khẩn cấp
 * **Module:** Backend Telegram Service, EventListener integration, Vault Manager UI.
 * **Mục đích:** Cung cấp kênh thông báo tức thì (real-time push alert) trên điện thoại khi Reactive Smart Contract kích hoạt callback trên Base Sepolia, hiện thực hóa 100% tinh thần "Set It and Forget It".
 * **Chi tiết thực thi:**
   * Tạo module `backend/src/services/telegram.service.ts` sử dụng `node-telegram-bot-api` (hoàn toàn miễn phí qua `@BotFather`).
   * Tích hợp hook vào `eventListener.service.ts`: khi bắt được sự kiện `CallbackExecuted` hoặc `VaultExecuted`, tự động gửi thông báo chi tiết (Tx Hashes nguồn/RSC/đích, giá khớp, độ trễ `latencyMs`).
-  * Thêm nút "Connect Telegram Notifications" tại trang `Vault Manager` qua cơ chế deep-link `t.me/OmniFlowBot?start=<ownerAddress>`.
+  * Thêm nút "Connect Telegram" tại trang `Vault Manager` qua deep link với mã dùng một lần cấp từ phiên ví.
   * Hỗ trợ lệnh `/status` (tra cứu tình trạng các pipeline) và `/panic` (gợi ý link rút vốn khẩn cấp).
+  * Đã nối luồng liên kết, hàng đợi SQLite, thông báo payout/skip và hai lệnh bot. Còn nghiệm thu liên kết với chat thật và nhận thông báo từ giao dịch testnet mới.
 * **Ngày tạo:** 19/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
-* **Trạng thái:** `TODO`.
+* **Trạng thái:** `IN_PROGRESS`.
 
 ### VẬN HÀNH WORKSPACE & NGHIỆM THU DỰ THI
 

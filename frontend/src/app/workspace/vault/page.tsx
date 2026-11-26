@@ -3,6 +3,7 @@
 import React, { Suspense, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
+import { TelegramAlerts } from '@/components/common/TelegramAlerts';
 import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
 import { getSavedVault, setSavedVault } from '@/lib/vaultSelection';
 import { 
@@ -70,7 +71,7 @@ function VaultRoute() {
     );
   }
 
-  return id ? (
+  const vault = id ? (
     <VaultSelection key={`${owner}:${id}`} owner={owner} id={id} />
   ) : (
     <>
@@ -86,6 +87,10 @@ function VaultRoute() {
       {owner && <VerifiedPipelineVaults key={owner} owner={owner} />}
     </>
   );
+  return <>
+    {vault}
+    {owner && <div className="ws-page"><TelegramAlerts key={owner} owner={owner} /></div>}
+  </>;
 }
 
 function VerifiedPipelineVaults({ owner }: { owner: Address }) {

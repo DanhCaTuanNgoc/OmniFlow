@@ -6,6 +6,7 @@ import type { Address, Hash, Hex } from 'viem';
 import { env } from '../config/env.js';
 import type { PipelineGraph } from '../schemas/pipeline.schema.js';
 import type { ActivityLogEntry, PendingExecution } from './activityLog.js';
+import { TelegramStore } from './telegram.js';
 
 export function graphSnapshot(graph: PipelineGraph) {
   const { createdAt: _createdAt, ...metadata } = graph.metadata;
@@ -49,12 +50,14 @@ export type Draft = { id: string; owner: Address; name: string; graphJson: strin
 
 export class DeploymentStore {
   private readonly db: Database.Database;
+  readonly telegram: TelegramStore;
 
   constructor(path: string) {
     if (path !== ':memory:') mkdirSync(dirname(resolve(path)), { recursive: true });
     this.db = new Database(path);
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('synchronous = FULL');
+    this.telegram = new TelegramStore(this.db);
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS deployments (
         id TEXT PRIMARY KEY, revisionId TEXT NOT NULL UNIQUE, owner TEXT NOT NULL,
@@ -199,7 +202,11 @@ export class DeploymentStore {
       UPDATE executions SET report = ? WHERE deploymentId = ? AND reactiveTxHash = ? AND report IS NOT ?
     `);
     const value = JSON.stringify(report);
-    return result.run(value, entry.deploymentId, entry.reactiveTxHash, value).changes > 0;
+    return this.db.transaction(() => {
+      const changed = result.run(value, entry.deploymentId, entry.reactiveTxHash, value).changes > 0;
+      if (changed && env.TELEGRAM_BOT_TOKEN) this.telegram.enqueue(entry.deploymentId, report);
+      return changed;
+    })();
   }
 
   markExecutionChecked(entry: PendingExecution) {

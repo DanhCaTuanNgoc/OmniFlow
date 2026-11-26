@@ -17,6 +17,24 @@ import { WorkspaceSessionService } from '../src/services/workspaceSession.servic
 const alice = privateKeyToAccount(generatePrivateKey());
 const bob = privateKeyToAccount(generatePrivateKey());
 
+test('Telegram links are single-use, unique to private chats, and revocable by wallet', () => {
+  const store = new DeploymentStore(':memory:').telegram;
+  const owner = alice.address.toLowerCase();
+  const other = bob.address.toLowerCase();
+  const original = store.createCode(owner).code;
+  const replacement = store.createCode(owner).code;
+  assert.equal(store.redeem(original, '100'), 'invalid');
+  assert.equal(store.redeem(replacement, '100'), 'linked');
+  assert.equal(store.redeem(replacement, '101'), 'invalid');
+  assert.equal(store.redeem(store.createCode(other).code, '100'), 'conflict');
+  assert.equal(store.owner('100'), owner);
+  assert.equal(store.status(other), false);
+  const pending = store.createCode(owner).code;
+  store.disconnect(owner);
+  assert.equal(store.owner('100'), undefined);
+  assert.equal(store.redeem(pending, '100'), 'invalid');
+});
+
 test('delegated Vault step requires the exact target, calldata and single-call mode', () => {
   const manager = '0xdb9b1e94b5b69df7e401ddbede43491141047db3';
   const abi = parseAbi(['function redeemDelegations(bytes[],bytes32[],bytes[])']);
@@ -133,12 +151,17 @@ test('HTTP workspace endpoints enforce the session and reject a forged deploymen
   try {
     assert.equal((await send('/pipeline/compile-and-deploy', {})).status, 401);
     assert.equal((await fetch(url + '/logs')).status, 401);
+    assert.equal((await fetch(url + '/telegram/status')).status, 401);
     assert.equal((await send('/session/challenge', { address: alice.address }, undefined, 'https://untrusted.example')).status, 403);
     const challenge = await (await send('/session/challenge', { address: alice.address })).json();
     const signature = await alice.signMessage({ message: challenge.message });
     const response = await send('/session/verify', { nonce: challenge.nonce, signature });
     assert.equal(response.status, 200);
     const { token } = await response.json();
+    assert.equal((await send('/telegram/link', {}, token, 'https://untrusted.example')).status, 403);
+    const telegram = await fetch(url + '/telegram/status', { headers: { Authorization: `Bearer ${token}` } });
+    assert.equal(telegram.status, 200);
+    assert.deepEqual(await telegram.json(), { enabled: Boolean(env.TELEGRAM_BOT_TOKEN), linked: false });
     const ws = new WebSocket(`ws://127.0.0.1:${bound.port}/stream`, { origin: env.WORKSPACE_ORIGIN });
     try {
       const [hello] = await once(ws, 'message');

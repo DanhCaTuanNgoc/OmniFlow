@@ -10,6 +10,7 @@ export interface ActivityLogEntry {
   reactiveChainId: number;
   reactiveTxHash?: string;
   reactiveLatencyMs?: number;
+  fullLoopLatencyMs?: number;
   destinationChainId: number;
   destinationTxHash?: string;
   destinationAction: string;
@@ -26,6 +27,8 @@ export interface ActivityLogEntry {
     executedPrice?: string;
     amountIn?: string;
     amountOut?: string;
+    vaultEthBalance?: string;
+    ownerQuoteBalance?: string;
     reason?: string;
     correlation?: 'system' | 'receipt-window';
   };

@@ -8,6 +8,7 @@ import { logsRouter } from './routes/logs.route.js';
 import { pipelineRouter } from './routes/pipeline.route.js';
 import { sessionRouter } from './routes/session.route.js';
 import { copilotRouter } from './routes/copilot.route.js';
+import { telegramRouter } from './routes/telegram.route.js';
 import { WebSocketGateway } from './websocket/gateway.js';
 import { eventListenerService } from './services/eventListener.service.js';
 
@@ -40,6 +41,7 @@ export function createApp(): {
   app.use('/api/session', sessionRouter);
   app.use('/api/pipeline', pipelineRouter);
   app.use('/api/copilot', copilotRouter);
+  app.use('/api/telegram', telegramRouter);
 
   // Root endpoint
   app.get('/', (_req: Request, res: Response) => {

@@ -4,6 +4,7 @@ import {
 } from 'viem';
 import { ACTION_VAULT_ABI, PRICE_ORDER_VAULT_ABI, STOP_LOSS_TEMPLATE, resolveStopLoss } from '@omniflow/shared';
 import type { ActivityLogEntry, PendingExecution } from '../data/activityLog.js';
+import { env } from '../config/env.js';
 import { deploymentStore, type DeploymentIntent } from '../data/deployments.js';
 import type { WebSocketGateway } from '../websocket/gateway.js';
 import { chainService } from './chain.service.js';
@@ -19,6 +20,7 @@ const abi = parseAbi([
   'function getCallbacks(uint256) view returns ((uint256 blockNumber, address requester, uint256 callbackIndex, uint256 chainId, uint256 txHash, bytes err)[])',
   'function deliverCallback(uint8,bytes)',
   'function executeStopLoss(address,address,uint256,uint256)',
+  'function balanceOf(address) view returns (uint256)',
 ]);
 const { basePublicClient: base, lasnaPublicClient: lasna } = chainService;
 const { callbackProxy: proxy, omniSystem: system } = STOP_LOSS_TEMPLATE;
@@ -241,6 +243,7 @@ class EventListenerService {
     if (destination.status !== 'success' || failures.some(log => isAddressEqual(log.args.target, vault))) {
       return result('FAILED', 'The verified Vault callback failed.');
     }
+    report.fullLoopLatencyMs = Number(destinationBlock.timestamp - originBlock.timestamp) * 1000;
     const logs = destination.logs.filter(log => isAddressEqual(log.address, vault));
     const skipped = parseEventLogs({ abi: vaultAbi, eventName: 'OrderSkipped', logs });
     const executed = parseEventLogs({ abi: ACTION_VAULT_ABI, eventName: 'StopLossExecuted', logs });
@@ -274,6 +277,19 @@ class EventListenerService {
     }
     report.details.amountIn = ethAmountIn.toString();
     report.details.amountOut = payouts[0].args.value.toString();
+    if (env.TELEGRAM_BOT_TOKEN && deploymentStore().telegram.status(deployment.owner)) {
+      const [principal, quote] = await Promise.allSettled([
+        base.getBalance({ address: vault, blockNumber: destination.blockNumber }),
+        base.readContract({
+          address: token, abi, functionName: 'balanceOf', args: [deployment.owner], blockNumber: destination.blockNumber,
+        }),
+      ]);
+      if (principal.status === 'fulfilled') report.details.vaultEthBalance = principal.value.toString();
+      if (quote.status === 'fulfilled') report.details.ownerQuoteBalance = quote.value.toString();
+      if (principal.status === 'rejected' || quote.status === 'rejected') {
+        console.warn('Unable to read all Telegram alert balances at the callback block.');
+      }
+    }
     return result('SUCCESS');
   }
 }
