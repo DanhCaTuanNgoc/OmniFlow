@@ -25,9 +25,9 @@ import { getSavedVault } from '@/lib/vaultSelection';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { isPhaseTwoGraph, resolvePhaseTwo, resolveStopLoss, STOP_LOSS_TEMPLATE, StopLossValidationError, type StopLossGraph } from '@omniflow/shared';
 import { APP_CONFIG } from '@/lib/constants';
-import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, studioGraph, studioEdgeData, exportDraftJson, connectionError, simulationPath } from '@/lib/pipelineDraft';
+import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserDraft, isDuplicatePipelineName, resolveUniquePipelineName, studioGraph, studioEdgeData, exportDraftJson, connectionError, simulationPath } from '@/lib/pipelineDraft';
 import { hasSingleExecutionRoute, planPipelineWalkthrough } from '@/lib/pipelineWalkthrough';
-import type { DeploymentDetail, DeploymentExecution } from '@/lib/deployments';
+import { fetchActiveWalletPipelineNames, type DeploymentDetail, type DeploymentExecution } from '@/lib/deployments';
 import { WorkspaceSignInRequired, workspaceRequest } from '@/lib/workspaceSession';
 import { useWorkspaceSignedIn } from '@/components/common/WorkspaceSignIn';
 import { PipelineOpenState } from '@/components/studio/PipelineOpenState';
@@ -253,7 +253,9 @@ function StudioCanvasInner() {
     setEdges(preset.edges);
     setDraftNetworks(undefined);
     setActiveRecipeId('');
-    if (!nodes.length && !pipelineName.trim()) setPipelineName(preset.title);
+    if (!nodes.length && !pipelineName.trim()) {
+      setPipelineName(resolveUniquePipelineName(preset.title, otherActiveNames, 'numbered'));
+    }
     setFitCopilotDraft(true);
     setCopilotOpen(false);
   }
@@ -287,6 +289,40 @@ function StudioCanvasInner() {
   }, [nodes, isSnapshot, setNodes, markDirty, reactFlowInstance]);
 
   const { setStudioHeader, clearStudioHeader } = useStudioHeaderStore();
+  const [otherActiveNames, setOtherActiveNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!isConnected || !address) {
+      try {
+        setOtherActiveNames(
+          listBrowserDrafts()
+            .filter((draft) => !draft.isArchived && draft.id !== localParam)
+            .map((draft) => draft.name)
+        );
+      } catch {
+        setOtherActiveNames([]);
+      }
+      return;
+    }
+    if (!signedIn) {
+      setOtherActiveNames([]);
+      return;
+    }
+    const controller = new AbortController();
+    void fetchActiveWalletPipelineNames(address, {
+      signal: controller.signal,
+      sessionOnly: true,
+      excludePipelineId: pipelineParam ?? undefined,
+      excludeDeploymentId: deploymentParam ?? undefined,
+    })
+      .then((names) => {
+        if (!controller.signal.aborted && active.current) setOtherActiveNames(names);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted && active.current) setOtherActiveNames([]);
+      });
+    return () => controller.abort();
+  }, [isConnected, address, signedIn, localParam, pipelineParam, deploymentParam]);
 
   const handleRenameFromHeader = useCallback((newName: string) => {
     setPipelineName(newName);
@@ -294,19 +330,27 @@ function StudioCanvasInner() {
     if (localParam) {
       renameBrowserDraft(localParam, newName);
     }
-  }, [localParam, markDirty]);
+    if (isDuplicatePipelineName(newName, otherActiveNames)) {
+      pushNotification({
+        type: 'warning',
+        title: 'Duplicate Pipeline Name',
+        message: `Another active pipeline is already named "${newName}". You can keep it, though identical names may be harder to distinguish.`,
+      });
+    }
+  }, [localParam, markDirty, otherActiveNames, pushNotification]);
 
   // Synchronize active pipeline name and rename handler with top Workspace Header breadcrumb
   useEffect(() => {
     setStudioHeader({
       pipelineName: draftName,
       isEditable: !isSnapshot,
+      existingPipelineNames: otherActiveNames,
       onRename: handleRenameFromHeader,
     });
     return () => {
       clearStudioHeader();
     };
-  }, [draftName, isSnapshot, handleRenameFromHeader, setStudioHeader, clearStudioHeader]);
+  }, [draftName, isSnapshot, otherActiveNames, handleRenameFromHeader, setStudioHeader, clearStudioHeader]);
 
   // Warn user before closing window/tab if there are unsaved edits
   useEffect(() => {
@@ -467,7 +511,7 @@ function StudioCanvasInner() {
     if (!isSnapshot || draftBusy || nodes.length === 0) return;
     setDraftBusy(true);
     try {
-      const copyName = `${draftName} (Copy)`;
+      const copyName = resolveUniquePipelineName(draftName, [draftName, ...otherActiveNames], 'copy');
       const graph = studioGraph(nodes, edges, draftNetworks);
       if (isConnected && address) {
         const result = await workspaceRequest<{ id: string; updatedAt: number }>(address, '/pipeline/drafts', {
@@ -750,7 +794,12 @@ function StudioCanvasInner() {
         }
 
         markDirty();
-        if (draft.name?.trim()) setPipelineName(draft.name);
+        if (draft.name?.trim()) {
+          const importedName = !pipelineParam && !localParam
+            ? resolveUniquePipelineName(draft.name, otherActiveNames, 'numbered')
+            : draft.name.trim();
+          setPipelineName(importedName);
+        }
         if (draft.description !== undefined) setDescription(draft.description);
         setNodes(draft.nodes);
         setEdges(draft.edges);

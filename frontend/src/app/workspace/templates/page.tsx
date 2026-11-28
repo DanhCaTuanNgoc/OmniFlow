@@ -5,7 +5,8 @@ import { WorkspacePageHeader, WorkspaceState } from '@/components/common/Workspa
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { RECIPE_PRESETS } from '@/lib/recipes';
-import { saveBrowserDraft, studioGraph } from '@/lib/pipelineDraft';
+import { listBrowserDrafts, resolveUniquePipelineName, saveBrowserDraft, studioGraph } from '@/lib/pipelineDraft';
+import { fetchActiveWalletPipelineNames } from '@/lib/deployments';
 import { workspaceRequest } from '@/lib/workspaceSession';
 import { useAccount } from 'wagmi';
 import { 
@@ -226,14 +227,19 @@ export default function TemplateLibraryPage() {
     const graph = studioGraph(preset.nodes, preset.edges);
     try {
       if (owner) {
+        const existingNames = await fetchActiveWalletPipelineNames(owner, { signal, sessionOnly: false });
+        if (signal.aborted) return;
+        const uniqueTitle = resolveUniquePipelineName(recipe.title, existingNames, 'numbered');
         const draft = await workspaceRequest<{ id: string }>(owner, '/pipeline/drafts', {
           method: 'POST', signal,
-          body: JSON.stringify({ graph: { ...graph, metadata: { name: recipe.title, ownerAddress: owner } } }),
+          body: JSON.stringify({ graph: { ...graph, metadata: { name: uniqueTitle, ownerAddress: owner } } }),
         });
         if (!signal.aborted) router.push('/workspace/studio?pipeline=' + encodeURIComponent(draft.id));
       } else {
         const id = crypto.randomUUID();
-        saveBrowserDraft(id, recipe.title, graph, recipe.description);
+        const existingNames = listBrowserDrafts().filter((draft) => !draft.isArchived).map((draft) => draft.name);
+        const uniqueTitle = resolveUniquePipelineName(recipe.title, existingNames, 'numbered');
+        saveBrowserDraft(id, uniqueTitle, graph, recipe.description);
         router.push('/workspace/studio?local=' + encodeURIComponent(id));
       }
     } catch (error) {

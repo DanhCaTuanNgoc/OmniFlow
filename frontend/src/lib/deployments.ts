@@ -165,3 +165,63 @@ export async function setVaultRscAuthorization(owner: Address, deployment: Deplo
   }
   return receipt.transactionHash;
 }
+
+export async function fetchActiveWalletPipelineNames(
+  owner: Address,
+  options?: {
+    signal?: AbortSignal;
+    sessionOnly?: boolean;
+    excludePipelineId?: string;
+    excludeDeploymentId?: string;
+  },
+): Promise<string[]> {
+  const { signal, sessionOnly = true, excludePipelineId, excludeDeploymentId } = options ?? {};
+  const draftsRes = await workspaceRequest<{ drafts: { id: string; name: string }[] }>(owner, '/pipeline/drafts', {
+    signal,
+    sessionOnly,
+  });
+  const depsRes = await workspaceRequest<{ deployments: DeploymentSummary[] }>(owner, '/pipeline/deployments', {
+    signal,
+    sessionOnly: true,
+  }).catch(() => ({ deployments: [] as DeploymentSummary[] }));
+
+  const displayedDeployments = new Map<string, DeploymentSummary>();
+  for (const dep of depsRes.deployments ?? []) {
+    const id = dep.workspacePipelineId ?? dep.pipelineId;
+    const previous = displayedDeployments.get(id);
+    if (previous) {
+      if (previous.status === 'deployed' && dep.status !== 'deployed') continue;
+      if ((previous.status === 'deployed') === (dep.status === 'deployed')) {
+        if (!previous.archivedAt && dep.archivedAt) continue;
+        if (Boolean(previous.archivedAt) === Boolean(dep.archivedAt) &&
+            (dep.createdAt < previous.createdAt ||
+              (dep.createdAt === previous.createdAt && dep.pipelineId <= previous.pipelineId))) continue;
+      }
+    }
+    displayedDeployments.set(id, dep);
+  }
+
+  const names: string[] = [];
+  const processed = new Set<string>();
+
+  for (const draft of draftsRes.drafts ?? []) {
+    const matchingDep = displayedDeployments.get(draft.id);
+    if (matchingDep) processed.add(draft.id);
+    if (matchingDep?.archivedAt) continue;
+    if (excludePipelineId && draft.id === excludePipelineId) continue;
+    if (excludeDeploymentId && matchingDep?.pipelineId === excludeDeploymentId) continue;
+    names.push(draft.name);
+  }
+
+  for (const dep of depsRes.deployments ?? []) {
+    const groupId = dep.workspacePipelineId ?? dep.pipelineId;
+    const primary = displayedDeployments.get(groupId)?.pipelineId === dep.pipelineId;
+    if (primary ? processed.has(groupId) : !dep.archivedAt) continue;
+    if (dep.archivedAt) continue;
+    if (excludePipelineId && groupId === excludePipelineId) continue;
+    if (excludeDeploymentId && dep.pipelineId === excludeDeploymentId) continue;
+    names.push(dep.name);
+  }
+
+  return names;
+}

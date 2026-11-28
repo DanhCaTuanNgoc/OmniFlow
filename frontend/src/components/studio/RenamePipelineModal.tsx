@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Edit3, Check } from 'lucide-react';
+import { isDuplicatePipelineName } from '@/lib/pipelineDraft';
+import { DuplicateNameWarning } from './DuplicateNameWarning';
 
 export interface RenamePipelineModalProps {
   isOpen: boolean;
   currentName: string;
   currentDescription?: string;
+  existingNames?: ReadonlyArray<string>;
   nameOnly?: boolean;
   error?: string | null;
   onClose: () => void;
@@ -17,6 +20,7 @@ export function RenamePipelineModal({
   isOpen,
   currentName,
   currentDescription = '',
+  existingNames = [],
   nameOnly = false,
   error,
   onClose,
@@ -48,6 +52,8 @@ export function RenamePipelineModal({
     if (!name.trim()) return;
     onSave(name.trim(), description.trim());
   };
+
+  const isDuplicateName = isDuplicatePipelineName(name, existingNames);
 
   return (
     <div
@@ -103,6 +109,7 @@ export function RenamePipelineModal({
               placeholder="e.g. Stop-Loss ETH / USDC"
               className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-3 py-2 text-xs text-white placeholder-zinc-500 focus:border-[var(--ws-accent)] focus:outline-none focus:ring-0"
             />
+            {isDuplicateName && <DuplicateNameWarning name={name} className="mt-1.5" />}
           </div>
 
           {!nameOnly && <div className="space-y-1.5">

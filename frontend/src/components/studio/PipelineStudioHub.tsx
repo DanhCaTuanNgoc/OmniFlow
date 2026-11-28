@@ -29,6 +29,7 @@ import {
   extractPipelineStats,
   parsePipelineDraft,
   archiveBrowserDraft,
+  resolveUniquePipelineName,
   studioGraph,
   type BrowserDraft 
 } from '@/lib/pipelineDraft';
@@ -169,13 +170,18 @@ export function PipelineStudioHub() {
     setIsImportingGuest(true);
     let importedCount = 0;
     try {
+      const takenWalletNames = unifiedPipelines
+        .filter((item) => item.source === 'wallet' && !item.isArchived)
+        .map((item) => item.name);
       // Import sequentially, removing each from localStorage upon success to prevent duplicate imports on partial failure
       for (const draft of [...localDrafts]) {
         const parsed = parsePipelineDraft(JSON.stringify(draft.graph), draftNodeTypes);
+        const uniqueName = resolveUniquePipelineName(draft.name, takenWalletNames, 'numbered');
+        takenWalletNames.push(uniqueName);
         const payload = {
           graph: {
             ...studioGraph(parsed.nodes, parsed.edges, parsed.networks ?? STOP_LOSS_TEMPLATE.networks),
-            metadata: { name: draft.name, ownerAddress: address },
+            metadata: { name: uniqueName, ownerAddress: address },
           },
         };
         await workspaceRequest(address, '/pipeline/drafts', {
@@ -300,6 +306,11 @@ export function PipelineStudioHub() {
     return items.sort((a, b) => b.updatedAt - a.updatedAt);
   }, [localDrafts, walletDrafts, walletDeployments]);
 
+  const activePipelineNames = useMemo(
+    () => unifiedPipelines.filter((item) => !item.isArchived).map((item) => item.name),
+    [unifiedPipelines]
+  );
+
   // Filtered pipelines based on search and status
   const filteredPipelines = useMemo(() => {
     return unifiedPipelines.filter((item) => {
@@ -386,7 +397,10 @@ export function PipelineStudioHub() {
 
   const handleSelectRecipe = (recipeId: string) => {
     const preset = RECIPE_PRESETS[recipeId];
-    if (preset) void createPipeline(preset.title, studioGraph(preset.nodes, preset.edges), preset.description);
+    if (preset) {
+      const uniqueName = resolveUniquePipelineName(preset.title, activePipelineNames, 'numbered');
+      void createPipeline(uniqueName, studioGraph(preset.nodes, preset.edges), preset.description);
+    }
   };
 
   const handleRenameSave = (name: string, description: string) => {
@@ -412,14 +426,15 @@ export function PipelineStudioHub() {
 
   const handleDuplicate = (item: PipelineItem) => void runAction(async signal => {
     if (item.source === 'local') {
-      duplicateBrowserDraft(item.id);
+      duplicateBrowserDraft(item.id, activePipelineNames);
       refreshLocalDrafts();
       return;
     }
     const { graph } = await readPipeline(item, signal);
     if (signal.aborted) return;
     const draft = parsePipelineDraft(JSON.stringify(graph), draftNodeTypes);
-    const copy = await storeWalletDraft(`${draft.name ?? item.name} (Copy)`, studioGraph(draft.nodes, draft.edges, draft.networks), signal);
+    const copyName = resolveUniquePipelineName(draft.name ?? item.name, activePipelineNames, 'copy');
+    const copy = await storeWalletDraft(copyName, studioGraph(draft.nodes, draft.edges, draft.networks), signal);
     if (signal.aborted) return;
     if (item.deployment) {
       router.push(`/workspace/studio?pipeline=${encodeURIComponent(copy.id)}`);
@@ -480,7 +495,8 @@ export function PipelineStudioHub() {
       if (file.size > 1_048_576) throw new Error('File size exceeds 1 MB.');
       const parsed = parsePipelineDraft(await file.text(), draftNodeTypes);
       if (signal?.aborted) return;
-      const name = parsed.name?.trim() || file.name.replace(/\.json$/i, '') || 'Imported Pipeline';
+      const rawName = parsed.name?.trim() || file.name.replace(/\.json$/i, '') || 'Imported Pipeline';
+      const name = resolveUniquePipelineName(rawName, activePipelineNames, 'numbered');
       await createPipeline(name, studioGraph(parsed.nodes, parsed.edges, parsed.networks), parsed.description);
     } catch (error) {
       if (!signal?.aborted) setImportError(error instanceof Error ? error.message : 'Invalid Studio JSON file.');
@@ -718,6 +734,7 @@ export function PipelineStudioHub() {
       {/* Modals */}
       <NewPipelineModal
         isOpen={isNewModalOpen}
+        existingNames={activePipelineNames}
         onClose={() => setIsNewModalOpen(false)}
         onCreateBlank={handleCreateBlank}
         onSelectRecipe={handleSelectRecipe}
@@ -728,6 +745,9 @@ export function PipelineStudioHub() {
           isOpen={!!renamingPipeline}
           currentName={renamingPipeline.name}
           currentDescription={renamingPipeline.description}
+          existingNames={unifiedPipelines
+            .filter((item) => !item.isArchived && item.id !== renamingPipeline.id)
+            .map((item) => item.name)}
           nameOnly={renamingPipeline.source === 'wallet'}
           error={importError}
           onClose={() => setRenamingPipeline(null)}

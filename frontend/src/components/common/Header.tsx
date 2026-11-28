@@ -4,8 +4,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAccount, useDisconnect, useSwitchChain } from 'wagmi';
-import { ArrowLeftRight, LogOut, Wallet, Pencil } from 'lucide-react';
+import { ArrowLeftRight, LogOut, Wallet, Pencil, AlertTriangle } from 'lucide-react';
 import { baseSepoliaChain } from '@/lib/chains';
+import { isDuplicatePipelineName } from '@/lib/pipelineDraft';
 import { truncateAddress } from '@/lib/utils';
 import { useStudioHeaderStore } from '@/lib/studioHeaderStore';
 import { clearWorkspaceSession } from '@/lib/workspaceSession';
@@ -31,13 +32,19 @@ export function Header() {
   const { switchChain, isPending: isSwitching, isError: switchFailed } = useSwitchChain();
   const needsBaseSepolia = isConnected && chainId !== baseSepoliaChain.id;
 
-  const { pipelineName, isEditable, onRename, activeAutomationName } = useStudioHeaderStore();
+  const { pipelineName, isEditable, existingPipelineNames, onRename, activeAutomationName } = useStudioHeaderStore();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isStudioDetail = sectionKey === 'studio' && Boolean(pipelineName);
   const isActiveDetail = sectionKey === 'active' && Boolean(subRoute) && Boolean(activeAutomationName);
+  const trimmedEditValue = editValue.trim();
+  const isDuplicateEditName =
+    isStudioDetail &&
+    isEditing &&
+    Boolean(trimmedEditValue) &&
+    isDuplicatePipelineName(trimmedEditValue, existingPipelineNames);
   const parentBreadcrumb = isStudioDetail
     ? { href: '/workspace/studio', label: 'Pipeline Studio', title: 'Return to Pipeline Studio Hub' }
     : isActiveDetail
@@ -158,6 +165,17 @@ export function Header() {
           </details>
         ) : null}
         {!signedIn && <WorkspaceSignIn compact />}
+        {isDuplicateEditName && (
+          <div
+            role="status"
+            className="absolute left-3 top-full z-40 mt-2 flex max-w-[calc(100vw-1.5rem)] items-start gap-2 rounded-lg border border-amber-500/35 bg-[#211e1a] px-3 py-2 text-[11px] leading-relaxed text-amber-200 sm:left-6 sm:max-w-md"
+          >
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-400" aria-hidden="true" />
+            <span>
+              Another pipeline is already named <strong className="font-semibold text-amber-100">&ldquo;{trimmedEditValue}&rdquo;</strong>. You can keep it, though identical names may be harder to distinguish.
+            </span>
+          </div>
+        )}
         {needsBaseSepolia && switchFailed && (
           <p role="alert" className="ws-panel absolute right-3 top-full mt-2 max-w-[16rem] p-3 text-xs text-rose-200">
             Could not switch to Base Sepolia. Check your wallet and try again.

@@ -2,7 +2,49 @@ import type { Edge, Node } from '@xyflow/react';
 import { STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 
 const localDraftsKey = 'omniflow.studio.drafts.v1';
+const MAX_PIPELINE_NAME_LENGTH = 120;
 export type BrowserDraft = { id: string; name: string; description?: string; updatedAt: number; graph: unknown; isArchived?: boolean };
+
+function fitNameWithSuffix(stem: string, suffix: string): string {
+  const maxStem = Math.max(1, MAX_PIPELINE_NAME_LENGTH - suffix.length);
+  return `${stem.slice(0, maxStem).trimEnd()}${suffix}`;
+}
+
+export function isDuplicatePipelineName(candidateName: string, existingNames: ReadonlyArray<string>): boolean {
+  const normalized = candidateName.trim().toLowerCase();
+  if (!normalized) return false;
+  return existingNames.some((name) => name.trim().toLowerCase() === normalized);
+}
+
+export function resolveUniquePipelineName(
+  baseName: string,
+  existingNames: ReadonlyArray<string>,
+  style: 'numbered' | 'copy' = 'numbered',
+): string {
+  const trimmed = (baseName.trim() || 'New Pipeline').slice(0, MAX_PIPELINE_NAME_LENGTH);
+  const taken = new Set(existingNames.map((name) => name.trim().toLowerCase()).filter(Boolean));
+
+  if (style === 'copy') {
+    const match = /^(.*?)\s+\(Copy(?:\s+(\d+))?\)$/i.exec(trimmed);
+    const stem = (match?.[1]?.trim() || trimmed).slice(0, MAX_PIPELINE_NAME_LENGTH);
+    const baseCopy = fitNameWithSuffix(stem, ' (Copy)');
+    if (!taken.has(baseCopy.toLowerCase())) return baseCopy;
+    let index = match?.[2] ? Math.max(2, Number(match[2]) + 1) : 2;
+    while (taken.has(fitNameWithSuffix(stem, ` (Copy ${index})`).toLowerCase())) {
+      index++;
+    }
+    return fitNameWithSuffix(stem, ` (Copy ${index})`);
+  }
+
+  if (!taken.has(trimmed.toLowerCase())) return trimmed;
+  const match = /^(.*?)\s+\((\d+)\)$/.exec(trimmed);
+  const stem = (match?.[1]?.trim() || trimmed).slice(0, MAX_PIPELINE_NAME_LENGTH);
+  let index = match?.[2] ? Math.max(2, Number(match[2]) + 1) : 2;
+  while (taken.has(fitNameWithSuffix(stem, ` (${index})`).toLowerCase())) {
+    index++;
+  }
+  return fitNameWithSuffix(stem, ` (${index})`);
+}
 
 export function listBrowserDrafts(): BrowserDraft[] {
   const serialized = localStorage.getItem(localDraftsKey);
@@ -49,14 +91,15 @@ export function renameBrowserDraft(id: string, name: string, description?: strin
   localStorage.setItem(localDraftsKey, JSON.stringify(updated));
 }
 
-export function duplicateBrowserDraft(id: string): BrowserDraft | undefined {
+export function duplicateBrowserDraft(id: string, existingNames?: ReadonlyArray<string>): BrowserDraft | undefined {
   const drafts = listBrowserDrafts();
   const existing = drafts.find(draft => draft.id === id);
   if (!existing) return undefined;
   const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
+  const activeNames = existingNames ?? drafts.filter((draft) => !draft.isArchived).map((draft) => draft.name);
   const copy: BrowserDraft = {
     id: newId,
-    name: `${existing.name} (Copy)`,
+    name: resolveUniquePipelineName(existing.name, activeNames, 'copy'),
     description: existing.description,
     updatedAt: Date.now(),
     graph: existing.graph,

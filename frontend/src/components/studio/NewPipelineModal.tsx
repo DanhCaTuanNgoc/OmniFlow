@@ -3,9 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Sparkles, Layers, ArrowRight } from 'lucide-react';
 import { RECIPE_PRESETS } from '@/lib/recipes';
+import { isDuplicatePipelineName, resolveUniquePipelineName } from '@/lib/pipelineDraft';
+import { DuplicateNameWarning } from './DuplicateNameWarning';
 
 export interface NewPipelineModalProps {
   isOpen: boolean;
+  existingNames?: ReadonlyArray<string>;
   onClose: () => void;
   onCreateBlank: (name: string) => void;
   onSelectRecipe: (recipeId: string) => void;
@@ -13,6 +16,7 @@ export interface NewPipelineModalProps {
 
 export function NewPipelineModal({
   isOpen,
+  existingNames = [],
   onClose,
   onCreateBlank,
   onSelectRecipe,
@@ -40,9 +44,13 @@ export function NewPipelineModal({
 
   const handleBlankSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onCreateBlank(pipelineName.trim() || 'New Pipeline');
+    const trimmed = pipelineName.trim();
+    const targetName = trimmed || resolveUniquePipelineName('New Pipeline', existingNames, 'numbered');
+    onCreateBlank(targetName);
     onClose();
   };
+
+  const isDuplicateName = isDuplicatePipelineName(pipelineName, existingNames);
 
   const handleRecipePick = (recipeId: string) => {
     onSelectRecipe(recipeId);
@@ -133,6 +141,7 @@ export function NewPipelineModal({
                 placeholder="e.g. My Arbitrage Pipeline"
                 className="w-full rounded-md border border-[var(--ws-border)] bg-[#111318] px-3 py-2 text-xs text-white placeholder-zinc-500 focus:border-[var(--ws-accent)] focus:outline-none focus:ring-0"
               />
+              {isDuplicateName && <DuplicateNameWarning name={pipelineName} className="mt-1.5" />}
             </div>
             <p className="text-xs text-[var(--ws-muted)] leading-relaxed">
               Creates an empty pipeline workspace. You can drag and drop Triggers, Condition Guards, and Destination Actions freely in the Visual Studio.
