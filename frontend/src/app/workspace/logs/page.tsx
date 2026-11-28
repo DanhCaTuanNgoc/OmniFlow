@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, type Address } from 'viem';
 import { 
   Activity, 
@@ -23,26 +24,16 @@ import { WorkspacePageHeader, WorkspaceState } from '@/components/common/Workspa
 import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
 import { useWebSocket, WebSocketProvider } from '@/components/providers/WebSocketProvider';
 import { getWorkspaceSessionToken, workspaceRequest } from '@/lib/workspaceSession';
-
-export type Execution = {
-  id: string;
-  pipelineId: string;
-  pipelineName: string;
-  timestamp: string;
-  status: 'PENDING' | 'UNVERIFIED' | 'REORGED' | 'SUCCESS' | 'SKIPPED' | 'FAILED';
-  originTxHash: string;
-  reactiveTxHash?: string;
-  destinationTxHash?: string;
-  details: {
-    reason?: string;
-    executionId?: string;
-    amountIn?: string;
-    amountOut?: string;
-    triggerPrice?: string;
-    thresholdPrice?: string;
-    executedPrice?: string;
-  };
-};
+import {
+  invalidateDeploymentsCache,
+  invalidateLogsCache,
+  useWorkspaceLogsQuery,
+  workspaceQueryKeys,
+  writeWorkspaceCache,
+  type ActivityExecution as Execution,
+  type ActivityHistory as History,
+} from '@/lib/workspaceCache';
+import { useWorkspaceFilterStore } from '@/lib/workspaceFilterStore';
 
 const outcome = {
   PENDING: { label: 'Confirming', icon: Clock, tone: 'text-amber-200' },
@@ -165,11 +156,7 @@ function ActivityEntry({ entry }: { entry: Execution }) {
   );
 }
 
-type History = {
-  logs: Execution[];
-  indexer: { checkedAt: string; error: boolean } | null;
-  next: { timestamp: string; sequence: number } | null;
-};
+export type { ActivityExecution as Execution } from '@/lib/workspaceCache';
 
 export default function ActivityLogsPage() {
   return (
@@ -223,53 +210,48 @@ function LogsRoute() {
 }
 
 function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: string | null }) {
-  const [history, setHistory] = useState<History>();
-  const [lastSyncedAt, setLastSyncedAt] = useState<Date>();
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string>();
+  const queryClient = useQueryClient();
+  const logsQuery = useWorkspaceLogsQuery(owner, deploymentId, true);
+  const history = logsQuery.data;
+  const lastSyncedAt = history && logsQuery.dataUpdatedAt ? new Date(logsQuery.dataUpdatedAt) : undefined;
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [mutationError, setMutationError] = useState<string>();
+  const pending = logsQuery.isFetching || loadingMore;
+  const error = mutationError ?? (logsQuery.error instanceof Error ? logsQuery.error.message : undefined);
   const { addListener, sendMessage, status } = useWebSocket();
   const path = deploymentId ? `/logs?pipelineId=${encodeURIComponent(deploymentId)}` : '/logs';
 
-  // Filter & Search
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SUCCESS' | 'PENDING' | 'FAILED' | 'SKIPPED' | 'UNVERIFIED'>('ALL');
+  // Filter & Search persisted across route navigation
+  const {
+    logsSearch: searchQuery,
+    logsStatus: statusFilter,
+    setLogsSearch: setSearchQuery,
+    setLogsStatus: setStatusFilter,
+  } = useWorkspaceFilterStore();
 
   const load = useCallback(async () => {
-    setPending(true);
-    setError(undefined);
-    try {
-      const res = await workspaceRequest<History>(owner, path, { sessionOnly: true });
-      setHistory(res);
-      setLastSyncedAt(new Date());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to open activity.');
-    } finally {
-      setPending(false);
-    }
-  }, [owner, path]);
+    setMutationError(undefined);
+    await logsQuery.refetch();
+  }, [logsQuery]);
 
   const hasHistory = history !== undefined;
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   async function loadEarlier() {
     const next = history?.next;
     if (!next) return;
-    setPending(true);
-    setError(undefined);
+    setLoadingMore(true);
+    setMutationError(undefined);
     try {
       const params = new URLSearchParams({ before: next.timestamp, sequence: String(next.sequence) });
       const page = await workspaceRequest<History>(owner, `${path}${deploymentId ? '&' : '?'}${params}`, { sessionOnly: true });
-      setHistory((current) => current && {
+      queryClient.setQueryData<History>(workspaceQueryKeys.logs(owner, deploymentId), (current) => current && {
         ...page,
         logs: [...current.logs, ...page.logs.filter((entry) => !current.logs.some((c) => c.id === entry.id))],
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load earlier receipts.');
+      setMutationError(err instanceof Error ? err.message : 'Unable to load earlier receipts.');
     } finally {
-      setPending(false);
+      setLoadingMore(false);
     }
   }
 
@@ -282,15 +264,20 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
       if (message.type === 'AUTHENTICATED') {
         sendMessage({ type: 'SUBSCRIBE_PIPELINE', pipelineId: deploymentId });
       } else if (message.type === 'PIPELINE_STATUS_CHANGED' && message.pipelineId === deploymentId) {
-        void load();
+        void invalidateLogsCache(queryClient, owner, deploymentId);
+        void invalidateDeploymentsCache(queryClient, owner, deploymentId);
       } else if (message.type === 'EXECUTION_UPDATED' && message.pipelineId === deploymentId) {
         const update = message.data as Execution;
-        setHistory((current) => current && {
-          ...current,
-          logs: [update, ...current.logs.filter((entry) => entry.id !== update.id)]
-            .sort((left, right) => right.timestamp.localeCompare(left.timestamp)),
+        queryClient.setQueryData<History>(workspaceQueryKeys.logs(owner, deploymentId), (current) => {
+          if (!current) return current;
+          const nextState = {
+            ...current,
+            logs: [update, ...current.logs.filter((entry) => entry.id !== update.id)]
+              .sort((left, right) => right.timestamp.localeCompare(left.timestamp)),
+          };
+          writeWorkspaceCache(owner, `logs:${deploymentId}`, nextState);
+          return nextState;
         });
-        setLastSyncedAt(new Date());
       }
     });
     sendMessage({ type: 'AUTHENTICATE', data: { token } });
@@ -298,7 +285,7 @@ function WalletHistory({ owner, deploymentId }: { owner: Address; deploymentId: 
       remove();
       sendMessage({ type: 'UNSUBSCRIBE_PIPELINE', pipelineId: deploymentId });
     };
-  }, [addListener, deploymentId, hasHistory, load, owner, sendMessage, status]);
+  }, [addListener, deploymentId, hasHistory, owner, queryClient, sendMessage, status]);
 
   // Periodic polling when not live-subscribed to WebSocket
   useEffect(() => {

@@ -23,12 +23,19 @@ import {
   Cpu
 } from 'lucide-react';
 import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract, useSwitchChain } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import { parseEther, formatEther, isAddress, isAddressEqual, type Address } from 'viem';
 import { CONTRACT_ADDRESSES } from '@/lib/constants';
 import { truncateAddress } from '@/lib/utils';
 import { ACTION_VAULT_ABI } from '@omniflow/shared';
 import { workspaceRequest } from '@/lib/workspaceSession';
 import type { DeploymentDetail, DeploymentSummary } from '@/lib/deployments';
+import {
+  invalidateDeploymentsCache,
+  useWorkspaceDeploymentsQuery,
+  useWorkspaceVaultsQuery,
+  workspaceQueryKeys,
+} from '@/lib/workspaceCache';
 
 export default function VaultManagerPage() {
   return (
@@ -94,22 +101,9 @@ function VaultRoute() {
 }
 
 function VerifiedPipelineVaults({ owner }: { owner: Address }) {
-  const [vaults, setVaults] = useState<{ address: Address; pair: Address; kind: string | null }[]>();
-  const [error, setError] = useState<string>();
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void workspaceRequest<{ vaults: NonNullable<typeof vaults> }>(owner, '/pipeline/vaults', {
-      signal: controller.signal,
-    }).then(result => {
-      if (!controller.signal.aborted) setVaults(result.vaults);
-    }).catch(error => {
-      if (!controller.signal.aborted) {
-        setError(error instanceof Error ? error.message : 'Unable to load linked Vaults.');
-      }
-    });
-    return () => controller.abort();
-  }, [owner]);
+  const vaultsQuery = useWorkspaceVaultsQuery(owner, true);
+  const vaults = vaultsQuery.data;
+  const error = vaultsQuery.error instanceof Error ? vaultsQuery.error.message : undefined;
 
   return (
     <section className="ws-page space-y-3" aria-label="Linked pipeline Vaults">
@@ -134,7 +128,10 @@ function VerifiedPipelineVaults({ owner }: { owner: Address }) {
 }
 
 function VaultSelection({ owner, id }: { owner?: Address; id: string }) {
-  const [deployment, setDeployment] = useState<DeploymentDetail>();
+  const queryClient = useQueryClient();
+  const [deployment, setDeployment] = useState<DeploymentDetail | undefined>(() =>
+    owner ? queryClient.getQueryData<DeploymentDetail>(workspaceQueryKeys.deployment(owner, id)) : undefined
+  );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -143,7 +140,16 @@ function VaultSelection({ owner, id }: { owner?: Address; id: string }) {
     setPending(true);
     setError(undefined);
     try {
-      setDeployment(await workspaceRequest<DeploymentDetail>(owner, `/pipeline/deployments/${encodeURIComponent(id)}`, { sessionOnly: true }));
+      const detail = await queryClient.fetchQuery({
+        queryKey: workspaceQueryKeys.deployment(owner, id),
+        staleTime: 20_000,
+        queryFn: ({ signal }) =>
+          workspaceRequest<DeploymentDetail>(owner, `/pipeline/deployments/${encodeURIComponent(id)}`, {
+            signal,
+            sessionOnly: true,
+          }),
+      });
+      setDeployment(detail);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Unable to load the Vault.');
     } finally {
@@ -229,7 +235,9 @@ function VaultForWallet({
   const [linkError, setLinkError] = useState<string | null>(null);
 
   // Target RSC to view & authorize
-  const [deployments, setDeployments] = useState<DeploymentSummary[]>([]);
+  const queryClient = useQueryClient();
+  const deploymentsQuery = useWorkspaceDeploymentsQuery(userAddress, Boolean(userAddress));
+  const deployments = deploymentsQuery.data ?? [];
   const [targetRsc, setTargetRsc] = useState<Address>(
     initialRscAddress ?? CONTRACT_ADDRESSES.DEFAULT_RSC_STOP_LOSS
   );
@@ -257,15 +265,12 @@ function VaultForWallet({
       )?.name ?? 'Reactive RSC';
 
   useEffect(() => {
-    if (!userAddress) return;
-    void workspaceRequest<{ deployments: DeploymentSummary[] }>(userAddress, '/pipeline/deployments', { sessionOnly: true }).then(({ deployments: deps }) => {
-      setDeployments(deps);
-      const deployedRsc = deps.find(({ contracts }) => contracts.rscAddress)?.contracts.rscAddress;
-      if (!initialRscAddress && deployedRsc) {
-        setTargetRsc(deployedRsc);
-      }
-    }).catch(() => {});
-  }, [userAddress, initialRscAddress]);
+    if (initialRscAddress) return;
+    const deployedRsc = deployments.find(({ contracts }) => contracts.rscAddress)?.contracts.rscAddress;
+    if (deployedRsc) {
+      setTargetRsc(deployedRsc);
+    }
+  }, [deployments, initialRscAddress]);
 
   const vaultConfigured = isAddress(vaultAddress);
   const isCorrectChain = chainId === 84532;
@@ -361,19 +366,21 @@ function VaultForWallet({
     if (depositReceipt?.status === 'success' && depositTxHash) {
       refetchVaultBalance();
       refetchUserBalance();
+      if (userAddress) void invalidateDeploymentsCache(queryClient, userAddress);
       setActionSuccessMsg({
         title: 'Vault deposit confirmed on Base Sepolia.',
         txHash: depositTxHash,
       });
       setTimeout(() => setActionSuccessMsg(null), 8000);
     }
-  }, [depositReceipt, depositTxHash, refetchVaultBalance, refetchUserBalance]);
+  }, [depositReceipt, depositTxHash, refetchVaultBalance, refetchUserBalance, queryClient, userAddress]);
 
   useEffect(() => {
     if (writeReceipt?.status === 'success' && writeTxHash) {
       refetchVaultBalance();
       refetchUserBalance();
       refetchAuthorization();
+      if (userAddress) void invalidateDeploymentsCache(queryClient, userAddress);
       setIsPanicConfirmOpen(false);
       setActionSuccessMsg({
         title: 'Transaction confirmed on Base Sepolia.',
@@ -381,7 +388,7 @@ function VaultForWallet({
       });
       setTimeout(() => setActionSuccessMsg(null), 8000);
     }
-  }, [writeReceipt, writeTxHash, refetchVaultBalance, refetchUserBalance, refetchAuthorization]);
+  }, [writeReceipt, writeTxHash, refetchVaultBalance, refetchUserBalance, refetchAuthorization, queryClient, userAddress]);
 
   const handleDeposit = () => {
     if (!canWrite || !userAddress || !/^\d+(\.\d{1,18})?$/.test(depositAmount) || parseEther(depositAmount) <= 0n) return;

@@ -10,15 +10,32 @@ let session: Session | undefined;
 let walletVersion = 0;
 let watching = false;
 const sessionKey = 'omniflow.workspace.session.v1';
+const workspaceCachePrefix = 'omniflow.ws.cache.v1.';
 const sessionListeners = new Set<() => void>();
 let expiryTimer: ReturnType<typeof setTimeout> | undefined;
 
+function clearSessionStorageCaches() {
+  if (typeof window === 'undefined') return;
+  try {
+    for (let i = window.sessionStorage.length - 1; i >= 0; i--) {
+      const key = window.sessionStorage.key(i);
+      if (key?.startsWith(workspaceCachePrefix)) window.sessionStorage.removeItem(key);
+    }
+  } catch {
+    // Ignore storage access errors.
+  }
+}
+
 function setSession(next?: Session) {
+  const previous = session;
   session = next;
   clearTimeout(expiryTimer);
   try {
     if (next) sessionStorage.setItem(sessionKey, JSON.stringify(next));
     else sessionStorage.removeItem(sessionKey);
+    if (!next || !previous || previous.token !== next.token || previous.owner.toLowerCase() !== next.owner.toLowerCase()) {
+      if (previous) clearSessionStorageCaches();
+    }
   } catch {
     // The current tab can still use the in-memory session.
   }

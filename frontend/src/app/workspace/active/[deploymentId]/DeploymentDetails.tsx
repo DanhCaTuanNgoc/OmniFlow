@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, parseEther, type Address } from 'viem';
 import {
   Activity, AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Circle, CirclePlus, Code2, Coins, ExternalLink,
@@ -16,6 +17,7 @@ import { WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspac
 import { ToastContainer, type ToastNotification } from '@/components/common/ToastContainer';
 import { DeployDialog } from '@/components/canvas/DeployConfirmation';
 import { useStudioHeaderStore } from '@/lib/studioHeaderStore';
+import { invalidateDeploymentsCache, useWorkspaceDeploymentDetailQuery } from '@/lib/workspaceCache';
 import { truncateAddress } from '@/lib/utils';
 
 const runtimeLabel = {
@@ -65,9 +67,11 @@ export default function DeploymentDetails({ id }: { id: string }) {
 }
 
 function WalletDeployment({ owner, id }: { owner: Address; id: string }) {
-  const [deployment, setDeployment] = useState<DeploymentDetail>();
-  const [pending, setPending] = useState(true);
-  const [error, setError] = useState<string>();
+  const queryClient = useQueryClient();
+  const detailQuery = useWorkspaceDeploymentDetailQuery(owner, id, true);
+  const deployment = detailQuery.data;
+  const pending = detailQuery.isFetching;
+  const error = detailQuery.error instanceof Error ? detailQuery.error.message : undefined;
   const { setActiveAutomationHeader, clearActiveAutomationHeader } = useStudioHeaderStore();
 
   useEffect(() => {
@@ -81,26 +85,12 @@ function WalletDeployment({ owner, id }: { owner: Address; id: string }) {
     };
   }, [deployment?.name, setActiveAutomationHeader, clearActiveAutomationHeader]);
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    setPending(true);
-    setError(undefined);
-    try {
-      const detail = await workspaceRequest<DeploymentDetail>(owner, `/pipeline/deployments/${encodeURIComponent(id)}`, { sessionOnly: true, signal });
-      if (!signal?.aborted) setDeployment(detail);
-    } catch (err) {
-      if (signal?.aborted) return;
-      setDeployment(undefined);
-      setError(err instanceof Error ? err.message : 'Unable to load the deployment.');
-    } finally {
-      if (!signal?.aborted) setPending(false);
-    }
-  }, [id, owner]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void load(controller.signal);
-    return () => controller.abort();
-  }, [load]);
+  const load = useCallback(async () => {
+    await Promise.all([
+      detailQuery.refetch(),
+      invalidateDeploymentsCache(queryClient, owner),
+    ]);
+  }, [detailQuery, owner, queryClient]);
 
   if (!deployment) {
     return (

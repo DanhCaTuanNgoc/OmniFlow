@@ -1,50 +1,50 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Address } from 'viem';
 import { workspaceRequest } from '@/lib/workspaceSession';
+import {
+  invalidateTelegramCache,
+  useWorkspaceTelegramStatusQuery,
+  workspaceQueryKeys,
+  writeWorkspaceCache,
+  type TelegramStatus,
+} from '@/lib/workspaceCache';
 
-type Status = { enabled: boolean; linked: boolean };
 type Link = { url: string; expires: number };
 
 export function TelegramAlerts({ owner }: { owner: Address }) {
-  const [status, setStatus] = useState<Status | null>(null);
+  const queryClient = useQueryClient();
+  const statusQuery = useWorkspaceTelegramStatusQuery(owner, true);
+  const status = statusQuery.data ?? null;
   const [link, setLink] = useState<Link | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [mutationError, setMutationError] = useState('');
   const [expired, setExpired] = useState(false);
-  const [refresh, setRefresh] = useState(0);
+  const error = mutationError || (statusQuery.isError ? 'Could not check Telegram status.' : '');
 
   useEffect(() => {
-    const controller = new AbortController();
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    async function check() {
-      try {
-        const next = await workspaceRequest<Status>(owner, '/telegram/status', {
-          sessionOnly: true, signal: controller.signal,
-        });
-        if (controller.signal.aborted) return;
-        setStatus(next);
-        setError('');
-        if (next.linked) setLink(null);
-        else if (link && Date.now() >= link.expires) {
-          setLink(null);
-          setExpired(true);
-        } else if (link) timer = setTimeout(check, 2500);
-      } catch {
-        if (!controller.signal.aborted) setError('Could not check Telegram status.');
+    if (!link) return;
+    const timer = setInterval(() => {
+      if (Date.now() >= link.expires) {
+        setLink(null);
+        setExpired(true);
+        return;
       }
-    }
-    void check();
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [owner, link, refresh]);
+      void statusQuery.refetch().then((result) => {
+        if (result.data?.linked) {
+          setLink(null);
+          writeWorkspaceCache(owner, 'telegram-status', result.data);
+        }
+      });
+    }, 2500);
+    return () => clearInterval(timer);
+  }, [link, owner, statusQuery]);
 
   async function changeLink(method: 'POST' | 'DELETE') {
     setBusy(true);
-    setError('');
+    setMutationError('');
     setExpired(false);
     try {
       if (method === 'POST') {
@@ -52,11 +52,15 @@ export function TelegramAlerts({ owner }: { owner: Address }) {
       } else {
         await workspaceRequest(owner, '/telegram/link', { method, sessionOnly: true });
         setLink(null);
-        setStatus(previous => previous && { ...previous, linked: false });
-        setRefresh(value => value + 1);
+        queryClient.setQueryData<TelegramStatus>(workspaceQueryKeys.telegramStatus(owner), (previous) => {
+          const next = previous ? { ...previous, linked: false } : previous;
+          if (next) writeWorkspaceCache(owner, 'telegram-status', next);
+          return next;
+        });
+        void invalidateTelegramCache(queryClient, owner);
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not update Telegram alerts.');
+      setMutationError(cause instanceof Error ? cause.message : 'Could not update Telegram alerts.');
     } finally {
       setBusy(false);
     }
@@ -74,7 +78,10 @@ export function TelegramAlerts({ owner }: { owner: Address }) {
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        {error && <button type="button" className="ws-button" onClick={() => setRefresh(value => value + 1)}>
+        {error && <button type="button" className="ws-button" onClick={() => {
+          setMutationError('');
+          void statusQuery.refetch();
+        }}>
           Refresh status
         </button>}
         {link && <a className="ws-button" href={link.url} target="_blank" rel="noopener noreferrer">Open Telegram</a>}

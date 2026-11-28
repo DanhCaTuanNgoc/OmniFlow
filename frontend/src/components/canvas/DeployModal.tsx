@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAccount, useConfig } from 'wagmi';
 import { getAccount, readContract } from 'wagmi/actions';
+import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, isAddressEqual, keccak256, stringToHex, type Address } from 'viem';
 import { APP_CONFIG } from '@/lib/constants';
 import { ACTION_VAULT_ABI, resolveStopLoss, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
@@ -20,6 +21,7 @@ import { truncateAddress } from '@/lib/utils';
 import { invalidateWorkspaceSession, signInToWorkspace } from '@/lib/workspaceSession';
 import { DeployDialog, DeploySummary } from './DeployConfirmation';
 import { runDeploymentAction, type DeploymentSummary } from '@/lib/deployments';
+import { invalidateDeploymentsCache, invalidateDraftsCache } from '@/lib/workspaceCache';
 
 type DeploymentResult = DeploymentSummary & {
   gasSponsored: { amountLReact: string };
@@ -37,6 +39,7 @@ interface DeployModalProps {
 export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name }: DeployModalProps) {
   const { address: userAddress, isConnected } = useAccount();
   const config = useConfig();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deployResult, setDeployResult] = useState<DeploymentResult | null>(null);
@@ -133,6 +136,8 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
       if (data.status === 'reverted') {
         setError('The Lasna deployment reverted. Check the transaction before deploying again.');
       }
+      void invalidateDraftsCache(queryClient, owner);
+      void invalidateDeploymentsCache(queryClient, owner, data.pipelineId);
       setDeployResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to deploy pipeline to Reactive Lasna');
@@ -147,6 +152,7 @@ export function DeployModal({ isOpen, onClose, graph, workspacePipelineId, name 
     setError(null);
     try {
       await runDeploymentAction(deployOwner, deployResult, 'authorization');
+      void invalidateDeploymentsCache(queryClient, deployOwner, deployResult.pipelineId);
       setAuthSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Vault authorization failed.');

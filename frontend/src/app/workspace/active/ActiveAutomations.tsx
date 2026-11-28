@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { useAccount, useSwitchChain } from 'wagmi';
 import { type Address } from 'viem';
@@ -21,7 +21,8 @@ import {
 import { WorkspacePageHeader, WorkspaceState } from '@/components/common/WorkspaceUI';
 import { useWorkspaceSignedIn, WorkspaceSignIn } from '@/components/common/WorkspaceSignIn';
 import { type DeploymentSummary } from '@/lib/deployments';
-import { workspaceRequest } from '@/lib/workspaceSession';
+import { useWorkspaceDeploymentsQuery } from '@/lib/workspaceCache';
+import { useWorkspaceFilterStore } from '@/lib/workspaceFilterStore';
 
 export type AutomationCardStatus = {
   type: 'active' | 'paused' | 'setup' | 'pending' | 'reverted';
@@ -149,33 +150,18 @@ function WalletDeployments({ owner }: { owner: Address }) {
   const { chainId } = useAccount();
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
   const isCorrectChain = chainId === 84532;
-  const [list, setList] = useState<DeploymentSummary[]>();
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string>();
+  const deploymentsQuery = useWorkspaceDeploymentsQuery(owner, isCorrectChain);
+  const list = isCorrectChain ? deploymentsQuery.data : undefined;
+  const pending = deploymentsQuery.isFetching;
+  const error = deploymentsQuery.error instanceof Error ? deploymentsQuery.error.message : undefined;
 
-  // Filter & Search
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'PAUSED' | 'SETUP' | 'PENDING' | 'ARCHIVED'>('ALL');
-
-  async function load() {
-    setPending(true);
-    setError(undefined);
-    try {
-      const result = await workspaceRequest<{ deployments: DeploymentSummary[] }>(owner, '/pipeline/deployments', { sessionOnly: true });
-      setList(result.deployments);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load deployments.');
-    } finally {
-      setPending(false);
-    }
-  }
-
-  // Auto-load deployments on mount or when switching to correct chain
-  useEffect(() => {
-    if (isCorrectChain) {
-      void load();
-    }
-  }, [owner, isCorrectChain]);
+  // Filter & Search persisted across route navigation
+  const {
+    activeSearch: searchQuery,
+    activeStatus: statusFilter,
+    setActiveSearch: setSearchQuery,
+    setActiveStatus: setStatusFilter,
+  } = useWorkspaceFilterStore();
 
   const counts = useMemo(() => {
     let all = 0;
@@ -275,7 +261,7 @@ function WalletDeployments({ owner }: { owner: Address }) {
           <button
             type="button"
             className="ws-button inline-flex items-center gap-1.5 shrink-0"
-            onClick={() => void load()}
+            onClick={() => void deploymentsQuery.refetch()}
             disabled={pending}
             title="Refresh deployments from blockchain"
           >

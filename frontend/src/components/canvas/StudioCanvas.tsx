@@ -20,6 +20,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAccount } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Address } from 'viem';
 import { getSavedVault } from '@/lib/vaultSelection';
 import { RECIPE_PRESETS } from '@/lib/recipes';
@@ -29,6 +30,7 @@ import { listBrowserDrafts, parsePipelineDraft, saveBrowserDraft, renameBrowserD
 import { hasSingleExecutionRoute, planPipelineWalkthrough } from '@/lib/pipelineWalkthrough';
 import { fetchActiveWalletPipelineNames, type DeploymentDetail, type DeploymentExecution } from '@/lib/deployments';
 import { WorkspaceSignInRequired, workspaceRequest } from '@/lib/workspaceSession';
+import { invalidateDraftsCache, workspaceQueryKeys } from '@/lib/workspaceCache';
 import { useWorkspaceSignedIn } from '@/components/common/WorkspaceSignIn';
 import { PipelineOpenState } from '@/components/studio/PipelineOpenState';
 import { useStudioHeaderStore } from '@/lib/studioHeaderStore';
@@ -135,6 +137,7 @@ function StudioCanvasInner() {
 
   const searchParams = useSearchParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isPaletteOpen, setPaletteOpen] = useState(true);
   const [activeRecipeId, setActiveRecipeId] = useState<string>('');
   const [isDeployOpen, setIsDeployOpen] = useState(false);
@@ -314,6 +317,7 @@ function StudioCanvasInner() {
       sessionOnly: true,
       excludePipelineId: pipelineParam ?? undefined,
       excludeDeploymentId: deploymentParam ?? undefined,
+      queryClient,
     })
       .then((names) => {
         if (!controller.signal.aborted && active.current) setOtherActiveNames(names);
@@ -322,7 +326,7 @@ function StudioCanvasInner() {
         if (!controller.signal.aborted && active.current) setOtherActiveNames([]);
       });
     return () => controller.abort();
-  }, [isConnected, address, signedIn, localParam, pipelineParam, deploymentParam]);
+  }, [isConnected, address, signedIn, localParam, pipelineParam, deploymentParam, queryClient]);
 
   const handleRenameFromHeader = useCallback((newName: string) => {
     setPipelineName(newName);
@@ -399,9 +403,17 @@ function StudioCanvasInner() {
     const controller = new AbortController();
     const resource = deploymentParam ? 'deployments' : 'drafts';
     const id = deploymentParam ?? pipelineParam!;
-    void workspaceRequest<{ graph: unknown; id?: string; updatedAt?: number } & Partial<Pick<DeploymentDetail, 'status' | 'runtime' | 'latestExecution'>>>(
-      address, '/pipeline/' + resource + '/' + encodeURIComponent(id), { signal: controller.signal, sessionOnly: true },
-    ).then(snapshot => {
+    const queryKey = deploymentParam
+      ? workspaceQueryKeys.deployment(address, id)
+      : workspaceQueryKeys.draft(address, id);
+    void queryClient.fetchQuery({
+      queryKey,
+      staleTime: deploymentParam ? 20_000 : 3 * 60_000,
+      gcTime: 15 * 60_000,
+      queryFn: ({ signal }) => workspaceRequest<{ graph: unknown; id?: string; updatedAt?: number } & Partial<Pick<DeploymentDetail, 'status' | 'runtime' | 'latestExecution'>>>(
+        address, '/pipeline/' + resource + '/' + encodeURIComponent(id), { signal, sessionOnly: true },
+      ),
+    }).then(snapshot => {
       if (controller.signal.aborted || !active.current) return;
       setSignInRequired(false);
       setLoadError(undefined);
@@ -426,7 +438,7 @@ function StudioCanvasInner() {
       setLoadError(needsSignIn ? undefined : error instanceof Error ? error.message : 'Unable to load pipeline.');
     });
     return () => controller.abort();
-  }, [address, pipelineParam, deploymentParam, setNodes, setEdges, signedIn, loaded]);
+  }, [address, pipelineParam, deploymentParam, setNodes, setEdges, signedIn, loaded, queryClient]);
 
   useEffect(() => {
     if (!loaded || !deploymentParam || !address || !signedIn) return;
@@ -477,13 +489,20 @@ function StudioCanvasInner() {
     try {
       const graph = studioGraph(nodes, edges, draftNetworks);
       if (isConnected && address) {
+        const savedPayload = { ...graph, metadata: { name: draftName, ownerAddress: address, description } };
         const result = await workspaceRequest<{ id: string; updatedAt: number }>(address, '/pipeline/drafts', {
           method: 'POST', body: JSON.stringify({
-            graph: { ...graph, metadata: { name: draftName, ownerAddress: address, description } }, revision: savedDraft,
+            graph: savedPayload, revision: savedDraft,
           }),
         });
         if (!active.current) return false;
         setSavedDraft(result);
+        queryClient.setQueryData(workspaceQueryKeys.draft(address, result.id), {
+          id: result.id,
+          updatedAt: result.updatedAt,
+          graph: savedPayload,
+        });
+        void invalidateDraftsCache(queryClient, address);
         if (!leave && editVersion.current === version && pipelineParam !== result.id) {
           router.replace('/workspace/studio?pipeline=' + result.id, { scroll: false });
         }
@@ -520,6 +539,7 @@ function StudioCanvasInner() {
             graph: { ...graph, metadata: { name: copyName, ownerAddress: address, description } },
           }),
         });
+        void invalidateDraftsCache(queryClient, address);
         if (active.current) router.push(`/workspace/studio?pipeline=${result.id}`);
       } else {
         const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;

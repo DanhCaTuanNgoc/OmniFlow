@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useSyncExternalStore } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useAccount } from 'wagmi';
@@ -15,9 +15,10 @@ const StudioCanvas = dynamic(
   }
 );
 
+const emptySubscribe = () => () => {};
+
 export default function StudioPage() {
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
+  const hydrated = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   if (!hydrated) return <PipelineOpenState state="studio" />;
 

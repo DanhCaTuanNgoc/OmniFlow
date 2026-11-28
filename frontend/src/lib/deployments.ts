@@ -1,8 +1,10 @@
 import { getAccount, sendTransaction, switchChain, waitForTransactionReceipt, writeContract } from 'wagmi/actions';
 import { isAddressEqual, parseAbi, type Address, type Hash } from 'viem';
+import type { QueryClient } from '@tanstack/react-query';
 import { ACTION_VAULT_ABI, PRICE_ORDER_VAULT_ABI, resolvePhaseTwo, STOP_LOSS_TEMPLATE, type StopLossGraph } from '@omniflow/shared';
 import { wagmiConfig } from './wagmi';
 import { signInToWorkspace, workspaceRequest } from './workspaceSession';
+import { fetchWorkspaceDeploymentsList, fetchWorkspaceDraftsList, workspaceQueryKeys } from './workspaceCache';
 
 type DeploymentStep = 'register-rsc' | 'price-policy' | 'authorization' | 'principal' | 'callback-reserve' | 'reactive-reserve';
 const reserveAbi = parseAbi(['function depositTo(address) payable']);
@@ -173,20 +175,39 @@ export async function fetchActiveWalletPipelineNames(
     sessionOnly?: boolean;
     excludePipelineId?: string;
     excludeDeploymentId?: string;
+    queryClient?: QueryClient;
   },
 ): Promise<string[]> {
-  const { signal, sessionOnly = true, excludePipelineId, excludeDeploymentId } = options ?? {};
-  const draftsRes = await workspaceRequest<{ drafts: { id: string; name: string }[] }>(owner, '/pipeline/drafts', {
-    signal,
-    sessionOnly,
-  });
-  const depsRes = await workspaceRequest<{ deployments: DeploymentSummary[] }>(owner, '/pipeline/deployments', {
-    signal,
-    sessionOnly: true,
-  }).catch(() => ({ deployments: [] as DeploymentSummary[] }));
+  const { signal, sessionOnly = true, excludePipelineId, excludeDeploymentId, queryClient } = options ?? {};
+  const drafts = queryClient && sessionOnly
+    ? await queryClient.fetchQuery({
+      queryKey: workspaceQueryKeys.drafts(owner),
+      queryFn: ({ signal: querySignal }) => fetchWorkspaceDraftsList(owner, querySignal),
+      staleTime: 3 * 60_000,
+    })
+    : (await workspaceRequest<{ drafts: { id: string; name: string }[] }>(owner, '/pipeline/drafts', {
+      signal,
+      sessionOnly,
+    })).drafts ?? [];
+
+  if (queryClient && !sessionOnly) {
+    // Ensure session is cached after sign-in before reading deployments with sessionOnly.
+    queryClient.setQueryData(workspaceQueryKeys.drafts(owner), drafts);
+  }
+
+  const deployments = queryClient
+    ? await queryClient.fetchQuery({
+      queryKey: workspaceQueryKeys.deployments(owner),
+      queryFn: ({ signal: querySignal }) => fetchWorkspaceDeploymentsList(owner, querySignal),
+      staleTime: 30_000,
+    }).catch(() => [] as DeploymentSummary[])
+    : (await workspaceRequest<{ deployments: DeploymentSummary[] }>(owner, '/pipeline/deployments', {
+      signal,
+      sessionOnly: true,
+    }).catch(() => ({ deployments: [] as DeploymentSummary[] }))).deployments ?? [];
 
   const displayedDeployments = new Map<string, DeploymentSummary>();
-  for (const dep of depsRes.deployments ?? []) {
+  for (const dep of deployments) {
     const id = dep.workspacePipelineId ?? dep.pipelineId;
     const previous = displayedDeployments.get(id);
     if (previous) {
@@ -204,7 +225,7 @@ export async function fetchActiveWalletPipelineNames(
   const names: string[] = [];
   const processed = new Set<string>();
 
-  for (const draft of draftsRes.drafts ?? []) {
+  for (const draft of drafts) {
     const matchingDep = displayedDeployments.get(draft.id);
     if (matchingDep) processed.add(draft.id);
     if (matchingDep?.archivedAt) continue;
@@ -213,7 +234,7 @@ export async function fetchActiveWalletPipelineNames(
     names.push(draft.name);
   }
 
-  for (const dep of depsRes.deployments ?? []) {
+  for (const dep of deployments) {
     const groupId = dep.workspacePipelineId ?? dep.pipelineId;
     const primary = displayedDeployments.get(groupId)?.pipelineId === dep.pipelineId;
     if (primary ? processed.has(groupId) : !dep.archivedAt) continue;

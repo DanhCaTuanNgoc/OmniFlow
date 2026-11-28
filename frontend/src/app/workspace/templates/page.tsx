@@ -9,6 +9,9 @@ import { listBrowserDrafts, resolveUniquePipelineName, saveBrowserDraft, studioG
 import { fetchActiveWalletPipelineNames } from '@/lib/deployments';
 import { workspaceRequest } from '@/lib/workspaceSession';
 import { useAccount } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
+import { invalidateDraftsCache } from '@/lib/workspaceCache';
+import { useWorkspaceFilterStore } from '@/lib/workspaceFilterStore';
 import { 
   Library, 
   ArrowRight, 
@@ -200,6 +203,7 @@ if (velocityDrop > VELOCITY_LIMIT && block.timestamp - lastTriggered >= 300) {
 
 export default function TemplateLibraryPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { address, isConnected } = useAccount();
   const owner = isConnected ? address : undefined;
   const scope = useRef<AbortController>();
@@ -214,8 +218,12 @@ export default function TemplateLibraryPage() {
     return () => controller.abort();
   }, [owner]);
 
-  const [activeCategory, setActiveCategory] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const {
+    templatesCategory: activeCategory,
+    templatesSearch: searchQuery,
+    setTemplatesCategory: setActiveCategory,
+    setTemplatesSearch: setSearchQuery,
+  } = useWorkspaceFilterStore();
   const [inspectingRecipe, setInspectingRecipe] = useState<Recipe | null>(null);
 
   const handleHydrateRecipe = async (recipe: Recipe) => {
@@ -227,13 +235,18 @@ export default function TemplateLibraryPage() {
     const graph = studioGraph(preset.nodes, preset.edges);
     try {
       if (owner) {
-        const existingNames = await fetchActiveWalletPipelineNames(owner, { signal, sessionOnly: false });
+        const existingNames = await fetchActiveWalletPipelineNames(owner, {
+          signal,
+          sessionOnly: false,
+          queryClient,
+        });
         if (signal.aborted) return;
         const uniqueTitle = resolveUniquePipelineName(recipe.title, existingNames, 'numbered');
         const draft = await workspaceRequest<{ id: string }>(owner, '/pipeline/drafts', {
           method: 'POST', signal,
           body: JSON.stringify({ graph: { ...graph, metadata: { name: uniqueTitle, ownerAddress: owner } } }),
         });
+        await invalidateDraftsCache(queryClient, owner);
         if (!signal.aborted) router.push('/workspace/studio?pipeline=' + encodeURIComponent(draft.id));
       } else {
         const id = crypto.randomUUID();

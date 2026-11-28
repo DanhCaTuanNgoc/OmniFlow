@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useRef, useLayoutEffect } from 're
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Address } from 'viem';
 import { 
   Plus, 
@@ -36,6 +37,16 @@ import {
 import { STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 import { setDeploymentArchived, type DeploymentSummary } from '@/lib/deployments';
 import { WorkspaceSignInRequired, WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspaceSession';
+import {
+  invalidateDeploymentsCache,
+  invalidateDraftDetailCache,
+  invalidateDraftsCache,
+  useWorkspaceDeploymentsQuery,
+  useWorkspaceDraftsQuery,
+  workspaceQueryKeys,
+  writeWorkspaceCache,
+} from '@/lib/workspaceCache';
+import { useWorkspaceFilterStore } from '@/lib/workspaceFilterStore';
 import { RECIPE_PRESETS } from '@/lib/recipes';
 import { PALETTE_ITEMS } from '@/components/canvas/NodePalette';
 import { WorkspaceState } from '@/components/common/WorkspaceUI';
@@ -48,28 +59,35 @@ import { useWorkspaceSignedIn } from '@/components/common/WorkspaceSignIn';
 
 const draftNodeTypes = new Map(PALETTE_ITEMS.map((item) => [item.type, item.category]));
 
-type WalletDraftSummary = { id: string; name: string; updatedAt: number };
-
 function isStandaloneDraft(item: PipelineItem) {
   return !item.deployment && !item.isArchived && (item.hasDraft || item.source === 'local');
 }
 
 export function PipelineStudioHub() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { address, isConnected } = useAccount();
 
   // Local drafts state
   const [localDrafts, setLocalDrafts] = useState<BrowserDraft[]>([]);
   const [localError, setLocalError] = useState(false);
 
-  // Wallet drafts & deployments state
-  const [walletDrafts, setWalletDrafts] = useState<WalletDraftSummary[]>([]);
-  const [walletDeployments, setWalletDeployments] = useState<DeploymentSummary[]>([]);
-  const [walletPending, setWalletPending] = useState(Boolean(isConnected && address));
-  const [walletError, setWalletError] = useState<string>();
-  const [signInRequired, setSignInRequired] = useState(false);
   const signedIn = useWorkspaceSignedIn(isConnected ? address : undefined);
-  const [reload, setReload] = useState(0);
+  const walletQueryEnabled = Boolean(isConnected && address && signedIn);
+  const draftsQuery = useWorkspaceDraftsQuery(address, walletQueryEnabled);
+  const deploymentsQuery = useWorkspaceDeploymentsQuery(address, walletQueryEnabled);
+  const walletDrafts = useMemo(() => draftsQuery.data ?? [], [draftsQuery.data]);
+  const walletDeployments = useMemo(() => deploymentsQuery.data ?? [], [deploymentsQuery.data]);
+  const walletPending = walletQueryEnabled && (draftsQuery.isLoading || deploymentsQuery.isLoading);
+  const signInRequired =
+    Boolean(isConnected && address && !signedIn) ||
+    draftsQuery.error instanceof WorkspaceSignInRequired ||
+    deploymentsQuery.error instanceof WorkspaceSignInRequired;
+  const walletFailures = [
+    draftsQuery.isError && !(draftsQuery.error instanceof WorkspaceSignInRequired) && 'drafts',
+    deploymentsQuery.isError && !(deploymentsQuery.error instanceof WorkspaceSignInRequired) && 'deployments',
+  ].filter(Boolean);
+  const walletError = walletFailures.length ? 'Could not load wallet ' + walletFailures.join(' and ') + '.' : undefined;
   const session = useRef<AbortController>();
   const actionInFlight = useRef(false);
   useLayoutEffect(() => {
@@ -78,9 +96,14 @@ export function PipelineStudioHub() {
     return () => controller.abort();
   }, []);
 
-  // Filter & Search (Aligned with Section 7.2 of Operations Analysis: All, Drafts, Active, Archived)
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'DRAFTS' | 'ACTIVE' | 'ARCHIVED'>('ALL');
+  // Filter & Search persisted across navigation
+  const {
+    studioSearch: searchQuery,
+    studioStatus: statusFilter,
+    setStudioSearch: setSearchQuery,
+    setStudioStatus: setStatusFilter,
+    resetStudioFilters,
+  } = useWorkspaceFilterStore();
 
   // Guest draft migration state
   const [isImportingGuest, setIsImportingGuest] = useState(false);
@@ -109,59 +132,6 @@ export function PipelineStudioHub() {
   useEffect(() => {
     refreshLocalDrafts();
   }, []);
-
-  // 2. Load Wallet Drafts & Deployments when connected
-  useEffect(() => {
-    if (!isConnected || !address) {
-      setWalletDrafts([]);
-      setWalletDeployments([]);
-      return;
-    }
-
-    const request = new AbortController();
-    async function fetchWalletData(owner: Address) {
-      setWalletPending(true);
-      setWalletError(undefined);
-      try {
-        const [draftsRes, depsRes] = await Promise.allSettled([
-          workspaceRequest<{ drafts: WalletDraftSummary[] }>(owner, '/pipeline/drafts', { signal: request.signal, sessionOnly: true }),
-          workspaceRequest<{ deployments: DeploymentSummary[] }>(owner, '/pipeline/deployments', { signal: request.signal, sessionOnly: true }),
-        ]);
-
-        if (!request.signal.aborted) {
-          const needsSignIn = [draftsRes, depsRes].some(result =>
-            result.status === 'rejected' && result.reason instanceof WorkspaceSignInRequired);
-          setSignInRequired(needsSignIn);
-          if (needsSignIn) {
-            setWalletDrafts([]);
-            setWalletDeployments([]);
-            return;
-          }
-          const failures = [draftsRes.status === 'rejected' && 'drafts', depsRes.status === 'rejected' && 'deployments'].filter(Boolean);
-          if (failures.length) setWalletError('Could not load wallet ' + failures.join(' and ') + '.');
-          if (draftsRes.status === 'fulfilled') {
-            setWalletDrafts(draftsRes.value.drafts || []);
-          }
-          if (depsRes.status === 'fulfilled') {
-            setWalletDeployments(depsRes.value.deployments || []);
-          }
-        }
-      } catch (err) {
-        if (!request.signal.aborted) {
-          setWalletError(err instanceof Error ? err.message : 'Unable to load wallet data.');
-        }
-      } finally {
-        if (!request.signal.aborted) {
-          setWalletPending(false);
-        }
-      }
-    }
-
-    fetchWalletData(address);
-    return () => {
-      request.abort();
-    };
-  }, [isConnected, address, reload, signedIn]);
 
   // Handle Guest-to-Wallet Drafts Import (Section 1 & 7.2)
   const handleImportAllGuestDrafts = async () => {
@@ -197,10 +167,11 @@ export function PipelineStudioHub() {
       setGuestImportMessage(`Successfully imported ${importedCount} browser drafts to your wallet workspace.`);
       setTimeout(() => setGuestImportMessage(null), 5000);
       setDismissedGuestBanner(true);
-      setReload(value => value + 1);
+      resetStudioFilters();
+      await invalidateDraftsCache(queryClient, address);
     } catch (err) {
       if (signal?.aborted) return;
-      setReload(value => value + 1);
+      await invalidateDraftsCache(queryClient, address);
       refreshLocalDrafts();
       if (err instanceof WorkspaceWalletPromptCancelled) return;
       setImportError(
@@ -381,8 +352,10 @@ export function PipelineStudioHub() {
 
   function createPipeline(name: string, graph: ReturnType<typeof studioGraph>, description?: string) {
     return runAction(async signal => {
+      resetStudioFilters();
       if (isConnected && address) {
         const result = await storeWalletDraft(name, graph, signal);
+        await invalidateDraftsCache(queryClient, address);
         if (!signal.aborted) router.push('/workspace/studio?pipeline=' + encodeURIComponent(result.id));
       } else {
         const id = crypto.randomUUID();
@@ -410,7 +383,7 @@ export function PipelineStudioHub() {
       if (item.source === 'local') {
         renameBrowserDraft(item.id, name, description);
         refreshLocalDrafts();
-      } else if (item.hasDraft) {
+      } else if (item.hasDraft && address) {
         const snapshot = await readPipeline(item, signal, 'draft');
         if (signal.aborted) return;
         if (snapshot.updatedAt !== item.updatedAt) throw new Error('The saved draft changed. Refresh the list and try again.');
@@ -418,7 +391,10 @@ export function PipelineStudioHub() {
         await storeWalletDraft(name, studioGraph(draft.nodes, draft.edges, draft.networks), signal,
           { id: item.id, updatedAt: item.updatedAt });
         if (signal.aborted) return;
-        setReload(value => value + 1);
+        await Promise.all([
+          invalidateDraftsCache(queryClient, address),
+          invalidateDraftDetailCache(queryClient, address, item.id),
+        ]);
       }
       setRenamingPipeline(null);
     });
@@ -435,11 +411,11 @@ export function PipelineStudioHub() {
     const draft = parsePipelineDraft(JSON.stringify(graph), draftNodeTypes);
     const copyName = resolveUniquePipelineName(draft.name ?? item.name, activePipelineNames, 'copy');
     const copy = await storeWalletDraft(copyName, studioGraph(draft.nodes, draft.edges, draft.networks), signal);
+    if (address) await invalidateDraftsCache(queryClient, address);
     if (signal.aborted) return;
     if (item.deployment) {
+      resetStudioFilters();
       router.push(`/workspace/studio?pipeline=${encodeURIComponent(copy.id)}`);
-    } else {
-      setReload(value => value + 1);
     }
   });
 
@@ -449,9 +425,13 @@ export function PipelineStudioHub() {
       const archived = !deployment.archivedAt;
       await setDeploymentArchived(address, deployment.pipelineId, archived, signal);
       if (!signal.aborted) {
-        setWalletDeployments(items => items.map(item => item.pipelineId === deployment.pipelineId
-          ? { ...item, archivedAt: archived ? Date.now() : null } : item));
-        setReload(value => value + 1);
+        queryClient.setQueryData<DeploymentSummary[]>(workspaceQueryKeys.deployments(address), (items) => {
+          const updated = items?.map((entry) => entry.pipelineId === deployment.pipelineId
+            ? { ...entry, archivedAt: archived ? Date.now() : null } : entry);
+          if (updated) writeWorkspaceCache(address, 'deployments', updated);
+          return updated;
+        });
+        await invalidateDeploymentsCache(queryClient, address, deployment.pipelineId);
       }
     } else if (item.source === 'local') {
       archiveBrowserDraft(item.id, !item.isArchived);
@@ -472,7 +452,10 @@ export function PipelineStudioHub() {
           signal,
           body: JSON.stringify({ revision: { updatedAt: item.updatedAt } }),
         });
-        if (!signal.aborted) setReload((v) => v + 1);
+        if (!signal.aborted) {
+          queryClient.removeQueries({ queryKey: workspaceQueryKeys.draft(address, item.id) });
+          await invalidateDraftsCache(queryClient, address);
+        }
       }
       setDeletingPipeline(null);
     });
@@ -605,7 +588,7 @@ export function PipelineStudioHub() {
         </div>
       )}
 
-      {walletError && <div role="alert">{walletError} <button type="button" className="ws-button" onClick={() => setReload(value => value + 1)}>Retry</button></div>}
+      {walletError && <div role="alert">{walletError} <button type="button" className="ws-button" onClick={() => void Promise.all([draftsQuery.refetch(), deploymentsQuery.refetch()])}>Retry</button></div>}
       {localError && <p role="alert">Could not read browser drafts.</p>}
 
       {/* Toolbar: Search & Business Status Filter Tabs (All, Drafts, Active, Archived) */}

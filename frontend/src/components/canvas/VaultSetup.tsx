@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { encodeDeployData, isAddress, isAddressEqual, zeroAddress, type Address, type Hash } from 'viem';
 import { getAccount, sendTransaction, waitForTransactionReceipt } from 'wagmi/actions';
+import { useQueryClient } from '@tanstack/react-query';
 import { ACTION_VAULT_ABI, ACTION_VAULT_BYTECODE, PRICE_ORDER_VAULT_ABI, PRICE_ORDER_VAULT_BYTECODE, STOP_LOSS_TEMPLATE } from '@omniflow/shared';
 import { wagmiConfig } from '@/lib/wagmi';
 import { workspaceRequest } from '@/lib/workspaceSession';
+import { invalidateVaultsCache } from '@/lib/workspaceCache';
 import { getVaultManagerAddress } from '@/lib/vaultSelection';
 
 const fieldClass = 'w-full rounded-md border border-[var(--ws-border)] bg-[#0d0e15] px-2.5 py-2 font-mono text-xs text-slate-100';
@@ -17,6 +19,7 @@ export function VaultSetup({ owner, pair, currentVault, onLinked, kind = 'stop-l
   onLinked: (address: Address) => void;
   kind?: 'stop-loss' | 'price-order';
 }) {
+  const queryClient = useQueryClient();
   const pendingPrefix = kind === 'price-order' ? 'omniflow.price-order-vault-create.v1' : 'omniflow.vault-create.v1';
   const pendingKey = `${pendingPrefix}.${owner.toLowerCase()}.${pair.toLowerCase()}`;
   const [creationHash, setCreationHash] = useState(() => {
@@ -74,6 +77,7 @@ export function VaultSetup({ owner, pair, currentVault, onLinked, kind = 'stop-l
         method: 'POST', body: JSON.stringify({ vault, pair, creationTxHash: hash, kind }),
       });
       setCandidate(result.vault.address);
+      void invalidateVaultsCache(queryClient, owner);
       onLinked(result.vault.address);
       setLinked(result.vault.address);
       if (hash) localStorage.removeItem(pendingKey);

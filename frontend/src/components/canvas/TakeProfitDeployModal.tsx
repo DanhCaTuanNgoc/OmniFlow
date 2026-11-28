@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { BaseError, formatEther, isAddressEqual, parseEther, type Address, type EIP1193Provider, type Hash, type Hex } from 'viem';
 import { getAccount, sendTransaction, switchChain, waitForTransactionReceipt } from 'wagmi/actions';
+import { useQueryClient } from '@tanstack/react-query';
 import { resolvePhaseTwo, type StopLossGraph } from '@omniflow/shared';
 import { 
   AlertCircle,
@@ -22,6 +23,7 @@ import { DeployDialog, DeploySummary } from './DeployConfirmation';
 import { runDeploymentAction, type DeploymentDetail, type DeploymentSummary } from '@/lib/deployments';
 import { wagmiConfig } from '@/lib/wagmi';
 import { WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspaceSession';
+import { invalidateDeploymentsCache, invalidateDraftsCache } from '@/lib/workspaceCache';
 import { truncateAddress } from '@/lib/utils';
 
 type Quote = { data: Hex; gas: string; gasPrice: string; value: string };
@@ -50,6 +52,7 @@ export function TakeProfitDeployModal({ owner, graph, draft, onClose }: {
   draft: { id: string; updatedAt: number };
   onClose: () => void;
 }) {
+  const queryClient = useQueryClient();
   const [stage, setStage] = useState<'lasna' | 'vault-setup'>('lasna');
   const [quote, setQuote] = useState<Quote>();
   const [deployment, setDeployment] = useState<DeploymentSummary>();
@@ -71,6 +74,8 @@ export function TakeProfitDeployModal({ owner, graph, draft, onClose }: {
       });
       setDetail(res);
       setDeployment(res);
+      void invalidateDraftsCache(queryClient, owner);
+      void invalidateDeploymentsCache(queryClient, owner, pipelineId);
     } catch {
       // Non-blocking detail fetch
     }
@@ -187,11 +192,14 @@ export function TakeProfitDeployModal({ owner, graph, draft, onClose }: {
 
       const submitted = await request(hash);
       setDeployment(submitted.deployment);
+      void invalidateDraftsCache(queryClient, owner);
+      void invalidateDeploymentsCache(queryClient, owner, submitted.deployment?.pipelineId);
 
       if (submitted.deployment?.status === 'signed') {
         await waitForTransactionReceipt(wagmiConfig, { chainId: 5318007, hash, timeout: 25_000, checkReplacement: false });
         const reconciled = await request(hash);
         setDeployment(reconciled.deployment);
+        void invalidateDeploymentsCache(queryClient, owner, reconciled.deployment?.pipelineId);
         if (reconciled.deployment?.status === 'deployed') {
           setStage('vault-setup');
           await loadDetail(reconciled.deployment.pipelineId);
