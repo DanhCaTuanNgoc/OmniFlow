@@ -337,7 +337,7 @@ export const RECIPE_PRESETS: Record<string, RecipePreset> = {
       {
         id: 'trigger-1',
         type: 'watchTransfers',
-        position: { x: 40, y: 180 },
+        position: { x: 40, y: 210 },
         data: {
           label: 'Salary Transfer Watcher',
           category: 'trigger',
@@ -350,7 +350,7 @@ export const RECIPE_PRESETS: Record<string, RecipePreset> = {
       {
         id: 'condition-1',
         type: 'balanceThreshold',
-        position: { x: 380, y: 180 },
+        position: { x: 390, y: 210 },
         data: {
           label: 'Salary > 1,000 USDC',
           category: 'condition',
@@ -363,7 +363,7 @@ export const RECIPE_PRESETS: Record<string, RecipePreset> = {
       {
         id: 'action-1',
         type: 'dexSwap',
-        position: { x: 740, y: 80 },
+        position: { x: 760, y: 20 },
         data: {
           label: 'DCA 20% into ETH',
           category: 'action',
@@ -378,7 +378,7 @@ export const RECIPE_PRESETS: Record<string, RecipePreset> = {
       {
         id: 'action-2',
         type: 'emergencySafeSweep',
-        position: { x: 740, y: 280 },
+        position: { x: 760, y: 230 },
         data: {
           label: 'Sweep 30% to Cold Safe',
           category: 'action',
@@ -390,7 +390,7 @@ export const RECIPE_PRESETS: Record<string, RecipePreset> = {
       {
         id: 'action-3',
         type: 'notifyLogWebhook',
-        position: { x: 1100, y: 180 },
+        position: { x: 760, y: 420 },
         data: {
           label: 'Telegram Alert',
           category: 'action',
@@ -423,11 +423,11 @@ export const RECIPE_PRESETS: Record<string, RecipePreset> = {
         data: { color: '#34d399' },
       },
       {
-        id: 'e-act1-act3',
-        source: 'action-1',
+        id: 'e-cond1-act3',
+        source: 'condition-1',
         target: 'action-3',
         type: 'custom',
-        data: { color: '#a855f7' },
+        data: { color: '#34d399' },
       },
     ],
   },
