@@ -21,7 +21,9 @@ const sections: Record<string, string> = {
 
 export function Header() {
   const pathname = usePathname();
-  const sectionKey = pathname.split('/')[2];
+  const pathSegments = pathname.split('/');
+  const sectionKey = pathSegments[2];
+  const subRoute = pathSegments[3];
   const title = sections[sectionKey] ?? 'Workspace';
   const { address, isConnected, chain, chainId } = useAccount();
   const signedIn = useWorkspaceSignedIn(isConnected ? address : undefined);
@@ -29,12 +31,18 @@ export function Header() {
   const { switchChain, isPending: isSwitching, isError: switchFailed } = useSwitchChain();
   const needsBaseSepolia = isConnected && chainId !== baseSepoliaChain.id;
 
-  const { pipelineName, isEditable, onRename } = useStudioHeaderStore();
+  const { pipelineName, isEditable, onRename, activeAutomationName } = useStudioHeaderStore();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isStudioDetail = sectionKey === 'studio' && Boolean(pipelineName);
+  const isActiveDetail = sectionKey === 'active' && Boolean(subRoute) && Boolean(activeAutomationName);
+  const parentBreadcrumb = isStudioDetail
+    ? { href: '/workspace/studio', label: 'Pipeline Studio', title: 'Return to Pipeline Studio Hub' }
+    : isActiveDetail
+    ? { href: '/workspace/active', label: 'Active Automations', title: 'Return to Active Automations' }
+    : null;
 
   useEffect(() => {
     if (isEditing) {
@@ -68,52 +76,53 @@ export function Header() {
   return (
     <header className="relative z-30 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-[var(--ws-border)] bg-[var(--ws-rail)] px-3 sm:px-6">
       <div className="flex min-w-0 items-center gap-1.5 truncate text-xs font-semibold sm:text-sm">
-        {isStudioDetail ? (
+        <span className="hidden text-[var(--ws-muted)] sm:inline">Workspace / </span>
+        {parentBreadcrumb ? (
           <>
-            <span className="hidden text-[var(--ws-muted)] sm:inline">Workspace / </span>
             <Link
-              href="/workspace/studio"
+              href={parentBreadcrumb.href}
               className="text-[var(--ws-muted)] hover:text-white transition-colors shrink-0"
-              title="Return to Pipeline Studio Hub"
+              title={parentBreadcrumb.title}
             >
-              Pipeline Studio
+              {parentBreadcrumb.label}
             </Link>
             <span className="text-[var(--ws-muted)]">/</span>
-            {isEditing ? (
-              <input
-                ref={inputRef}
-                type="text"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={handleCommitEdit}
-                onKeyDown={handleKeyDown}
-                maxLength={120}
-                className="rounded border border-[var(--ws-accent)] bg-[#0d0e15] px-2 py-0.5 text-xs text-white font-medium focus:outline-none max-w-[14rem] sm:max-w-[20rem]"
-              />
+            {isStudioDetail ? (
+              isEditing ? (
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={handleCommitEdit}
+                  onKeyDown={handleKeyDown}
+                  maxLength={120}
+                  className="rounded border border-[var(--ws-accent)] bg-[#0d0e15] px-2 py-0.5 text-xs text-white font-medium focus:outline-none max-w-[14rem] sm:max-w-[20rem]"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleStartEdit}
+                  disabled={!isEditable}
+                  title={isEditable ? 'Click to rename pipeline' : undefined}
+                  className={`group inline-flex items-center gap-1.5 truncate rounded px-1.5 py-0.5 font-medium transition-colors ${
+                    isEditable
+                      ? 'cursor-pointer text-white hover:bg-white/10 hover:text-[var(--ws-accent)]'
+                      : 'text-white'
+                  }`}
+                >
+                  <span className="truncate">{pipelineName}</span>
+                  {isEditable && (
+                    <Pencil className="size-3 text-zinc-400 opacity-60 group-hover:opacity-100 group-hover:text-[var(--ws-accent)] transition-opacity shrink-0" />
+                  )}
+                </button>
+              )
             ) : (
-              <button
-                type="button"
-                onClick={handleStartEdit}
-                disabled={!isEditable}
-                title={isEditable ? 'Click to rename pipeline' : undefined}
-                className={`group inline-flex items-center gap-1.5 truncate rounded px-1.5 py-0.5 font-medium transition-colors ${
-                  isEditable
-                    ? 'cursor-pointer text-white hover:bg-white/10 hover:text-[var(--ws-accent)]'
-                    : 'text-white'
-                }`}
-              >
-                <span className="truncate">{pipelineName}</span>
-                {isEditable && (
-                  <Pencil className="size-3 text-zinc-400 opacity-60 group-hover:opacity-100 group-hover:text-[var(--ws-accent)] transition-opacity shrink-0" />
-                )}
-              </button>
+              <span className="truncate font-medium text-white">{activeAutomationName}</span>
             )}
           </>
         ) : (
-          <>
-            <span className="hidden text-[var(--ws-muted)] sm:inline">Workspace / </span>
-            <span>{title}</span>
-          </>
+          <span>{title}</span>
         )}
       </div>
 

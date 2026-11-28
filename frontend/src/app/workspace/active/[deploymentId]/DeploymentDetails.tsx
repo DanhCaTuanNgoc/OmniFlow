@@ -15,6 +15,7 @@ import { deploymentStepKey, runDeploymentAction, setDeploymentArchived, setVault
 import { WorkspaceWalletPromptCancelled, workspaceRequest } from '@/lib/workspaceSession';
 import { ToastContainer, type ToastNotification } from '@/components/common/ToastContainer';
 import { DeployDialog } from '@/components/canvas/DeployConfirmation';
+import { useStudioHeaderStore } from '@/lib/studioHeaderStore';
 import { truncateAddress } from '@/lib/utils';
 
 const runtimeLabel = {
@@ -67,6 +68,18 @@ function WalletDeployment({ owner, id }: { owner: Address; id: string }) {
   const [deployment, setDeployment] = useState<DeploymentDetail>();
   const [pending, setPending] = useState(true);
   const [error, setError] = useState<string>();
+  const { setActiveAutomationHeader, clearActiveAutomationHeader } = useStudioHeaderStore();
+
+  useEffect(() => {
+    if (deployment?.name) {
+      setActiveAutomationHeader(deployment.name);
+    } else {
+      clearActiveAutomationHeader();
+    }
+    return () => {
+      clearActiveAutomationHeader();
+    };
+  }, [deployment?.name, setActiveAutomationHeader, clearActiveAutomationHeader]);
 
   const load = useCallback(async (signal?: AbortSignal) => {
     setPending(true);
