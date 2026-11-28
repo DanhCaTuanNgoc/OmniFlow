@@ -82,6 +82,14 @@ Mỗi hàng cần một deployment có thể mở lại trong Active, một lư�
 
 **Hạng mục trước cloud dùng chung · TASK-333–336/353.** Chuẩn bị migration PostgreSQL và kiểm tra trên DB sạch. Với dữ liệu cần giữ từ SQLite, sao lưu và đối soát liên kết ví, revision, deployment, chữ ký giao dịch đã lưu, nonce, idempotency key, receipt và cursor trước khi chuyển nguồn đọc. Nghiệm thu cách ly hai ví, khôi phục backup, restart giữa lúc broadcast và ghi receipt, đọc bù lịch sử và tiếp tục đúng job. Với nhiều replica, thử hai worker tranh cùng job/cursor và kiểm tra mỗi bước chỉ được một worker nhận. Mục này đang chờ triển khai, có thể làm độc lập với việc cấp quỹ relayer testnet.
 
+#### 5.1.1 Sự cố Workspace trống trên production ngày 26/11/2026
+
+- **Triệu chứng.** Trên [Vercel production](https://omni-flow-omega.vercel.app/workspace/active), ví `0xE50dD8e4aE1b1Dd46334eA22C10129Ee4d6736eF` đã ký đăng nhập nhưng Pipelines và Active Automations vẫn trống. Railway trả `200` cho yêu cầu tạo challenge từ Vercel và `401` cho request draft thiếu phiên. Chưa ghi nhận response của hai API sau khi ký.
+- **Nguyên nhân đã xác nhận.** Railway production thiếu `DATABASE_URL` và volume. SQLite trong container có một draft của ví và chưa có deployment hoặc liên kết Vault.
+- **Đã khôi phục ngày 28/11/2026.** Sao lưu SQLite production trước khi redeploy. Nhập draft production vào Supabase và cấu hình Railway kết nối PostgreSQL qua TLS. Hợp nhất deployment, liên kết Vault và lịch sử từ SQLite local theo đúng ví, giữ trạng thái archive và lưu trên Railway Volume tại `/data/workspace.sqlite`.
+- **Đã đối soát sau redeploy.** Backend production đọc được 7 draft, 5 deployment (4 chưa archive) và 3 liên kết Vault. Bộ dữ liệu khôi phục gồm 19 bước setup, 5 cursor và 2 bản ghi execution. SQLite qua kiểm tra toàn vẹn.
+- **Còn nghiệm thu · TASK-337.** Xác nhận dữ liệu sau khi ký trên Vercel và thử đổi sang ví thứ hai. Relayer hiện tại đã được cấu hình trên Railway. Kiểm tra gas và quỹ testnet trước lượt deploy mới. Chạy Stop-Loss và Take-Profit từ Studio trên bản cloud rồi đối chiếu UI với receipt. Migration deployment và lịch sử sang PostgreSQL tiếp tục theo `TASK-335/336`.
+
 ## 6. Gói triển khai và điều kiện bàn giao hackathon
 
 **Tiến độ AI · TASK-331.** Studio đã có nút AI cạnh Deploy, modal nhập prompt và bước xem trước trước khi áp dụng template Stop-Loss hoặc Take-Profit lên Canvas. Backend dùng `gemini-3.1-flash-lite` với thinking tối thiểu và giới hạn 256 token đầu ra. Hai lượt kiểm tra qua backend thật đều trả HTTP 200 và đúng tham số: Stop-Loss ở $2,100 trong 3,6 giây, Take-Profit bán 25% ở $3,000 trong 5,0 giây. Còn nghiệm thu thao tác áp dụng, chỉnh sửa, lưu và mở lại draft trên trình duyệt. [Tracking TASK-331](../TASKS.md)

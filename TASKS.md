@@ -15,14 +15,14 @@
 | **Giai đoạn 0: Thiết Kế & Chuẩn Hóa Kiến Trúc** | 14/11/2026 | 8 | 8 | 0 | **100%** |
 | **Sprint 1: Core Contracts & Live On-Chain Loop** | Ngày 1 - 7 (15/11 - 21/11) | 10 | 10 | 0 | **100%** |
 | **Sprint 2: Workspace UI, Studio Canvas & Backend Relayer** | Ngày 8 - 14 (22/11 - 28/11) | 18 | 18 | 0 | **100%** |
-| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 24 | 23 | 0 | **95.8%** |
-| **Đánh giá cạnh tranh, bằng chứng và tính năng mở rộng** | 18–19/11/2026 | 8 | 5 | 1 | **62.5%** |
-| **Vận hành Workspace & nghiệm thu dự thi** | Ghi nhận 20/11/2026 | 8 | 1 | 0 | **12.5%** |
+| **Sprint 3: Live Visualizer, Hardening & Deployment** | Ngày 15 - 21 (29/11 - 5/12) | 24 | 24 | 0 | **100%** |
+| **Đánh giá cạnh tranh, bằng chứng và tính năng mở rộng** | 18–19/11/2026 | 8 | 5 | 2 | **62.5%** |
+| **Vận hành Workspace & nghiệm thu dự thi** | Ghi nhận 20/11/2026 | 8 | 1 | 1 | **12.5%** |
 | **Khả năng deploy của preset, runtime và nghiệm thu toàn bộ flow** | Ghi nhận 20/11/2026 | 13 | 2 | 0 | **15.4%** |
 | **Future Roadmap: 16 Ca Mở Rộng & Universal Engine** | Lộ trình mở rộng | 18 | 1 | 0 | **5.6%** |
-| **TỔNG CỘNG** | **Đối chiếu 26/11/2026** | **107** | **68** | **1** | **63.6%** |
+| **TỔNG CỘNG** | **Đối chiếu 28/11/2026** | **107** | **69** | **3** | **64.5%** |
 
-Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **21 mục `TODO`**, **1 mục `IN_PROGRESS`** và **17 mục `BACKLOG`**.
+Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **18 mục `TODO`**, **3 mục `IN_PROGRESS`** và **17 mục `BACKLOG`**.
 
 > [!IMPORTANT]
 > **Yêu cầu Bắt buộc & Định hướng Hoàn thành Nghiệm thu On-chain:**
@@ -541,7 +541,7 @@ Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **21 mục `TODO`**, *
 * **Ngày hoàn thành:** 17/11/2026 09:55
 * **Trạng thái:** `DONE`
 
-#### `TASK-304` [TODO] — Đóng gói Docker & Triển khai Cloud (Vercel & Railway)
+#### `TASK-304` [DONE] — Đóng gói Docker & Triển khai Cloud (Vercel & Railway)
 * **Module / Màn hình:** Hạ tầng Cloud Deploy (`backend/Dockerfile`, `frontend/Dockerfile`, `backend/railway.json`, `frontend/vercel.json`, `docker-compose.yml`)
 * **Mục đích:** Đưa toàn bộ hệ thống lên môi trường production sẵn sàng cho BGK truy cập.
 * **Chi tiết thực thi:**
@@ -549,11 +549,10 @@ Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **21 mục `TODO`**, *
   * Cấu hình `backend/railway.json` chuẩn schema Railway với restart policy và timeout probe.
   * Xây dựng `frontend/Dockerfile` tối ưu và `frontend/vercel.json` thiết lập tiêu chuẩn bảo mật (CSP, X-Frame-Options, X-Content-Type nosniff).
   * Repo có `docker-compose.yml` để chạy frontend và backend cùng nhau.
-  * **Còn lại:** Chỉ triển khai Vercel/Railway sau khi `TASK-353` đạt trên public testnet với web/API chạy local. Sau đó xác nhận URL, `/health`, RPC theo manifest và REST/WebSocket từ frontend cloud.
+  * **Nghiệm thu hạ tầng ngày 28/11/2026:** Vercel mở được Workspace. Railway `/health` trả 200 và kết nối Base Sepolia, Lasna. REST qua origin Vercel xác minh được phiên ví và WebSocket production trả `AUTHENTICATED`. Backend đọc draft từ Supabase và deployment từ Railway Volume sau redeploy. Hai full-loop từ giao diện cloud tiếp tục theo `TASK-337`, nghiệm thu toàn catalog theo `TASK-353`.
 * **Ngày tạo:** 14/11/2026 17:35
-* **Ngày hoàn thành:** —
-* **Người thực hiện:** Chưa phân công bước xác minh cloud.
-* **Trạng thái:** `TODO`
+* **Ngày hoàn thành:** 28/11/2026.
+* * **Trạng thái:** `DONE`
 
 #### `TASK-305` [DONE] — Thêm kiểm tra RPC, bằng chứng và CSS
 * **Module / Màn hình:** Toàn bộ Frontend & Smart Contracts (`scripts/verify-all.ts`, `globals.css`)
@@ -899,6 +898,7 @@ Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **21 mục `TODO`**, *
   * Đã gọi Gemini thật qua backend với `gemini-3.6-flash`. Hai prompt mẫu trả HTTP 200 với đúng template và tham số: Stop-Loss ETH ở $2,100 và Take-Profit bán 25% ETH ở $3,000.
   * Sau khi gặp timeout và HTTP 503 từ Gemini 3.6, chuyển mặc định sang `gemini-3.1-flash-lite` với thinking tối thiểu. Kiểm tra lại qua backend cổng 8080: Stop-Loss trả HTTP 200 trong 3,6 giây và Take-Profit trong 5,0 giây.
   * Modal liệt kê bốn node theo thứ tự thực thi. Người dùng chỉnh pool, ngưỡng giá, cooldown, tỷ lệ bán và địa chỉ Vault tùy chọn trước khi xác nhận đưa graph lên Canvas.
+* **Kiểm thử lại ngày 28/11/2026:** Đã cấu hình Gemini trên Railway. Production trả 200 với Stop-Loss $2.100 và Take-Profit $3.000, bán 25%. Có lượt trả 504 khi Gemini vượt 20 giây. Backend local trả 400 cho prompt rỗng hoặc quá dài và 422 cho prompt thiếu điều kiện hoặc ngoài phạm vi.
 * **Còn nghiệm thu:** Dùng modal trên trình duyệt để áp dụng cả hai đề xuất lên Canvas, kiểm tra chiều giá, chỉnh node, rồi lưu và mở lại draft trong Studio.
 * **Ngày tạo:** 19/11/2026.
 * **Ngày hoàn thành:** —
@@ -914,6 +914,7 @@ Tỷ lệ tính theo số mục `DONE` trên bảng. Còn **21 mục `TODO`**, *
   * Thêm nút "Connect Telegram" tại trang `Vault Manager` qua deep link với mã dùng một lần cấp từ phiên ví.
   * Hỗ trợ lệnh `/status` (tra cứu tình trạng các pipeline) và `/panic` (gợi ý link rút vốn khẩn cấp).
   * Đã nối luồng liên kết, hàng đợi SQLite, thông báo payout/skip và hai lệnh bot. Còn nghiệm thu liên kết với chat thật và nhận thông báo từ giao dịch testnet mới.
+* **Kiểm thử lại ngày 28/11/2026:** Telegram `getMe` trả 200, tên bot đúng cấu hình. API production tạo được link cho ví test mới. Railway ghi lỗi polling lặp lại. Local và production dùng chung token, webhook chưa cấu hình. Cần dùng một poller cho mỗi token và thử chat thật, payout/skip và retry.
 * **Ngày tạo:** 19/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
@@ -959,14 +960,17 @@ Phạm vi Workspace theo [phân tích vận hành](docs/WORKSPACE_OPERATIONS_ANA
 * **Người thực hiện:** Chưa phân công.
 * **Trạng thái:** `TODO`.
 
-#### `TASK-337` [TODO] — Nghiệm thu luồng stop-loss trên bản demo cloud
+#### `TASK-337` [IN_PROGRESS] — Nghiệm thu luồng stop-loss trên bản demo cloud
 * **Module:** Studio, backend cloud, Reactive Lasna, Base Sepolia và Activity Logs.
 * **Mục đích:** Xác minh luồng người dùng trên bản demo dùng để chấm.
+* **Đã xử lý thiếu dữ liệu production (28/11/2026):** Sau khi sao lưu SQLite production, backend Railway đọc được 7 draft từ Supabase (6 draft local và 1 draft production), 5 deployment (4 chưa archive), 3 liên kết Vault và lịch sử liên quan của ví `0xE50dD8e4aE1b1Dd46334eA22C10129Ee4d6736eF` từ Railway Volume. SQLite qua kiểm tra toàn vẹn sau redeploy.
+* **Ưu tiên tiếp theo:** Đối soát Pipelines, Active, Vault và Logs sau khi ký đăng nhập production, rồi thử đổi sang ví thứ hai. Đã cấu hình production dùng relayer hiện tại và xác minh qua health. Cần preflight gas và quỹ trước lượt deploy mới, sau đó chạy Stop-Loss và Take-Profit từ Studio đến callback trên URL demo.
+* **Bằng chứng đã tái xác minh:** 12 receipt của bốn lượt payout/skip Stop-Loss và Take-Profit đều thành công và khớp block trong [FULL_LOOP_EVIDENCE.json](FULL_LOOP_EVIDENCE.json). Foundry đạt 40/40, backend đạt 53/53. REST và WebSocket production qua phiên ví test mới. Còn đối soát UI bằng ví demo và bằng chứng full-loop từ Studio cloud.
 * **Chi tiết:** Sau khi có URL ở `TASK-304`, chạy từ Studio qua deploy, cấp quyền Vault, sự kiện nguồn và callback, rồi đối chiếu trạng thái UI và ba hash với RPC. Dùng kịch bản hai kết quả ở `TASK-340` khi đủ bằng chứng. Nếu chọn flow theo dõi nâng cấp, nghiệm thu lại kết quả đối chứng và trạng thái dừng trên bản cloud ở `TASK-344`. Chạy lại Foundry và ghi kết quả thực tế. Kiểm tra thao tác bàn phím và độ tương phản trên luồng demo.
 * **Ngày tạo:** 20/11/2026.
 * **Ngày hoàn thành:** —
 * **Người thực hiện:** Chưa phân công.
-* **Trạng thái:** `TODO`.
+* **Trạng thái:** `IN_PROGRESS` · Đã khôi phục dữ liệu. Còn nghiệm thu trình duyệt, cách ly hai ví và full-loop cloud.
 
 #### `TASK-338` [TODO] — Hoàn thiện video demo dưới 3 phút
 * **Module:** Tài liệu dự thi.
