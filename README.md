@@ -6,6 +6,8 @@
 [![License](https://img.shields.io/badge/License-MIT-purple)](LICENSE)
 [![Networks](https://img.shields.io/badge/Chains-Base%20Sepolia%20%7C%20Reactive%20Lasna-orange)](#)
 
+**Buildathon judges:** [On-chain evidence for Stop-Loss and Take-Profit](EVIDENCE.md).
+
 ---
 
 ## 📌 Overview
